@@ -19,4 +19,8 @@ class FileSystemService {
   Future<String> renameEntry(String sourcePath, String newName) {
     return rust.renameEntry(sourcePath: sourcePath, newName: newName);
   }
+
+  Future<void> deleteEntry(String path) {
+    return rust.deleteEntry(path: path);
+  }
 }

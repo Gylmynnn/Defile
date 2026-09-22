@@ -10,6 +10,24 @@ pub struct FileEntry {
     pub is_file: bool,
 }
 
+pub fn delete_entry(path: std::string::String) -> Result<(), std::string::String> {
+    let target = Path::new(&path);
+
+    let metadata = fs::symlink_metadata(target)
+        .map_err(|error| format!("Item tidak ditemukan atau tidak dapat diakses: {error}"))?;
+
+    let file_type = metadata.file_type();
+
+    if file_type.is_dir() {
+        fs::remove_dir(target)
+            .map_err(|error| format!("Gagal menghapus folder. Pastikan folder kosong: {error}"))?;
+    } else {
+        fs::remove_file(target).map_err(|error| format!("Gagal menghapus file: {error}"))?;
+    }
+
+    Ok(())
+}
+
 pub fn rename_entry(
     source_path: std::string::String,
     new_name: std::string::String,

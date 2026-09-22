@@ -66,8 +66,14 @@ class FileExplorerPage extends GetView<FileExplorerController> {
                     trailing: PopupMenuButton<String>(
                       tooltip: 'Menu item',
                       onSelected: (value) {
-                        if (value == 'rename') {
-                          _showRenameDialog(context, entry);
+                        switch (value) {
+                          case 'rename':
+                            _showRenameDialog(context, entry);
+                            break;
+
+                          case 'delete':
+                            _showDeleteDialog(context, entry);
+                            break;
                         }
                       },
                       itemBuilder: (context) => const [
@@ -78,6 +84,16 @@ class FileExplorerPage extends GetView<FileExplorerController> {
                               Icon(Icons.drive_file_rename_outline),
                               SizedBox(width: 8),
                               Text('Rename'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline),
+                              SizedBox(width: 8),
+                              Text('Delete'),
                             ],
                           ),
                         ),
@@ -92,6 +108,39 @@ class FileExplorerPage extends GetView<FileExplorerController> {
         ],
       ),
     );
+  }
+
+  Future<void> _showDeleteDialog(
+    BuildContext context,
+    rust.FileEntry entry,
+  ) async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Hapus item?'),
+        content: Text(
+          'Apakah kamu yakin ingin menghapus '
+          '"${entry.name}"?\n\n'
+          'Folder hanya dapat dihapus jika kosong.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Get.back(result: true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await controller.deleteEntry(entry);
+    }
   }
 
   void _showRenameDialog(BuildContext context, rust.FileEntry entry) {

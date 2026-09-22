@@ -23,6 +23,25 @@ class FileExplorerController extends GetxController {
     loadDirectory(currentPath.value);
   }
 
+  Future<void> deleteEntry(rust.FileEntry entry) async {
+    try {
+      await fileSystemService.deleteEntry(entry.path);
+      await refreshDirectory();
+
+      Get.snackbar(
+        'Berhasil',
+        '"${entry.name}" berhasil dihapus.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (error) {
+      Get.snackbar(
+        'Gagal menghapus',
+        error.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   Future<void> renameEntry(rust.FileEntry entry, String newName) async {
     final String trimmedName = newName.trim();
     if (trimmedName.isEmpty) {
