@@ -10,6 +10,45 @@ pub struct FileEntry {
     pub is_file: bool,
 }
 
+pub fn rename_entry(
+    source_path: std::string::String,
+    new_name: std::string::String,
+) -> Result<std::string::String, std::string::String> {
+    let source = Path::new(&source_path);
+
+    if !source.exists() {
+        return Err(format!("File atau folder tidak ditemukan: {source_path}"));
+    }
+
+    let name = new_name.trim();
+
+    if name.is_empty() {
+        return Err("Nama baru tidak boleh kosong".to_string());
+    }
+
+    if name == "." || name == ".." || name.contains('/') || name.contains('\\') {
+        return Err("Nama baru tidak valid".to_string());
+    }
+
+    let parent = source
+        .parent()
+        .ok_or("Tidak dapat menentukan direktori induk")?;
+
+    let destination = parent.join(name);
+
+    if source == destination {
+        return Ok(destination.to_string_lossy().into_owned());
+    }
+
+    if destination.exists() {
+        return Err(format!("Nama '{}' sudah digunakan", name));
+    }
+
+    fs::rename(source, &destination).map_err(|error| format!("Gagal mengganti nama: {error}"))?;
+
+    Ok(destination.to_string_lossy().into_owned())
+}
+
 pub fn create_directory(
     parent_path: std::string::String,
     directory_name: std::string::String,

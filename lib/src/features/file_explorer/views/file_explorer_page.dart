@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
+import 'package:defile/src/rust/api/file_entry.dart' as rust;
 
 import '../controllers/file_explorer_controller.dart';
 
@@ -62,14 +63,61 @@ class FileExplorerPage extends GetView<FileExplorerController> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(entry.isDirectory ? 'Folder' : 'File'),
-                    trailing: entry.isDirectory
-                        ? const Icon(Icons.chevron_right)
-                        : null,
+                    trailing: PopupMenuButton<String>(
+                      tooltip: 'Menu item',
+                      onSelected: (value) {
+                        if (value == 'rename') {
+                          _showRenameDialog(context, entry);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'rename',
+                          child: Row(
+                            children: [
+                              Icon(Icons.drive_file_rename_outline),
+                              SizedBox(width: 8),
+                              Text('Rename'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                     onTap: () => controller.openFile(entry),
                   );
                 },
               );
             }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, rust.FileEntry entry) {
+    final textController = TextEditingController(text: entry.name);
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Rename'),
+        content: TextField(
+          controller: textController,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Nama baru'),
+          onSubmitted: (value) {
+            Get.back();
+            controller.renameEntry(entry, value);
+          },
+        ),
+        actions: [
+          TextButton(onPressed: Get.back, child: const Text('Batal')),
+          FilledButton(
+            onPressed: () {
+              final newName = textController.text;
+              Get.back();
+              controller.renameEntry(entry, newName);
+            },
+            child: const Text('Simpan'),
           ),
         ],
       ),

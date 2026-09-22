@@ -70,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -71513274;
+  int get rustContentHash => -359172736;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -96,6 +96,11 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<void> crateApiFileEntryOpenFile({required String path});
+
+  Future<String> crateApiFileEntryRenameEntry({
+    required String sourcePath,
+    required String newName,
+  });
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -248,6 +253,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiFileEntryOpenFileConstMeta =>
       const TaskConstMeta(debugName: "open_file", argNames: ["path"]);
+
+  @override
+  Future<String> crateApiFileEntryRenameEntry({
+    required String sourcePath,
+    required String newName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sourcePath, serializer);
+          sse_encode_String(newName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFileEntryRenameEntryConstMeta,
+        argValues: [sourcePath, newName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFileEntryRenameEntryConstMeta =>
+      const TaskConstMeta(
+        debugName: "rename_entry",
+        argNames: ["sourcePath", "newName"],
+      );
 
   @protected
   String dco_decode_String(dynamic raw) {
