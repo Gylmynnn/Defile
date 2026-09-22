@@ -14,6 +14,11 @@ class FileExplorerPage extends GetView<FileExplorerController> {
         title: const Text('Defile'),
         actions: [
           IconButton(
+            tooltip: 'Folder baru',
+            icon: const Icon(Icons.create_new_folder_outlined),
+            onPressed: () => _showCreateFolderDialog(context),
+          ),
+          IconButton(
             tooltip: 'Refresh',
             icon: const Icon(Icons.refresh),
             onPressed: controller.refreshDirectory,
@@ -65,6 +70,38 @@ class FileExplorerPage extends GetView<FileExplorerController> {
                 },
               );
             }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreateFolderDialog(BuildContext context) {
+    final textController = TextEditingController();
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Folder baru'),
+        content: TextField(
+          controller: textController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Nama folder',
+            hintText: 'Contoh: Projects',
+          ),
+          onSubmitted: (value) {
+            Get.back();
+            controller.createDirectory(value);
+          },
+        ),
+        actions: [
+          TextButton(onPressed: Get.back, child: const Text('Batal')),
+          FilledButton(
+            onPressed: () {
+              final name = textController.text;
+              Get.back();
+              controller.createDirectory(name);
+            },
+            child: const Text('Buat'),
           ),
         ],
       ),

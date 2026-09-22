@@ -23,6 +23,35 @@ class FileExplorerController extends GetxController {
     loadDirectory(currentPath.value);
   }
 
+  Future<void> createDirectory(String name) async {
+    final String trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      Get.snackbar(
+        "Nama folder kosong",
+        "Masukkan nama folder terlebih dahulu",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    try {
+      await fileSystemService.createDirectory(currentPath.value, trimmedName);
+      await refreshDirectory();
+
+      Get.snackbar(
+        "Berhasil",
+        'Folder "$trimmedName" berhasil dibuat',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Gagal membuat folder',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   Future<void> openDirectory(rust.FileEntry entry) async {
     if (!entry.isDirectory) return;
     pathHistory.add(currentPath.value);

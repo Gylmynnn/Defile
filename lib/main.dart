@@ -15,6 +15,7 @@ class RootApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
+      themeMode: ThemeMode.dark,
       debugShowCheckedModeBanner: false,
       initialBinding: FileExplorerBinding(),
       home: const FileExplorerPage(),

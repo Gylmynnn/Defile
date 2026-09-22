@@ -10,6 +10,37 @@ pub struct FileEntry {
     pub is_file: bool,
 }
 
+pub fn create_directory(
+    parent_path: std::string::String,
+    directory_name: std::string::String,
+) -> Result<std::string::String, std::string::String> {
+    let parent = Path::new(&parent_path);
+
+    if !parent.exists() {
+        return Err(format!("Direktori induk tidak ditemukan: {parent_path}"));
+    }
+
+    if !parent.is_dir() {
+        return Err("Path induk bukan direktori".to_string());
+    }
+
+    let name = directory_name.trim();
+
+    if name.is_empty() {
+        return Err("Nama folder tidak boleh kosong".to_string());
+    }
+
+    if name == "." || name == ".." || name.contains('/') || name.contains('\\') {
+        return Err("Nama folder tidak valid".to_string());
+    }
+
+    let new_path = parent.join(name);
+
+    fs::create_dir(&new_path).map_err(|error| format!("Gagal membuat folder: {error}"))?;
+
+    Ok(new_path.to_string_lossy().into_owned())
+}
+
 pub fn list_directory(path: std::string::String) -> Result<Vec<FileEntry>, std::string::String> {
     let directory = Path::new(&path);
     if !directory.exists() {

@@ -9,6 +9,14 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
+Future<String> createDirectory({
+  required String parentPath,
+  required String directoryName,
+}) => RustLib.instance.api.crateApiFileEntryCreateDirectory(
+  parentPath: parentPath,
+  directoryName: directoryName,
+);
+
 Future<List<FileEntry>> listDirectory({required String path}) =>
     RustLib.instance.api.crateApiFileEntryListDirectory(path: path);
 

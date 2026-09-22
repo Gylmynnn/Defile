@@ -8,4 +8,11 @@ class FileSystemService {
   Future<void> openFile(String path) {
     return rust.openFile(path: path);
   }
+
+  Future<String> createDirectory(String parentPath, String directoryName) {
+    return rust.createDirectory(
+      parentPath: parentPath,
+      directoryName: directoryName,
+    );
+  }
 }
