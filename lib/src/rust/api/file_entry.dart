@@ -6,8 +6,31 @@
 import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+part 'file_entry.freezed.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `copy_directory_recursive`, `validate_name`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `fmt`, `from`
+
+Future<void> copyEntry({
+  required String sourcePath,
+  required String destinationDirectory,
+  required String newName,
+}) => RustLib.instance.api.crateApiFileEntryCopyEntry(
+  sourcePath: sourcePath,
+  destinationDirectory: destinationDirectory,
+  newName: newName,
+);
+
+Future<void> moveEntry({
+  required String sourcePath,
+  required String destinationDirectory,
+  required String newName,
+}) => RustLib.instance.api.crateApiFileEntryMoveEntry(
+  sourcePath: sourcePath,
+  destinationDirectory: destinationDirectory,
+  newName: newName,
+);
 
 Future<void> deleteEntry({required String path}) =>
     RustLib.instance.api.crateApiFileEntryDeleteEntry(path: path);
@@ -60,4 +83,21 @@ class FileEntry {
           path == other.path &&
           isDirectory == other.isDirectory &&
           isFile == other.isFile;
+}
+
+@freezed
+sealed class FileOperationError
+    with _$FileOperationError
+    implements FrbException {
+  const FileOperationError._();
+
+  const factory FileOperationError.io(String field0) = FileOperationError_Io;
+  const factory FileOperationError.invalidName(String field0) =
+      FileOperationError_InvalidName;
+  const factory FileOperationError.destinationExists(String field0) =
+      FileOperationError_DestinationExists;
+  const factory FileOperationError.unsupportedSymlink(String field0) =
+      FileOperationError_UnsupportedSymlink;
+  const factory FileOperationError.invalidPath(String field0) =
+      FileOperationError_InvalidPath;
 }

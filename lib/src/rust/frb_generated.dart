@@ -70,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 220365080;
+  int get rustContentHash => -223898233;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -82,6 +82,12 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<void> crateApiFileEntryCopyEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+  });
+
   Future<String> crateApiFileEntryCreateDirectory({
     required String parentPath,
     required String directoryName,
@@ -95,6 +101,12 @@ abstract class RustLibApi extends BaseApi {
 
   Future<List<FileEntry>> crateApiFileEntryListDirectory({
     required String path,
+  });
+
+  Future<void> crateApiFileEntryMoveEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
   });
 
   Future<void> crateApiFileEntryOpenFile({required String path});
@@ -114,6 +126,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<void> crateApiFileEntryCopyEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sourcePath, serializer);
+          sse_encode_String(destinationDirectory, serializer);
+          sse_encode_String(newName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_file_operation_error,
+        ),
+        constMeta: kCrateApiFileEntryCopyEntryConstMeta,
+        argValues: [sourcePath, destinationDirectory, newName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFileEntryCopyEntryConstMeta => const TaskConstMeta(
+    debugName: "copy_entry",
+    argNames: ["sourcePath", "destinationDirectory", "newName"],
+  );
+
+  @override
   Future<String> crateApiFileEntryCreateDirectory({
     required String parentPath,
     required String directoryName,
@@ -127,7 +175,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 2,
             port: port_,
           );
         },
@@ -158,7 +206,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 3,
             port: port_,
           );
         },
@@ -183,7 +231,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -208,7 +256,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 5,
             port: port_,
           );
         },
@@ -238,7 +286,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 6,
             port: port_,
           );
         },
@@ -257,6 +305,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "list_directory", argNames: ["path"]);
 
   @override
+  Future<void> crateApiFileEntryMoveEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sourcePath, serializer);
+          sse_encode_String(destinationDirectory, serializer);
+          sse_encode_String(newName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_file_operation_error,
+        ),
+        constMeta: kCrateApiFileEntryMoveEntryConstMeta,
+        argValues: [sourcePath, destinationDirectory, newName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFileEntryMoveEntryConstMeta => const TaskConstMeta(
+    debugName: "move_entry",
+    argNames: ["sourcePath", "destinationDirectory", "newName"],
+  );
+
+  @override
   Future<void> crateApiFileEntryOpenFile({required String path}) {
     return handler.executeNormal(
       NormalTask(
@@ -266,7 +350,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 8,
             port: port_,
           );
         },
@@ -298,7 +382,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 9,
             port: port_,
           );
         },
@@ -343,6 +427,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       isDirectory: dco_decode_bool(arr[2]),
       isFile: dco_decode_bool(arr[3]),
     );
+  }
+
+  @protected
+  FileOperationError dco_decode_file_operation_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return FileOperationError_Io(dco_decode_String(raw[1]));
+      case 1:
+        return FileOperationError_InvalidName(dco_decode_String(raw[1]));
+      case 2:
+        return FileOperationError_DestinationExists(dco_decode_String(raw[1]));
+      case 3:
+        return FileOperationError_UnsupportedSymlink(dco_decode_String(raw[1]));
+      case 4:
+        return FileOperationError_InvalidPath(dco_decode_String(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
   }
 
   @protected
@@ -395,6 +498,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       isDirectory: var_isDirectory,
       isFile: var_isFile,
     );
+  }
+
+  @protected
+  FileOperationError sse_decode_file_operation_error(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_Io(var_field0);
+      case 1:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_InvalidName(var_field0);
+      case 2:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_DestinationExists(var_field0);
+      case 3:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_UnsupportedSymlink(var_field0);
+      case 4:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_InvalidPath(var_field0);
+      default:
+        throw UnimplementedError('');
+    }
   }
 
   @protected
@@ -452,6 +583,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.path, serializer);
     sse_encode_bool(self.isDirectory, serializer);
     sse_encode_bool(self.isFile, serializer);
+  }
+
+  @protected
+  void sse_encode_file_operation_error(
+    FileOperationError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case FileOperationError_Io(field0: final field0):
+        sse_encode_i_32(0, serializer);
+        sse_encode_String(field0, serializer);
+      case FileOperationError_InvalidName(field0: final field0):
+        sse_encode_i_32(1, serializer);
+        sse_encode_String(field0, serializer);
+      case FileOperationError_DestinationExists(field0: final field0):
+        sse_encode_i_32(2, serializer);
+        sse_encode_String(field0, serializer);
+      case FileOperationError_UnsupportedSymlink(field0: final field0):
+        sse_encode_i_32(3, serializer);
+        sse_encode_String(field0, serializer);
+      case FileOperationError_InvalidPath(field0: final field0):
+        sse_encode_i_32(4, serializer);
+        sse_encode_String(field0, serializer);
+    }
   }
 
   @protected

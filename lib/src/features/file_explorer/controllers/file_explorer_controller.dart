@@ -3,6 +3,9 @@ import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 
+import '../views/widgets/directory_picker_dialog.dart';
+import 'directory_picker_controller.dart';
+
 class FileExplorerController extends GetxController {
   FileExplorerController(this.fileSystemService);
 
@@ -23,6 +26,34 @@ class FileExplorerController extends GetxController {
     loadDirectory(currentPath.value);
   }
 
+  Future<void> pickDestination(
+    rust.FileEntry entry, {
+    required bool move,
+  }) async {
+    final pickerController = Get.put(
+      DirectoryPickerController(fileSystemService),
+    );
+
+    await pickerController.initialize(currentPath.value);
+
+    final destination = await Get.dialog<String>(
+      DirectoryPickerDialog(initialPath: currentPath.value),
+    );
+
+    if (destination == null) {
+      Get.delete<DirectoryPickerController>();
+      return;
+    }
+
+    if (move) {
+      await moveEntry(entry: entry, destinationDirectory: destination);
+    } else {
+      await copyEntry(entry: entry, destinationDirectory: destination);
+    }
+
+    Get.delete<DirectoryPickerController>();
+  }
+
   Future<void> deleteEntry(rust.FileEntry entry) async {
     try {
       await fileSystemService.deleteEntry(entry.path);
@@ -39,6 +70,46 @@ class FileExplorerController extends GetxController {
         error.toString(),
         snackPosition: SnackPosition.BOTTOM,
       );
+    }
+  }
+
+  Future<void> copyEntry({
+    required rust.FileEntry entry,
+    required String destinationDirectory,
+    String? newName,
+  }) async {
+    try {
+      await fileSystemService.copyEntry(
+        sourcePath: entry.path,
+        destinationDirectory: destinationDirectory,
+        newName: newName ?? entry.name,
+      );
+
+      await loadDirectory(currentPath.value);
+
+      Get.snackbar('Berhasil', '${entry.name} berhasil disalin');
+    } catch (error) {
+      Get.snackbar('Gagal menyalin', error.toString());
+    }
+  }
+
+  Future<void> moveEntry({
+    required rust.FileEntry entry,
+    required String destinationDirectory,
+    String? newName,
+  }) async {
+    try {
+      await fileSystemService.moveEntry(
+        sourcePath: entry.path,
+        destinationDirectory: destinationDirectory,
+        newName: newName ?? entry.name,
+      );
+
+      await loadDirectory(currentPath.value);
+
+      Get.snackbar('Berhasil', '${entry.name} berhasil dipindahkan');
+    } catch (error) {
+      Get.snackbar('Gagal memindahkan', error.toString());
     }
   }
 

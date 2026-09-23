@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 
 import '../controllers/file_explorer_controller.dart';
+import 'widgets/directory_picker_dialog.dart';
 
 class FileExplorerPage extends GetView<FileExplorerController> {
   const new({super.key});
@@ -65,8 +66,37 @@ class FileExplorerPage extends GetView<FileExplorerController> {
                     subtitle: Text(entry.isDirectory ? 'Folder' : 'File'),
                     trailing: PopupMenuButton<String>(
                       tooltip: 'Menu item',
-                      onSelected: (value) {
+                      onSelected: (value) async {
                         switch (value) {
+                          case 'copy':
+                            final destination = await Get.dialog<String>(
+                              DirectoryPickerDialog(
+                                initialPath: controller.currentPath.value,
+                              ),
+                            );
+
+                            if (destination != null) {
+                              await controller.copyEntry(
+                                entry: entry,
+                                destinationDirectory: destination,
+                              );
+                            }
+                            break;
+
+                          case 'move':
+                            final destination = await Get.dialog<String>(
+                              DirectoryPickerDialog(
+                                initialPath: controller.currentPath.value,
+                              ),
+                            );
+
+                            if (destination != null) {
+                              await controller.moveEntry(
+                                entry: entry,
+                                destinationDirectory: destination,
+                              );
+                            }
+                            break;
                           case 'rename':
                             _showRenameDialog(context, entry);
                             break;
@@ -76,7 +106,28 @@ class FileExplorerPage extends GetView<FileExplorerController> {
                             break;
                         }
                       },
-                      itemBuilder: (context) => const [
+                      itemBuilder: (BuildContext context) => const [
+                        PopupMenuItem(
+                          value: 'copy',
+                          child: Row(
+                            children: [
+                              Icon(Icons.copy),
+                              SizedBox(width: 12),
+                              Text('Copy'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'move',
+                          child: Row(
+                            children: [
+                              Icon(Icons.drive_file_move),
+                              SizedBox(width: 12),
+                              Text('Move'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuDivider(),
                         PopupMenuItem(
                           value: 'rename',
                           child: Row(

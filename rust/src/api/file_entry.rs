@@ -1,6 +1,8 @@
-use std::fs;
-use std::path::Path;
-use std::process::Command;
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 #[derive(Debug, Clone)]
 pub struct FileEntry {
@@ -8,6 +10,154 @@ pub struct FileEntry {
     pub path: std::string::String,
     pub is_directory: bool,
     pub is_file: bool,
+}
+
+#[derive(Debug)]
+pub enum FileOperationError {
+    Io(std::string::String),
+    InvalidName(std::string::String),
+    DestinationExists(std::string::String),
+    UnsupportedSymlink(std::string::String),
+    InvalidPath(std::string::String),
+}
+
+impl From<io::Error> for FileOperationError {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error.to_string())
+    }
+}
+
+fn validate_name(name: &str) -> Result<(), FileOperationError> {
+    if name.trim().is_empty()
+        || name == "."
+        || name == ".."
+        || name.contains('/')
+        || name.contains('\\')
+    {
+        return Err(FileOperationError::InvalidName(
+            "Nama tujuan tidak valid".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+fn copy_directory_recursive(source: &Path, destination: &Path) -> Result<(), FileOperationError> {
+    fs::create_dir(destination)?;
+
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+
+        let metadata = fs::symlink_metadata(&source_path)?;
+
+        if metadata.file_type().is_symlink() {
+            return Err(FileOperationError::UnsupportedSymlink(
+                source_path.display().to_string(),
+            ));
+        }
+
+        if metadata.is_dir() {
+            copy_directory_recursive(&source_path, &destination_path)?;
+        } else if metadata.is_file() {
+            fs::copy(&source_path, &destination_path)?;
+        }
+    }
+
+    Ok(())
+}
+
+#[flutter_rust_bridge::frb]
+pub fn copy_entry(
+    source_path: std::string::String,
+    destination_directory: std::string::String,
+    new_name: std::string::String,
+) -> Result<(), FileOperationError> {
+    validate_name(&new_name)?;
+
+    let source = PathBuf::from(source_path);
+    let destination_dir = PathBuf::from(destination_directory);
+
+    let metadata =
+        fs::symlink_metadata(&source).map_err(|error| FileOperationError::Io(error.to_string()))?;
+
+    if metadata.file_type().is_symlink() {
+        return Err(FileOperationError::UnsupportedSymlink(
+            source.display().to_string(),
+        ));
+    }
+
+    if !destination_dir.is_dir() {
+        return Err(FileOperationError::InvalidPath(
+            "Folder tujuan tidak ditemukan".to_string(),
+        ));
+    }
+
+    let destination = destination_dir.join(new_name);
+
+    if destination.exists() {
+        return Err(FileOperationError::DestinationExists(
+            destination.display().to_string(),
+        ));
+    }
+
+    if metadata.is_dir() {
+        if destination.starts_with(&source) || source.starts_with(&destination) {
+            return Err(FileOperationError::InvalidPath(
+                "Folder sumber dan tujuan tidak valid".to_string(),
+            ));
+        }
+
+        copy_directory_recursive(&source, &destination)?;
+    } else if metadata.is_file() {
+        fs::copy(&source, &destination)?;
+    } else {
+        return Err(FileOperationError::InvalidPath(
+            "Tipe file tidak didukung".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+#[flutter_rust_bridge::frb]
+pub fn move_entry(
+    source_path: std::string::String,
+    destination_directory: std::string::String,
+    new_name: std::string::String,
+) -> Result<(), FileOperationError> {
+    validate_name(&new_name)?;
+
+    let source = PathBuf::from(source_path);
+    let destination_dir = PathBuf::from(destination_directory);
+
+    let metadata =
+        fs::symlink_metadata(&source).map_err(|error| FileOperationError::Io(error.to_string()))?;
+
+    if !destination_dir.is_dir() {
+        return Err(FileOperationError::InvalidPath(
+            "Folder tujuan tidak ditemukan".to_string(),
+        ));
+    }
+
+    let destination = destination_dir.join(new_name);
+
+    if destination.exists() {
+        return Err(FileOperationError::DestinationExists(
+            destination.display().to_string(),
+        ));
+    }
+
+    if metadata.is_dir() && (destination.starts_with(&source) || source.starts_with(&destination)) {
+        return Err(FileOperationError::InvalidPath(
+            "Folder sumber dan tujuan tidak valid".to_string(),
+        ));
+    }
+
+    fs::rename(&source, &destination)?;
+
+    Ok(())
 }
 
 pub fn delete_entry(path: std::string::String) -> Result<(), std::string::String> {

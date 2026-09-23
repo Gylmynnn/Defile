@@ -23,4 +23,28 @@ class FileSystemService {
   Future<void> deleteEntry(String path) {
     return rust.deleteEntry(path: path);
   }
+
+  Future<void> copyEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+  }) {
+    return rust.copyEntry(
+      sourcePath: sourcePath,
+      destinationDirectory: destinationDirectory,
+      newName: newName,
+    );
+  }
+
+  Future<void> moveEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+  }) {
+    return rust.moveEntry(
+      sourcePath: sourcePath,
+      destinationDirectory: destinationDirectory,
+      newName: newName,
+    );
+  }
 }
