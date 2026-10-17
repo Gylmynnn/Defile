@@ -2,6 +2,7 @@ use std::{
     fs, io,
     path::{Path, PathBuf},
     process::Command,
+    time::UNIX_EPOCH,
 };
 
 #[derive(Debug, Clone)]
@@ -10,6 +11,30 @@ pub struct FileEntry {
     pub path: std::string::String,
     pub is_directory: bool,
     pub is_file: bool,
+    pub size_bytes: u64,
+    pub modified_seconds: i64,
+}
+
+pub(crate) fn entry_from_metadata(
+    name: std::string::String,
+    path: std::string::String,
+    metadata: &fs::Metadata,
+) -> FileEntry {
+    let modified_seconds = metadata
+        .modified()
+        .ok()
+        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or(0);
+
+    FileEntry {
+        name,
+        path,
+        is_directory: metadata.is_dir(),
+        is_file: metadata.is_file(),
+        size_bytes: metadata.len(),
+        modified_seconds,
+    }
 }
 
 #[derive(Debug)]
@@ -178,6 +203,26 @@ pub fn delete_entry(path: std::string::String) -> Result<(), std::string::String
     Ok(())
 }
 
+pub fn delete_entry_recursive(path: std::string::String) -> Result<(), std::string::String> {
+    let target = Path::new(&path);
+
+    let metadata = fs::symlink_metadata(target)
+        .map_err(|error| format!("Item tidak ditemukan atau tidak dapat diakses: {error}"))?;
+
+    let file_type = metadata.file_type();
+
+    if file_type.is_symlink() || file_type.is_file() {
+        fs::remove_file(target).map_err(|error| format!("Gagal menghapus file: {error}"))?;
+    } else if file_type.is_dir() {
+        fs::remove_dir_all(target)
+            .map_err(|error| format!("Gagal menghapus folder dan isinya: {error}"))?;
+    } else {
+        return Err("Tipe item tidak didukung".to_string());
+    }
+
+    Ok(())
+}
+
 pub fn rename_entry(
     source_path: std::string::String,
     new_name: std::string::String,
@@ -270,12 +315,7 @@ pub fn list_directory(path: std::string::String) -> Result<Vec<FileEntry>, std::
         let name = entry.file_name().to_string_lossy().into_owned();
         let path = item_path.to_string_lossy().into_owned();
 
-        result.push(FileEntry {
-            name,
-            path,
-            is_directory: metadata.is_dir(),
-            is_file: metadata.is_file(),
-        });
+        result.push(entry_from_metadata(name, path, &metadata));
     }
 
     result.sort_by(|a, b| {

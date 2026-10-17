@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'file_entry.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `copy_directory_recursive`, `validate_name`
+// These functions are ignored because they are not marked as `pub`: `copy_directory_recursive`, `entry_from_metadata`, `validate_name`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `fmt`, `from`
 
 Future<void> copyEntry({
@@ -34,6 +34,9 @@ Future<void> moveEntry({
 
 Future<void> deleteEntry({required String path}) =>
     RustLib.instance.api.crateApiFileEntryDeleteEntry(path: path);
+
+Future<void> deleteEntryRecursive({required String path}) =>
+    RustLib.instance.api.crateApiFileEntryDeleteEntryRecursive(path: path);
 
 Future<String> renameEntry({
   required String sourcePath,
@@ -62,17 +65,26 @@ class FileEntry {
   final String path;
   final bool isDirectory;
   final bool isFile;
+  final BigInt sizeBytes;
+  final PlatformInt64 modifiedSeconds;
 
   const FileEntry({
     required this.name,
     required this.path,
     required this.isDirectory,
     required this.isFile,
+    required this.sizeBytes,
+    required this.modifiedSeconds,
   });
 
   @override
   int get hashCode =>
-      name.hashCode ^ path.hashCode ^ isDirectory.hashCode ^ isFile.hashCode;
+      name.hashCode ^
+      path.hashCode ^
+      isDirectory.hashCode ^
+      isFile.hashCode ^
+      sizeBytes.hashCode ^
+      modifiedSeconds.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -82,7 +94,9 @@ class FileEntry {
           name == other.name &&
           path == other.path &&
           isDirectory == other.isDirectory &&
-          isFile == other.isFile;
+          isFile == other.isFile &&
+          sizeBytes == other.sizeBytes &&
+          modifiedSeconds == other.modifiedSeconds;
 }
 
 @freezed

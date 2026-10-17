@@ -4,7 +4,10 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/file_entry.dart';
+import 'api/icon_theme.dart';
+import 'api/properties.dart';
 import 'api/simple.dart';
+import 'api/system.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -70,7 +73,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -223898233;
+  int get rustContentHash => -1533139169;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -95,12 +98,49 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiFileEntryDeleteEntry({required String path});
 
+  Future<void> crateApiFileEntryDeleteEntryRecursive({required String path});
+
+  Future<void> crateApiSystemDeleteFromTrash({required String path});
+
+  Future<int> crateApiSystemEmptyTrash();
+
+  Future<String?> crateApiIconThemeFindIcon({
+    required String theme,
+    required List<String> iconNames,
+    required int size,
+  });
+
+  Future<DiskUsage> crateApiSystemGetDiskUsage({required String path});
+
+  Future<EntryProperties> crateApiPropertiesGetEntryProperties({
+    required String path,
+  });
+
+  String crateApiSystemGetHomeDirectory();
+
+  Future<String> crateApiIconThemeGetIconTheme();
+
   String crateApiSimpleGreet({required String name});
+
+  Future<Uint8List?> crateApiIconThemeIconPng({
+    required String theme,
+    required List<String> iconNames,
+    required int size,
+  });
 
   Future<void> crateApiSimpleInitApp();
 
   Future<List<FileEntry>> crateApiFileEntryListDirectory({
     required String path,
+  });
+
+  Future<List<IconThemeEntry>> crateApiIconThemeListIconThemes();
+
+  Future<List<Place>> crateApiSystemListPlaces();
+
+  Future<List<FileEntry>> crateApiSystemListRecentFiles({
+    required String root,
+    required int limit,
   });
 
   Future<void> crateApiFileEntryMoveEntry({
@@ -109,12 +149,18 @@ abstract class RustLibApi extends BaseApi {
     required String newName,
   });
 
+  Future<String> crateApiSystemMoveToTrash({required String path});
+
   Future<void> crateApiFileEntryOpenFile({required String path});
+
+  Future<void> crateApiSystemOpenInTerminal({required String path});
 
   Future<String> crateApiFileEntryRenameEntry({
     required String sourcePath,
     required String newName,
   });
+
+  Future<void> crateApiIconThemeSetIconTheme({required String name});
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -225,13 +271,245 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "delete_entry", argNames: ["path"]);
 
   @override
+  Future<void> crateApiFileEntryDeleteEntryRecursive({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFileEntryDeleteEntryRecursiveConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFileEntryDeleteEntryRecursiveConstMeta =>
+      const TaskConstMeta(
+        debugName: "delete_entry_recursive",
+        argNames: ["path"],
+      );
+
+  @override
+  Future<void> crateApiSystemDeleteFromTrash({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSystemDeleteFromTrashConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSystemDeleteFromTrashConstMeta =>
+      const TaskConstMeta(debugName: "delete_from_trash", argNames: ["path"]);
+
+  @override
+  Future<int> crateApiSystemEmptyTrash() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_32,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSystemEmptyTrashConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSystemEmptyTrashConstMeta =>
+      const TaskConstMeta(debugName: "empty_trash", argNames: []);
+
+  @override
+  Future<String?> crateApiIconThemeFindIcon({
+    required String theme,
+    required List<String> iconNames,
+    required int size,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(theme, serializer);
+          sse_encode_list_String(iconNames, serializer);
+          sse_encode_u_32(size, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiIconThemeFindIconConstMeta,
+        argValues: [theme, iconNames, size],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIconThemeFindIconConstMeta => const TaskConstMeta(
+    debugName: "find_icon",
+    argNames: ["theme", "iconNames", "size"],
+  );
+
+  @override
+  Future<DiskUsage> crateApiSystemGetDiskUsage({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_disk_usage,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSystemGetDiskUsageConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSystemGetDiskUsageConstMeta =>
+      const TaskConstMeta(debugName: "get_disk_usage", argNames: ["path"]);
+
+  @override
+  Future<EntryProperties> crateApiPropertiesGetEntryProperties({
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_entry_properties,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPropertiesGetEntryPropertiesConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesGetEntryPropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_entry_properties",
+        argNames: ["path"],
+      );
+
+  @override
+  String crateApiSystemGetHomeDirectory() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSystemGetHomeDirectoryConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSystemGetHomeDirectoryConstMeta =>
+      const TaskConstMeta(debugName: "get_home_directory", argNames: []);
+
+  @override
+  Future<String> crateApiIconThemeGetIconTheme() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiIconThemeGetIconThemeConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIconThemeGetIconThemeConstMeta =>
+      const TaskConstMeta(debugName: "get_icon_theme", argNames: []);
+
+  @override
   String crateApiSimpleGreet({required String name}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -248,6 +526,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "greet", argNames: ["name"]);
 
   @override
+  Future<Uint8List?> crateApiIconThemeIconPng({
+    required String theme,
+    required List<String> iconNames,
+    required int size,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(theme, serializer);
+          sse_encode_list_String(iconNames, serializer);
+          sse_encode_u_32(size, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_list_prim_u_8_strict,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiIconThemeIconPngConstMeta,
+        argValues: [theme, iconNames, size],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIconThemeIconPngConstMeta => const TaskConstMeta(
+    debugName: "icon_png",
+    argNames: ["theme", "iconNames", "size"],
+  );
+
+  @override
   Future<void> crateApiSimpleInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -256,7 +570,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 14,
             port: port_,
           );
         },
@@ -286,7 +600,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 15,
             port: port_,
           );
         },
@@ -305,6 +619,95 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "list_directory", argNames: ["path"]);
 
   @override
+  Future<List<IconThemeEntry>> crateApiIconThemeListIconThemes() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_icon_theme_entry,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiIconThemeListIconThemesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIconThemeListIconThemesConstMeta =>
+      const TaskConstMeta(debugName: "list_icon_themes", argNames: []);
+
+  @override
+  Future<List<Place>> crateApiSystemListPlaces() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_place,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSystemListPlacesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSystemListPlacesConstMeta =>
+      const TaskConstMeta(debugName: "list_places", argNames: []);
+
+  @override
+  Future<List<FileEntry>> crateApiSystemListRecentFiles({
+    required String root,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_file_entry,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSystemListRecentFilesConstMeta,
+        argValues: [root, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSystemListRecentFilesConstMeta =>
+      const TaskConstMeta(
+        debugName: "list_recent_files",
+        argNames: ["root", "limit"],
+      );
+
+  @override
   Future<void> crateApiFileEntryMoveEntry({
     required String sourcePath,
     required String destinationDirectory,
@@ -320,7 +723,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 19,
             port: port_,
           );
         },
@@ -341,6 +744,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Future<String> crateApiSystemMoveToTrash({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSystemMoveToTrashConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSystemMoveToTrashConstMeta =>
+      const TaskConstMeta(debugName: "move_to_trash", argNames: ["path"]);
+
+  @override
   Future<void> crateApiFileEntryOpenFile({required String path}) {
     return handler.executeNormal(
       NormalTask(
@@ -350,7 +781,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 21,
             port: port_,
           );
         },
@@ -369,6 +800,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "open_file", argNames: ["path"]);
 
   @override
+  Future<void> crateApiSystemOpenInTerminal({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSystemOpenInTerminalConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSystemOpenInTerminalConstMeta =>
+      const TaskConstMeta(debugName: "open_in_terminal", argNames: ["path"]);
+
+  @override
   Future<String> crateApiFileEntryRenameEntry({
     required String sourcePath,
     required String newName,
@@ -382,7 +841,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 23,
             port: port_,
           );
         },
@@ -403,6 +862,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["sourcePath", "newName"],
       );
 
+  @override
+  Future<void> crateApiIconThemeSetIconTheme({required String name}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 24,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiIconThemeSetIconThemeConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIconThemeSetIconThemeConstMeta =>
+      const TaskConstMeta(debugName: "set_icon_theme", argNames: ["name"]);
+
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -416,16 +903,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  FileEntry dco_decode_file_entry(dynamic raw) {
+  DiskUsage dco_decode_disk_usage(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
     if (arr.length != 4)
       throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return DiskUsage(
+      path: dco_decode_String(arr[0]),
+      totalBytes: dco_decode_u_64(arr[1]),
+      freeBytes: dco_decode_u_64(arr[2]),
+      usedBytes: dco_decode_u_64(arr[3]),
+    );
+  }
+
+  @protected
+  EntryProperties dco_decode_entry_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return EntryProperties(
+      name: dco_decode_String(arr[0]),
+      path: dco_decode_String(arr[1]),
+      kind: dco_decode_String(arr[2]),
+      linkTarget: dco_decode_opt_String(arr[3]),
+      isDirectory: dco_decode_bool(arr[4]),
+      sizeBytes: dco_decode_u_64(arr[5]),
+      sizeOnDiskBytes: dco_decode_u_64(arr[6]),
+      createdSeconds: dco_decode_i_64(arr[7]),
+      modifiedSeconds: dco_decode_i_64(arr[8]),
+      accessedSeconds: dco_decode_i_64(arr[9]),
+      fileCount: dco_decode_u_64(arr[10]),
+      folderCount: dco_decode_u_64(arr[11]),
+    );
+  }
+
+  @protected
+  FileEntry dco_decode_file_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return FileEntry(
       name: dco_decode_String(arr[0]),
       path: dco_decode_String(arr[1]),
       isDirectory: dco_decode_bool(arr[2]),
       isFile: dco_decode_bool(arr[3]),
+      sizeBytes: dco_decode_u_64(arr[4]),
+      modifiedSeconds: dco_decode_i_64(arr[5]),
     );
   }
 
@@ -449,15 +974,100 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
+  IconThemeEntry dco_decode_icon_theme_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return IconThemeEntry(
+      name: dco_decode_String(arr[0]),
+      path: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
   List<FileEntry> dco_decode_list_file_entry(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_file_entry).toList();
   }
 
   @protected
+  List<IconThemeEntry> dco_decode_list_icon_theme_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_icon_theme_entry).toList();
+  }
+
+  @protected
+  List<Place> dco_decode_list_place(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_place).toList();
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_prim_u_8_strict(raw);
+  }
+
+  @protected
+  Place dco_decode_place(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return Place(
+      label: dco_decode_String(arr[0]),
+      path: dco_decode_String(arr[1]),
+      kind: dco_decode_place_kind(arr[2]),
+    );
+  }
+
+  @protected
+  PlaceKind dco_decode_place_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PlaceKind.values[raw as int];
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
   }
 
   @protected
@@ -486,17 +1096,67 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DiskUsage sse_decode_disk_usage(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_path = sse_decode_String(deserializer);
+    var var_totalBytes = sse_decode_u_64(deserializer);
+    var var_freeBytes = sse_decode_u_64(deserializer);
+    var var_usedBytes = sse_decode_u_64(deserializer);
+    return DiskUsage(
+      path: var_path,
+      totalBytes: var_totalBytes,
+      freeBytes: var_freeBytes,
+      usedBytes: var_usedBytes,
+    );
+  }
+
+  @protected
+  EntryProperties sse_decode_entry_properties(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_linkTarget = sse_decode_opt_String(deserializer);
+    var var_isDirectory = sse_decode_bool(deserializer);
+    var var_sizeBytes = sse_decode_u_64(deserializer);
+    var var_sizeOnDiskBytes = sse_decode_u_64(deserializer);
+    var var_createdSeconds = sse_decode_i_64(deserializer);
+    var var_modifiedSeconds = sse_decode_i_64(deserializer);
+    var var_accessedSeconds = sse_decode_i_64(deserializer);
+    var var_fileCount = sse_decode_u_64(deserializer);
+    var var_folderCount = sse_decode_u_64(deserializer);
+    return EntryProperties(
+      name: var_name,
+      path: var_path,
+      kind: var_kind,
+      linkTarget: var_linkTarget,
+      isDirectory: var_isDirectory,
+      sizeBytes: var_sizeBytes,
+      sizeOnDiskBytes: var_sizeOnDiskBytes,
+      createdSeconds: var_createdSeconds,
+      modifiedSeconds: var_modifiedSeconds,
+      accessedSeconds: var_accessedSeconds,
+      fileCount: var_fileCount,
+      folderCount: var_folderCount,
+    );
+  }
+
+  @protected
   FileEntry sse_decode_file_entry(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_name = sse_decode_String(deserializer);
     var var_path = sse_decode_String(deserializer);
     var var_isDirectory = sse_decode_bool(deserializer);
     var var_isFile = sse_decode_bool(deserializer);
+    var var_sizeBytes = sse_decode_u_64(deserializer);
+    var var_modifiedSeconds = sse_decode_i_64(deserializer);
     return FileEntry(
       name: var_name,
       path: var_path,
       isDirectory: var_isDirectory,
       isFile: var_isFile,
+      sizeBytes: var_sizeBytes,
+      modifiedSeconds: var_modifiedSeconds,
     );
   }
 
@@ -529,6 +1189,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  IconThemeEntry sse_decode_icon_theme_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    return IconThemeEntry(name: var_name, path: var_path);
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -541,10 +1233,86 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<IconThemeEntry> sse_decode_list_icon_theme_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <IconThemeEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_icon_theme_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<Place> sse_decode_list_place(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <Place>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_place(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_prim_u_8_strict(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  Place sse_decode_place(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_label = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_kind = sse_decode_place_kind(deserializer);
+    return Place(label: var_label, path: var_path, kind: var_kind);
+  }
+
+  @protected
+  PlaceKind sse_decode_place_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return PlaceKind.values[inner];
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
   }
 
   @protected
@@ -556,12 +1324,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_decode_unit(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-  }
-
-  @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
   }
 
   @protected
@@ -577,12 +1339,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_disk_usage(DiskUsage self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.path, serializer);
+    sse_encode_u_64(self.totalBytes, serializer);
+    sse_encode_u_64(self.freeBytes, serializer);
+    sse_encode_u_64(self.usedBytes, serializer);
+  }
+
+  @protected
+  void sse_encode_entry_properties(
+    EntryProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_opt_String(self.linkTarget, serializer);
+    sse_encode_bool(self.isDirectory, serializer);
+    sse_encode_u_64(self.sizeBytes, serializer);
+    sse_encode_u_64(self.sizeOnDiskBytes, serializer);
+    sse_encode_i_64(self.createdSeconds, serializer);
+    sse_encode_i_64(self.modifiedSeconds, serializer);
+    sse_encode_i_64(self.accessedSeconds, serializer);
+    sse_encode_u_64(self.fileCount, serializer);
+    sse_encode_u_64(self.folderCount, serializer);
+  }
+
+  @protected
   void sse_encode_file_entry(FileEntry self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.name, serializer);
     sse_encode_String(self.path, serializer);
     sse_encode_bool(self.isDirectory, serializer);
     sse_encode_bool(self.isFile, serializer);
+    sse_encode_u_64(self.sizeBytes, serializer);
+    sse_encode_i_64(self.modifiedSeconds, serializer);
   }
 
   @protected
@@ -611,6 +1404,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_icon_theme_entry(
+    IconThemeEntry self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.path, serializer);
+  }
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_file_entry(
     List<FileEntry> self,
     SseSerializer serializer,
@@ -619,6 +1443,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_file_entry(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_icon_theme_entry(
+    List<IconThemeEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_icon_theme_entry(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_place(List<Place> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_place(item, serializer);
     }
   }
 
@@ -633,6 +1478,55 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_list_prim_u_8_strict(
+    Uint8List? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_prim_u_8_strict(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_place(Place self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.label, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_place_kind(self.kind, serializer);
+  }
+
+  @protected
+  void sse_encode_place_kind(PlaceKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
+  }
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self);
@@ -641,11 +1535,5 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-  }
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
   }
 }

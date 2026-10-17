@@ -4,7 +4,10 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api/file_entry.dart';
+import 'api/icon_theme.dart';
+import 'api/properties.dart';
 import 'api/simple.dart';
+import 'api/system.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -29,16 +32,58 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  DiskUsage dco_decode_disk_usage(dynamic raw);
+
+  @protected
+  EntryProperties dco_decode_entry_properties(dynamic raw);
+
+  @protected
   FileEntry dco_decode_file_entry(dynamic raw);
 
   @protected
   FileOperationError dco_decode_file_operation_error(dynamic raw);
 
   @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
+  IconThemeEntry dco_decode_icon_theme_entry(dynamic raw);
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
   List<FileEntry> dco_decode_list_file_entry(dynamic raw);
 
   @protected
+  List<IconThemeEntry> dco_decode_list_icon_theme_entry(dynamic raw);
+
+  @protected
+  List<Place> dco_decode_list_place(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  Place dco_decode_place(dynamic raw);
+
+  @protected
+  PlaceKind dco_decode_place_kind(dynamic raw);
+
+  @protected
+  int dco_decode_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -53,6 +98,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  DiskUsage sse_decode_disk_usage(SseDeserializer deserializer);
+
+  @protected
+  EntryProperties sse_decode_entry_properties(SseDeserializer deserializer);
+
+  @protected
   FileEntry sse_decode_file_entry(SseDeserializer deserializer);
 
   @protected
@@ -61,10 +112,48 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  IconThemeEntry sse_decode_icon_theme_entry(SseDeserializer deserializer);
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
   List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer);
 
   @protected
+  List<IconThemeEntry> sse_decode_list_icon_theme_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<Place> sse_decode_list_place(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  Place sse_decode_place(SseDeserializer deserializer);
+
+  @protected
+  PlaceKind sse_decode_place_kind(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -73,13 +162,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_disk_usage(DiskUsage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_entry_properties(
+    EntryProperties self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_file_entry(FileEntry self, SseSerializer serializer);
@@ -91,10 +186,34 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_icon_theme_entry(
+    IconThemeEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_file_entry(
     List<FileEntry> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_list_icon_theme_entry(
+    List<IconThemeEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_place(List<Place> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -103,13 +222,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_list_prim_u_8_strict(
+    Uint8List? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_place(Place self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_place_kind(PlaceKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class
