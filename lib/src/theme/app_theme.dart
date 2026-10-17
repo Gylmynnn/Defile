@@ -36,7 +36,12 @@ abstract final class AppColors {
 }
 
 abstract final class AppTheme {
-  static ThemeData dark() {
+  static ThemeData dark({String? fontFamily}) {
+    final String? resolvedFamily =
+        (fontFamily != null && fontFamily.trim().isNotEmpty)
+            ? fontFamily.trim()
+            : null;
+
     final ThemeData base = ThemeData.dark(useMaterial3: true);
     final ColorScheme scheme = base.colorScheme.copyWith(
       primary: AppColors.accent,
@@ -61,16 +66,24 @@ abstract final class AppTheme {
       ),
       textTheme: base.textTheme
           .apply(
+            fontFamily: resolvedFamily,
             bodyColor: AppColors.textPrimary,
             displayColor: AppColors.textPrimary,
           )
           .copyWith(
             bodySmall: base.textTheme.bodySmall?.copyWith(
+              fontFamily: resolvedFamily,
               fontSize: 12,
               color: AppColors.textSecondary,
             ),
-            bodyMedium: base.textTheme.bodyMedium?.copyWith(fontSize: 13),
-            titleMedium: base.textTheme.titleMedium?.copyWith(fontSize: 14),
+            bodyMedium: base.textTheme.bodyMedium?.copyWith(
+              fontFamily: resolvedFamily,
+              fontSize: 13,
+            ),
+            titleMedium: base.textTheme.titleMedium?.copyWith(
+              fontFamily: resolvedFamily,
+              fontSize: 14,
+            ),
           ),
       iconTheme: const IconThemeData(color: AppColors.textSecondary, size: 18),
       dialogTheme: DialogThemeData(
@@ -80,19 +93,22 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(10),
           side: const BorderSide(color: AppColors.border),
         ),
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
+          fontFamily: resolvedFamily,
           fontSize: 15,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
-        contentTextStyle: const TextStyle(
+        contentTextStyle: TextStyle(
+          fontFamily: resolvedFamily,
           fontSize: 13,
           color: AppColors.textSecondary,
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.surfaceHigh,
-        contentTextStyle: const TextStyle(
+        contentTextStyle: TextStyle(
+          fontFamily: resolvedFamily,
           color: AppColors.textPrimary,
           fontSize: 12.5,
         ),
@@ -108,7 +124,8 @@ abstract final class AppTheme {
           border: Border.all(color: AppColors.border),
           borderRadius: BorderRadius.circular(5),
         ),
-        textStyle: const TextStyle(
+        textStyle: TextStyle(
+          fontFamily: resolvedFamily,
           color: AppColors.textPrimary,
           fontSize: 11.5,
         ),

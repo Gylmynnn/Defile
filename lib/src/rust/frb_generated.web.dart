@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/file_entry.dart';
+import 'api/font.dart';
 import 'api/icon_theme.dart';
 import 'api/properties.dart';
 import 'api/simple.dart';
