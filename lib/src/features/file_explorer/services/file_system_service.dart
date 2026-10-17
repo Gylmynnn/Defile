@@ -1,4 +1,5 @@
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
+import 'package:defile/src/rust/api/system.dart' as rust_system;
 
 class FileSystemService {
   Future<List<rust.FileEntry>> listDirectory(String path) {
@@ -22,6 +23,22 @@ class FileSystemService {
 
   Future<void> deleteEntry(String path) {
     return rust.deleteEntry(path: path);
+  }
+
+  Future<void> deleteEntryRecursive(String path) {
+    return rust.deleteEntryRecursive(path: path);
+  }
+
+  Future<String> moveToTrash(String path) {
+    return rust_system.moveToTrash(path: path);
+  }
+
+  Future<void> deleteFromTrash(String path) {
+    return rust_system.deleteFromTrash(path: path);
+  }
+
+  Future<int> emptyTrash() {
+    return rust_system.emptyTrash();
   }
 
   Future<void> copyEntry({

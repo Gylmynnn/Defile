@@ -10,9 +10,10 @@ class DirectoryPickerController extends GetxController {
 
   final FileSystemService fileSystemService;
 
-  final currentPath = ''.obs;
-  final directories = <rust.FileEntry>[].obs;
-  final isLoading = false.obs;
+  final RxString currentPath = ''.obs;
+  final RxList<rust.FileEntry> directories = <rust.FileEntry>[].obs;
+  final RxBool isLoading = false.obs;
+  final RxnString errorMessage = RxnString();
 
   Future<void> initialize(String initialPath) async {
     currentPath.value = initialPath;
@@ -21,13 +22,14 @@ class DirectoryPickerController extends GetxController {
 
   Future<void> loadDirectories() async {
     isLoading.value = true;
-
+    errorMessage.value = null;
     try {
       final entries = await fileSystemService.listDirectory(currentPath.value);
 
       directories.assignAll(entries.where((entry) => entry.isDirectory));
     } catch (error) {
-      Get.snackbar('Gagal memuat folder', error.toString());
+      directories.clear();
+      errorMessage.value = error.toString();
     } finally {
       isLoading.value = false;
     }
