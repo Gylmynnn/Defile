@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../../../theme/theme_palette.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../services/font_service.dart';
 import '../../services/icon_theme_service.dart';
+import '../../services/theme_service.dart';
 import 'entry_glyphs.dart';
 import 'themed_icon.dart';
 
@@ -225,6 +227,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   IconThemeService get _iconService => Get.find<IconThemeService>();
   FontService get _fontService => Get.find<FontService>();
+  ThemeService get _themeService => Get.find<ThemeService>();
   FileExplorerController? get _explorerController =>
       Get.isRegistered<FileExplorerController>()
           ? Get.find<FileExplorerController>()
@@ -261,63 +264,72 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final double dialogHeight =
         (screenSize.height * 0.84).clamp(500.0, 680.0);
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      child: Center(
-        child: Container(
-          width: dialogWidth,
-          height: dialogHeight,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: const Color(0xFF16181A),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF2C3033), width: 1),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0xA6000000),
-                blurRadius: 36,
-                offset: Offset(0, 14),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Left Sidebar
-              SizedBox(
-                width: 235,
-                child: _buildSidebar(),
-              ),
+    return Obx(() {
+      _themeService.baseThemeId.value;
+      _themeService.accentId.value;
 
-              // Vertical Border Divider
-              Container(
-                width: 1,
-                color: const Color(0xFF232628),
-              ),
-
-              // Right Content Panel
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: _buildContentPanel(),
-                    ),
-                    // Close button at top right
-                    Positioned(
-                      top: 14,
-                      right: 18,
-                      child: _CloseButton(onTap: () => Navigator.of(context).pop()),
-                    ),
-                  ],
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        shape: const RoundedRectangleBorder(),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: Center(
+          child: Container(
+            width: dialogWidth,
+            height: dialogHeight,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: AppColors.windowDeep,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0xA6000000),
+                  blurRadius: 36,
+                  offset: Offset(0, 14),
                 ),
-              ),
-            ],
+              ],
+            ),
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.cardBorder, width: 1),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Left Sidebar
+                SizedBox(
+                  width: 235,
+                  child: _buildSidebar(),
+                ),
+
+                // Vertical Border Divider
+                Container(
+                  width: 1,
+                  color: AppColors.divider,
+                ),
+
+                // Right Content Panel
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: _buildContentPanel(),
+                      ),
+                      // Close button at top right
+                      Positioned(
+                        top: 14,
+                        right: 18,
+                        child: _CloseButton(onTap: () => Navigator.of(context).pop()),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   // ==========================================
@@ -342,7 +354,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     }
 
     return Container(
-      color: const Color(0xFF131517),
+      color: AppColors.sidebarDeep,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -354,12 +366,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
           // Scrollable Sidebar Navigation
           Expanded(
             child: grouped.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'No matching settings',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF6B7275),
+                        color: AppColors.textFaint,
                       ),
                     ),
                   )
@@ -387,13 +399,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
       height: 32,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1C1E),
+        color: AppColors.input,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFF282C2E), width: 1),
+        border: Border.all(color: AppColors.inputBorder, width: 1),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, size: 14, color: Color(0xFF6B7276)),
+          Icon(Icons.search, size: 14, color: AppColors.textFaint),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -401,11 +413,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
               onChanged: _onSearchChanged,
               cursorHeight: 14,
               cursorColor: AppColors.accent,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFFDCDDDD),
+                color: AppColors.textPrimary,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
                 filled: false,
                 border: InputBorder.none,
@@ -415,7 +427,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 hintText: 'Search settings...',
                 hintStyle: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF636A6E),
+                  color: AppColors.textFaint,
                 ),
               ),
             ),
@@ -426,11 +438,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 _searchController.clear();
                 _onSearchChanged('');
               },
-              child: const MouseRegion(
+              child: MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: Padding(
                   padding: EdgeInsets.all(2),
-                  child: Icon(Icons.close, size: 13, color: Color(0xFF828A8D)),
+                  child: Icon(Icons.close, size: 13, color: AppColors.textFaint),
                 ),
               ),
             ),
@@ -444,10 +456,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
       padding: const EdgeInsets.only(left: 6, bottom: 4),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF6B7276),
+          color: AppColors.textFaint,
         ),
       ),
     );
@@ -473,7 +485,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
   // ==========================================
   Widget _buildContentPanel() {
     return Container(
-      color: const Color(0xFF17191B),
+      color: AppColors.panel,
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(28, 22, 28, 36),
         child: Column(
@@ -517,7 +529,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 },
               ),
             ),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Automatic updates',
               subtitle: 'Turn this off to prevent the app from checking for updates.',
@@ -526,7 +538,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 onChanged: (val) => setState(() => _automaticUpdates = val),
               ),
             ),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Language',
               subtitle: 'Change the display language.\nLearn how to add a new language to Obsidian.',
@@ -544,7 +556,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 },
               ),
             ),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Help',
               subtitle: 'Learn how to use Obsidian and get help from the community.',
@@ -584,7 +596,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ],
               ),
             ),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Commercial license',
               subtitle: 'Help keep Obsidian 100% user-supported.',
@@ -622,7 +634,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               control: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.timer_outlined, size: 16, color: Color(0xFF707679)),
+                  Icon(Icons.timer_outlined, size: 16, color: AppColors.textFaint),
                   const SizedBox(width: 8),
                   _ObsidianSwitch(
                     value: _notifyStartup,
@@ -631,7 +643,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ],
               ),
             ),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Hardware acceleration',
               subtitle: 'Use GPU acceleration for smoother file rendering and animations.',
@@ -640,7 +652,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 onChanged: (val) => setState(() => _hardwareAcceleration = val),
               ),
             ),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Command line interface',
               subtitle: 'Install defile launcher to open folders and files directly from shell.',
@@ -683,13 +695,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF26292C),
+                        color: AppColors.chip,
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: const Color(0xFF383C40)),
+                        border: Border.all(color: AppColors.chipBorder),
                       ),
                       child: Text(
                         display,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w500,
                           color: AppColors.accent,
@@ -705,7 +717,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               );
             }),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             Padding(
               padding: const EdgeInsets.all(12),
               child: _buildThemeSearchField(),
@@ -739,13 +751,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF26292C),
+                        color: AppColors.chip,
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: const Color(0xFF383C40)),
+                        border: Border.all(color: AppColors.chipBorder),
                       ),
                       child: Text(
                         display,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w500,
                           color: AppColors.accent,
@@ -761,7 +773,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               );
             }),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             Padding(
               padding: const EdgeInsets.all(12),
               child: _buildFontSearchField(),
@@ -779,36 +791,116 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
         _ObsidianSectionCard(
           children: [
-            _ObsidianSettingRow(
-              title: 'Base color theme',
-              subtitle: 'Select base dark scheme.',
-              control: _ObsidianDropdown<String>(
-                value: 'Obsidian Dark',
-                items: const [
-                  DropdownMenuItem(value: 'Obsidian Dark', child: Text('Obsidian Dark')),
-                  DropdownMenuItem(value: 'Midnight Black', child: Text('Midnight Black')),
-                  DropdownMenuItem(value: 'Charcoal', child: Text('Charcoal')),
-                ],
-                onChanged: (_) {},
-              ),
-            ),
-            const _ObsidianDivider(),
-            _ObsidianSettingRow(
-              title: 'Accent color',
-              subtitle: 'Color highlight for selections, badges, and focus rings.',
-              control: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _ColorDot(color: AppColors.accent, isSelected: true, onTap: () {}),
-                  const SizedBox(width: 6),
-                  _ColorDot(color: const Color(0xFF7C54E8), isSelected: false, onTap: () {}),
-                  const SizedBox(width: 6),
-                  _ColorDot(color: const Color(0xFF4A90E2), isSelected: false, onTap: () {}),
-                  const SizedBox(width: 6),
-                  _ColorDot(color: const Color(0xFF48BB78), isSelected: false, onTap: () {}),
-                ],
-              ),
-            ),
+            Obx(() {
+              final String currentTheme = _themeService.baseThemeId.value;
+
+              return _ObsidianSettingRow(
+                title: 'Base color theme',
+                subtitle: 'Select the base dark scheme for the whole interface.',
+                control: _ObsidianDropdown<String>(
+                  value: AppPalettes.byId(currentTheme).id,
+                  items: [
+                    for (final palette in AppPalettes.all)
+                      DropdownMenuItem(
+                        value: palette.id,
+                        child: Text(palette.label),
+                      ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) _themeService.setBaseTheme(val);
+                  },
+                ),
+              );
+            }),
+            _ObsidianDivider(),
+            Obx(() {
+              final String currentAccent = _themeService.accentId.value;
+
+              return _ObsidianSettingRow(
+                title: 'Accent color',
+                subtitle: 'Color highlight for selections, badges, and focus rings.',
+                control: Wrap(
+                  spacing: 6,
+                  children: [
+                    for (final accent in AppAccents.all)
+                      _ColorDot(
+                        color: accent.color,
+                        isSelected: accent.id == currentAccent,
+                        onTap: () => _themeService.setAccent(accent.id),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+
+        const SizedBox(height: 22),
+        _buildSectionTitle('Display'),
+        const SizedBox(height: 8),
+
+        _ObsidianSectionCard(
+          children: [
+            Obx(() {
+              final double scale = _themeService.uiScale.value;
+
+              return _ObsidianSettingRow(
+                title: 'Interface scale',
+                subtitle:
+                    'Enlarge or shrink the whole interface, similar to display scaling on your monitor.',
+                control: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 168,
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 3,
+                          activeTrackColor: AppColors.accent,
+                          inactiveTrackColor: AppColors.elevated,
+                          thumbColor: AppColors.accent,
+                          overlayShape: SliderComponentShape.noOverlay,
+                          thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 6,
+                          ),
+                        ),
+                        child: Slider(
+                          value: scale,
+                          min: ThemeService.minScale,
+                          max: ThemeService.maxScale,
+                          divisions: 15,
+                          onChanged: _themeService.setUiScale,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 48,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.elevated,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: AppColors.elevatedBorder),
+                      ),
+                      child: Text(
+                        '${(scale * 100).round()}%',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _ObsidianButton(
+                      label: 'Reset',
+                      onTap: () => _themeService.setUiScale(1.0),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       ],
@@ -858,7 +950,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ),
                 );
               }),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             if (controller != null)
               Obx(() {
                 return _ObsidianSettingRow(
@@ -870,7 +962,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ),
                 );
               }),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Show storage usage bar',
               subtitle: 'Display total and available capacity bars underneath mounted drives.',
@@ -907,7 +999,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 onChanged: (val) => setState(() => _confirmTrash = val),
               ),
             ),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Default terminal application',
               subtitle: 'Terminal emulator launched when pressing F4 or clicking terminal icon.',
@@ -925,7 +1017,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               ),
             ),
             if (controller != null) ...[
-              const _ObsidianDivider(),
+              _ObsidianDivider(),
               Obx(() => _ObsidianSettingRow(
                     title: 'Home directory',
                     subtitle: controller.homePath.value,
@@ -973,7 +1065,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         _ObsidianSectionCard(
           children: [
             for (int i = 0; i < shortcuts.length; i++) ...[
-              if (i > 0) const _ObsidianDivider(),
+              if (i > 0) _ObsidianDivider(),
               _ObsidianSettingRow(
                 title: shortcuts[i].$1,
                 control: _buildHotkeyBadge(shortcuts[i].$2),
@@ -997,7 +1089,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 part,
-                style: const TextStyle(fontSize: 11, color: Color(0xFF6B7276)),
+                style: TextStyle(fontSize: 11, color: AppColors.textFaint),
               ),
             )
           else
@@ -1005,16 +1097,16 @@ class _SettingsDialogState extends State<SettingsDialog> {
               margin: const EdgeInsets.symmetric(horizontal: 2),
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color(0xFF26292C),
+                color: AppColors.chip,
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: const Color(0xFF383C40)),
+                border: Border.all(color: AppColors.chipBorder),
               ),
               child: Text(
                 part,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFFD4D8DB),
+                  color: AppColors.textLabel,
                 ),
               ),
             ),
@@ -1047,7 +1139,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 onChanged: (_) {},
               ),
             ),
-            const _ObsidianDivider(),
+            _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Options',
               subtitle: 'Configure specific settings and keybindings for this module.',
@@ -1070,21 +1162,21 @@ class _SettingsDialogState extends State<SettingsDialog> {
       height: 28,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF191B1D),
+        color: AppColors.input,
         borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: const Color(0xFF2A2D30)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, size: 13, color: Color(0xFF6B7276)),
+          Icon(Icons.search, size: 13, color: AppColors.textFaint),
           const SizedBox(width: 6),
           Expanded(
             child: TextField(
               controller: _themeSearchController,
               onChanged: (val) => setState(() => _themeQuery = val.trim().toLowerCase()),
               cursorHeight: 12,
-              style: const TextStyle(fontSize: 11.5, color: Color(0xFFDCDDDD)),
-              decoration: const InputDecoration(
+              style: TextStyle(fontSize: 11.5, color: AppColors.textPrimary),
+              decoration: InputDecoration(
                 isDense: true,
                 filled: false,
                 border: InputBorder.none,
@@ -1092,7 +1184,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 hintText: 'Search icon themes...',
-                hintStyle: TextStyle(fontSize: 11.5, color: Color(0xFF636A6E)),
+                hintStyle: TextStyle(fontSize: 11.5, color: AppColors.textFaint),
               ),
             ),
           ),
@@ -1102,7 +1194,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 _themeSearchController.clear();
                 setState(() => _themeQuery = '');
               },
-              child: const Icon(Icons.close, size: 12, color: Color(0xFF828A8D)),
+              child: Icon(Icons.close, size: 12, color: AppColors.textFaint),
             ),
         ],
       ),
@@ -1112,19 +1204,19 @@ class _SettingsDialogState extends State<SettingsDialog> {
   Widget _buildObsidianThemeList() {
     final String selected = _iconService.themeName.value;
     final List<_ThemeChoice> choices = [
-      const _ThemeChoice(name: '', path: null),
+      _ThemeChoice(name: '', path: null),
       for (final theme in _iconService.themes)
         if (_themeQuery.isEmpty || theme.name.toLowerCase().contains(_themeQuery))
           _ThemeChoice(name: theme.name, path: theme.path),
     ];
 
     if (_iconService.themes.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Text(
             'No installed icon themes found.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF8A9195)),
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
         ),
       );
@@ -1149,21 +1241,21 @@ class _SettingsDialogState extends State<SettingsDialog> {
       height: 28,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF191B1D),
+        color: AppColors.input,
         borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: const Color(0xFF2A2D30)),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, size: 13, color: Color(0xFF6B7276)),
+          Icon(Icons.search, size: 13, color: AppColors.textFaint),
           const SizedBox(width: 6),
           Expanded(
             child: TextField(
               controller: _fontSearchController,
               onChanged: (val) => setState(() => _fontQuery = val.trim().toLowerCase()),
               cursorHeight: 12,
-              style: const TextStyle(fontSize: 11.5, color: Color(0xFFDCDDDD)),
-              decoration: const InputDecoration(
+              style: TextStyle(fontSize: 11.5, color: AppColors.textPrimary),
+              decoration: InputDecoration(
                 isDense: true,
                 filled: false,
                 border: InputBorder.none,
@@ -1171,7 +1263,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 hintText: 'Search fonts...',
-                hintStyle: TextStyle(fontSize: 11.5, color: Color(0xFF636A6E)),
+                hintStyle: TextStyle(fontSize: 11.5, color: AppColors.textFaint),
               ),
             ),
           ),
@@ -1181,7 +1273,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 _fontSearchController.clear();
                 setState(() => _fontQuery = '');
               },
-              child: const Icon(Icons.close, size: 12, color: Color(0xFF828A8D)),
+              child: Icon(Icons.close, size: 12, color: AppColors.textFaint),
             ),
         ],
       ),
@@ -1234,10 +1326,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w700,
-        color: Color(0xFFE2E4E5),
+        color: AppColors.textPrimary,
       ),
     );
   }
@@ -1247,11 +1339,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
       title: title,
       message: message,
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF222528),
+      backgroundColor: AppColors.rowHover,
       borderRadius: 8,
       margin: const EdgeInsets.all(16),
       duration: const Duration(seconds: 3),
-      borderColor: const Color(0xFF383C40),
+      borderColor: AppColors.chipBorder,
       borderWidth: 1,
     );
   }
@@ -1284,12 +1376,12 @@ class _SidebarItemWidgetState extends State<_SidebarItemWidget> {
   @override
   Widget build(BuildContext context) {
     final Color bgColor = widget.active
-        ? const Color(0xFF282B2E)
-        : (_hovered ? const Color(0xFF1E2022) : Colors.transparent);
+        ? AppColors.rowSelected
+        : (_hovered ? AppColors.rowHover : Colors.transparent);
 
     final Color contentColor = widget.active
         ? Colors.white
-        : (_hovered ? const Color(0xFFD4D8DB) : const Color(0xFF949B9E));
+        : (_hovered ? AppColors.textLabel : AppColors.textSecondary);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -1338,9 +1430,9 @@ class _ObsidianSectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E2124),
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF2A2D30), width: 1),
+        border: Border.all(color: AppColors.cardBorder, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1357,7 +1449,7 @@ class _ObsidianDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 1,
-      color: const Color(0xFF26292C),
+      color: AppColors.chip,
     );
   }
 }
@@ -1391,19 +1483,19 @@ class _ObsidianSettingRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFFDFE1E2),
+                    color: AppColors.textStrong,
                   ),
                 ),
                 if (subtitle != null && subtitle!.isNotEmpty) ...[
                   const SizedBox(height: 3),
                   Text(
                     subtitle!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
-                      color: Color(0xFF8A9195),
+                      color: AppColors.textSecondary,
                       height: 1.35,
                     ),
                   ),
@@ -1416,9 +1508,9 @@ class _ObsidianSettingRow extends StatelessWidget {
                       onTap: onLinkTap,
                       child: Text(
                         linkText!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
-                          color: Color(0xFF9EA6A9),
+                          color: AppColors.textSecondary,
                           decoration: TextDecoration.underline,
                         ),
                       ),
@@ -1456,16 +1548,16 @@ class _ObsidianButtonState extends State<_ObsidianButton> {
   @override
   Widget build(BuildContext context) {
     final Color bgColor = _pressed
-        ? const Color(0xFF222528)
+        ? AppColors.rowHover
         : _hovered
-            ? const Color(0xFF33383D)
-            : const Color(0xFF2A2E32);
+            ? AppColors.elevatedHover
+            : AppColors.elevated;
 
     final Color borderColor =
-        _hovered ? const Color(0xFF484E54) : const Color(0xFF3B4045);
+        _hovered ? AppColors.elevatedBorderHover : AppColors.elevatedBorder;
 
     final Color textColor =
-        _hovered ? Colors.white : const Color(0xFFD4D8DB);
+        _hovered ? Colors.white : AppColors.textLabel;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -1523,10 +1615,10 @@ class _ObsidianSwitch extends StatelessWidget {
           height: 19,
           padding: const EdgeInsets.all(2.5),
           decoration: BoxDecoration(
-            color: value ? AppColors.accent : const Color(0xFF26292B),
+            color: value ? AppColors.accent : AppColors.switchTrack,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: value ? AppColors.selectionBorder : const Color(0xFF383C40),
+              color: value ? AppColors.selectionBorder : AppColors.chipBorder,
               width: 1,
             ),
           ),
@@ -1536,7 +1628,7 @@ class _ObsidianSwitch extends StatelessWidget {
             height: 12,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: value ? Colors.white : const Color(0xFF6B7275),
+              color: value ? Colors.white : AppColors.textFaint,
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x4D000000),
@@ -1569,21 +1661,21 @@ class _ObsidianDropdown<T> extends StatelessWidget {
       height: 30,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2E32),
+        color: AppColors.elevated,
         borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: const Color(0xFF3B4045), width: 1),
+        border: Border.all(color: AppColors.elevatedBorder, width: 1),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
           items: items,
           onChanged: onChanged,
-          icon: const Padding(
+          icon: Padding(
             padding: EdgeInsets.only(left: 6),
-            child: Icon(Icons.unfold_more, size: 14, color: Color(0xFF8B9296)),
+            child: Icon(Icons.unfold_more, size: 14, color: AppColors.textFaint),
           ),
-          dropdownColor: const Color(0xFF222528),
-          style: const TextStyle(fontSize: 12, color: Color(0xFFD4D8DB)),
+          dropdownColor: AppColors.rowHover,
+          style: TextStyle(fontSize: 12, color: AppColors.textLabel),
           isDense: true,
           elevation: 4,
           borderRadius: BorderRadius.circular(6),
@@ -1617,13 +1709,13 @@ class _CloseButtonState extends State<_CloseButton> {
           duration: const Duration(milliseconds: 120),
           padding: const EdgeInsets.all(5),
           decoration: BoxDecoration(
-            color: _hovered ? const Color(0xFF2C3034) : Colors.transparent,
+            color: _hovered ? AppColors.elevatedHover : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Icon(
             Icons.close,
             size: 15,
-            color: _hovered ? Colors.white : const Color(0xFF828A8D),
+            color: _hovered ? Colors.white : AppColors.textFaint,
           ),
         ),
       ),
@@ -1670,7 +1762,7 @@ class _ColorDot extends StatelessWidget {
 // =====================================================================
 
 class _ThemeChoice {
-  const _ThemeChoice({required this.name, required this.path});
+  _ThemeChoice({required this.name, required this.path});
 
   final String name;
   final String? path;
@@ -1704,7 +1796,7 @@ class _ObsidianThemeRowState extends State<_ObsidianThemeRow> {
             iconNames: const ['folder', 'inode-directory'],
             size: 18,
             theme: widget.choice.name,
-            fallback: const Icon(
+            fallback: Icon(
               Icons.folder,
               size: 16,
               color: AppColors.textFaint,
@@ -1717,9 +1809,9 @@ class _ObsidianThemeRowState extends State<_ObsidianThemeRow> {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: widget.selected
-            ? const Color(0xFF282B2E)
+            ? AppColors.rowSelected
             : _hovered
-                ? const Color(0xFF222528)
+                ? AppColors.rowHover
                 : Colors.transparent,
         borderRadius: BorderRadius.circular(4),
       ),
@@ -1734,13 +1826,13 @@ class _ObsidianThemeRowState extends State<_ObsidianThemeRow> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12,
-                color: widget.selected ? Colors.white : const Color(0xFFD4D8DB),
+                color: widget.selected ? Colors.white : AppColors.textLabel,
                 fontWeight: widget.selected ? FontWeight.w500 : FontWeight.w400,
               ),
             ),
           ),
           if (widget.selected)
-            const Icon(Icons.check, size: 14, color: AppColors.accent),
+            Icon(Icons.check, size: 14, color: AppColors.accent),
         ],
       ),
     );
@@ -1796,9 +1888,9 @@ class _ObsidianFontRowState extends State<_ObsidianFontRow> {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: widget.selected
-                ? const Color(0xFF282B2E)
+                ? AppColors.rowSelected
                 : _hovered
-                    ? const Color(0xFF222528)
+                    ? AppColors.rowHover
                     : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
@@ -1809,7 +1901,7 @@ class _ObsidianFontRowState extends State<_ObsidianFontRow> {
                 height: 22,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF26292C),
+                  color: AppColors.chip,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -1818,7 +1910,7 @@ class _ObsidianFontRowState extends State<_ObsidianFontRow> {
                     fontFamily: previewFamily,
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
-                    color: widget.selected ? AppColors.accent : const Color(0xFF8A9195),
+                    color: widget.selected ? AppColors.accent : AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -1831,13 +1923,13 @@ class _ObsidianFontRowState extends State<_ObsidianFontRow> {
                   style: TextStyle(
                     fontFamily: previewFamily,
                     fontSize: 12,
-                    color: widget.selected ? Colors.white : const Color(0xFFD4D8DB),
+                    color: widget.selected ? Colors.white : AppColors.textLabel,
                     fontWeight: widget.selected ? FontWeight.w500 : FontWeight.w400,
                   ),
                 ),
               ),
               if (widget.selected)
-                const Icon(Icons.check, size: 14, color: AppColors.accent),
+                Icon(Icons.check, size: 14, color: AppColors.accent),
             ],
           ),
         ),

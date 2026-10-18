@@ -147,7 +147,7 @@ class _GridTileState extends State<_GridTile> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     color: AppColors.textPrimary,
                     height: 1.2,
@@ -188,10 +188,10 @@ class EntryListView extends StatelessWidget {
         Container(
           height: 28,
           padding: const EdgeInsets.symmetric(horizontal: 18),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: AppColors.divider)),
           ),
-          child: const Row(
+          child: Row(
             children: [
               SizedBox(width: 24),
               Expanded(child: Text('Nama', style: _headerStyle)),
@@ -225,7 +225,7 @@ class EntryListView extends StatelessWidget {
   }
 }
 
-const TextStyle _headerStyle = TextStyle(
+TextStyle get _headerStyle => TextStyle(
   fontSize: 11.5,
   fontWeight: FontWeight.w600,
   color: AppColors.textFaint,
@@ -299,7 +299,7 @@ class _ListRowState extends State<_ListRow> {
                     entry.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12.5,
                       color: AppColors.textPrimary,
                     ),
@@ -311,7 +311,7 @@ class _ListRowState extends State<_ListRow> {
                     entry.isFile ? formatBytes(entry.sizeBytes) : '—',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       color: AppColors.textSecondary,
                     ),
@@ -323,7 +323,7 @@ class _ListRowState extends State<_ListRow> {
                     formatDate(entry.modifiedSeconds.toInt()),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       color: AppColors.textSecondary,
                     ),
@@ -335,7 +335,7 @@ class _ListRowState extends State<_ListRow> {
                     entry.isDirectory ? 'Folder' : _typeLabel(entry.name),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       color: AppColors.textSecondary,
                     ),
@@ -353,7 +353,7 @@ class _ListRowState extends State<_ListRow> {
                             );
                           },
                           borderRadius: BorderRadius.circular(4),
-                          child: const Icon(
+                          child: Icon(
                             Icons.more_horiz,
                             size: 16,
                             color: AppColors.textSecondary,
@@ -478,7 +478,7 @@ class _CompactRowState extends State<_CompactRow> {
                     widget.entry.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textPrimary,
                     ),
@@ -513,7 +513,7 @@ class _EntryGlyph extends StatelessWidget {
       return ThemedIcon(
         iconNames: themedIconNamesFor(name: entry.name, isDirectory: true),
         size: 56,
-        fallback: const FolderGlyph(),
+        fallback: FolderGlyph(),
       );
     }
 
@@ -538,7 +538,7 @@ class _EntryMiniIcon extends StatelessWidget {
         child: ThemedIcon(
           iconNames: themedIconNamesFor(name: entry.name, isDirectory: true),
           size: 15,
-          fallback: const Icon(Icons.folder, size: 15, color: AppColors.folder),
+          fallback: Icon(Icons.folder, size: 15, color: AppColors.folder),
         ),
       );
     }

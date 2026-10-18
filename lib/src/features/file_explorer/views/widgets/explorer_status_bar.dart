@@ -14,7 +14,7 @@ class ExplorerStatusBar extends GetView<FileExplorerController> {
   Widget build(BuildContext context) {
     return Container(
       height: 25,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.divider)),
       ),
@@ -32,7 +32,7 @@ class ExplorerStatusBar extends GetView<FileExplorerController> {
               selectedCount > 0
                   ? '$selectedCount dipilih dari ${entries.length} item'
                   : '${entries.length} item ($folders folder, $files file)',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
                 color: AppColors.textSecondary,
               ),
@@ -84,7 +84,7 @@ class _UsageBar extends StatelessWidget {
           value: ratio.clamp(0.0, 1.0),
           minHeight: 4,
           color: usageColor(ratio),
-          backgroundColor: const Color(0xFF2C3032),
+          backgroundColor: AppColors.chip,
         ),
       ),
     );

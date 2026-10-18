@@ -59,7 +59,7 @@ class _FolderPainter extends CustomPainter {
     canvas.drawRRect(
       body,
       Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [AppColors.folder, AppColors.folderDark],

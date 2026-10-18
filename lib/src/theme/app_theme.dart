@@ -1,38 +1,74 @@
 import 'package:flutter/material.dart';
 
+import 'theme_palette.dart';
+
+/// Active application colors. The concrete values are resolved at runtime from
+/// the selected [ThemePalette] and [AccentPreset] so that switching themes
+/// updates every widget that reads these getters.
 abstract final class AppColors {
-  static const Color window = Color(0xFF191B1C);
-  static const Color sidebar = Color(0xFF161819);
-  static const Color surface = Color(0xFF202324);
-  static const Color surfaceHigh = Color(0xFF26292B);
-  static const Color hover = Color(0xFF23272A);
-  static const Color border = Color(0xFF2B2F31);
-  static const Color divider = Color(0xFF25292B);
+  static ThemePalette _palette = AppPalettes.obsidianDark;
+  static AccentPreset _accent = AppAccents.amber;
 
-  static const Color textPrimary = Color(0xFFDCDDDD);
-  static const Color textSecondary = Color(0xFF8C9496);
-  static const Color textFaint = Color(0xFF666E70);
+  static ThemePalette get palette => _palette;
+  static AccentPreset get accentPreset => _accent;
 
-  static const Color accent = Color(0xFFCFA05A);
-  static const Color selection = Color(0xFF4A3B28);
-  static const Color selectionBorder = Color(0xFF75603F);
+  static void usePalette(ThemePalette palette) => _palette = palette;
+  static void useAccent(AccentPreset accent) => _accent = accent;
 
-  static const Color folder = Color(0xFF87AFA2);
-  static const Color folderDark = Color(0xFF6D968A);
-  static const Color folderTab = Color(0xFF5D857A);
+  static Color get window => _palette.window;
+  static Color get windowDeep => _palette.windowDeep;
+  static Color get panel => _palette.panel;
+  static Color get sidebar => _palette.sidebar;
+  static Color get sidebarDeep => _palette.sidebarDeep;
+  static Color get surface => _palette.surface;
+  static Color get surfaceHigh => _palette.surfaceHigh;
+  static Color get card => _palette.card;
+  static Color get cardBorder => _palette.cardBorder;
+  static Color get hover => _palette.hover;
+  static Color get border => _palette.border;
+  static Color get divider => _palette.divider;
 
-  static const Color danger = Color(0xFFB4433B);
-  static const Color dangerBright = Color(0xFFE0574F);
-  static const Color warning = Color(0xFFC08B3E);
-  static const Color success = Color(0xFF6F9E86);
+  static Color get elevated => _palette.elevated;
+  static Color get elevatedBorder => _palette.elevatedBorder;
+  static Color get elevatedBorderHover => _palette.elevatedBorderHover;
+  static Color get elevatedHover => _palette.elevatedHover;
+  static Color get elevatedPressed => _palette.elevatedPressed;
+  static Color get chip => _palette.chip;
+  static Color get chipBorder => _palette.chipBorder;
+  static Color get input => _palette.input;
+  static Color get inputBorder => _palette.inputBorder;
+  static Color get rowHover => _palette.rowHover;
+  static Color get rowSelected => _palette.rowSelected;
+  static Color get switchTrack => _palette.switchTrack;
 
-  static const Color menu = Color(0xFF1B1D1E);
-  static const Color menuBorder = Color(0xFF303436);
-  static const Color menuLabel = Color(0xFFD7DADB);
-  static const Color menuIcon = Color(0xFFC9CDCE);
-  static const Color menuShortcut = Color(0xFF6E7778);
+  static Color get textPrimary => _palette.textPrimary;
+  static Color get textStrong => _palette.textStrong;
+  static Color get textLabel => _palette.textLabel;
+  static Color get textSecondary => _palette.textSecondary;
+  static Color get textFaint => _palette.textFaint;
 
-  static const Color fileDefault = Color(0xFF7C8A99);
+  static Color get accent => _accent.color;
+  static Color get selection => Color.lerp(_palette.window, _accent.color, 0.24)!;
+  static Color get selectionBorder =>
+      Color.lerp(_palette.window, _accent.color, 0.5)!;
+
+  static Color get folder => _palette.folder;
+  static Color get folderDark => _palette.folderDark;
+  static Color get folderTab => _palette.folderTab;
+
+  static Color get danger => _palette.danger;
+  static Color get dangerBright => _palette.dangerBright;
+  static Color get warning => _palette.warning;
+  static Color get success => _palette.success;
+
+  static Color get menu => _palette.menu;
+  static Color get menuBorder => _palette.menuBorder;
+  static Color get menuLabel => _palette.menuLabel;
+  static Color get menuIcon => _palette.menuIcon;
+  static Color get menuShortcut => _palette.menuShortcut;
+
+  static Color get fileDefault => _palette.fileDefault;
+  static Color get scrollbar => _palette.scrollbar;
 }
 
 abstract final class AppTheme {
@@ -59,9 +95,9 @@ abstract final class AppTheme {
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
       visualDensity: VisualDensity.compact,
-      textSelectionTheme: const TextSelectionThemeData(
+      textSelectionTheme: TextSelectionThemeData(
         cursorColor: AppColors.accent,
-        selectionColor: Color(0x5575603F),
+        selectionColor: AppColors.selectionBorder.withValues(alpha: 0.33),
         selectionHandleColor: AppColors.accent,
       ),
       textTheme: base.textTheme
@@ -85,13 +121,13 @@ abstract final class AppTheme {
               fontSize: 14,
             ),
           ),
-      iconTheme: const IconThemeData(color: AppColors.textSecondary, size: 18),
+      iconTheme: IconThemeData(color: AppColors.textSecondary, size: 18),
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.border),
         ),
         titleTextStyle: TextStyle(
           fontFamily: resolvedFamily,
@@ -115,7 +151,7 @@ abstract final class AppTheme {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.border),
         ),
       ),
       tooltipTheme: TooltipThemeData(
@@ -135,22 +171,22 @@ abstract final class AppTheme {
         isDense: true,
         filled: true,
         fillColor: AppColors.window,
-        hintStyle: const TextStyle(color: AppColors.textFaint, fontSize: 12.5),
+        hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 12.5),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 10,
           vertical: 10,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: AppColors.selectionBorder),
+          borderSide: BorderSide(color: AppColors.selectionBorder),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -159,7 +195,7 @@ abstract final class AppTheme {
           foregroundColor: AppColors.textPrimary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(6),
-            side: const BorderSide(color: AppColors.selectionBorder),
+            side: BorderSide(color: AppColors.selectionBorder),
           ),
           textStyle: const TextStyle(
             fontSize: 12.5,
@@ -178,20 +214,20 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.border),
         ),
-        textStyle: const TextStyle(
+        textStyle: TextStyle(
           color: AppColors.textPrimary,
           fontSize: 12.5,
         ),
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
+      progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.accent,
       ),
       scrollbarTheme: ScrollbarThemeData(
         thickness: WidgetStateProperty.all(6),
         radius: const Radius.circular(3),
-        thumbColor: WidgetStateProperty.all(const Color(0xFF3A3F41)),
+        thumbColor: WidgetStateProperty.all(AppColors.scrollbar),
         crossAxisMargin: 2,
       ),
     );

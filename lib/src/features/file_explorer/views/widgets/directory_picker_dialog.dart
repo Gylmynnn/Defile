@@ -72,7 +72,7 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
                         pickerController.currentPath.value,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textPrimary,
                         ),
@@ -120,7 +120,7 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
                         child: Text(
                           error,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
                           ),
@@ -130,7 +130,7 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
                   }
 
                   if (pickerController.directories.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Text(
                         'Tidak ada subfolder',
                         style: TextStyle(
@@ -211,20 +211,20 @@ class _FolderRowState extends State<_FolderRow> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.folder, size: 15, color: AppColors.folder),
+              Icon(Icons.folder, size: 15, color: AppColors.folder),
               const SizedBox(width: 9),
               Expanded(
                 child: Text(
                   widget.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     color: AppColors.textPrimary,
                   ),
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right,
                 size: 15,
                 color: AppColors.textFaint,

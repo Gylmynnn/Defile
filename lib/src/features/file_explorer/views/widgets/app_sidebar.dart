@@ -16,7 +16,7 @@ class AppSidebar extends GetView<FileExplorerController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SidebarHeader(),
+          _SidebarHeader(),
           Expanded(
             child: Obx(() {
               return ListView(
@@ -30,7 +30,7 @@ class AppSidebar extends GetView<FileExplorerController> {
                       onTap: () => controller.openPlace(place),
                     ),
                   if (controller.folderPlaces.isNotEmpty) ...[
-                    const _SidebarGroupLabel('Places'),
+                    _SidebarGroupLabel('Places'),
                     for (final place in controller.folderPlaces)
                       _PlaceTile(
                         place: place,
@@ -41,7 +41,7 @@ class AppSidebar extends GetView<FileExplorerController> {
                       ),
                   ],
                   if (controller.drivePlaces.isNotEmpty) ...[
-                    const _SidebarGroupLabel('Drives'),
+                    _SidebarGroupLabel('Drives'),
                     for (final place in controller.drivePlaces)
                       _DriveTile(
                         place: place,
@@ -93,14 +93,14 @@ class _SidebarHeader extends StatelessWidget {
               color: AppColors.folder,
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.folder_copy_outlined,
               size: 12,
-              color: Color(0xFF14191A),
+              color: AppColors.windowDeep,
             ),
           ),
           const SizedBox(width: 9),
-          const Text(
+          Text(
             'Defile',
             style: TextStyle(
               fontSize: 14,
@@ -127,7 +127,7 @@ class _SidebarGroupLabel extends StatelessWidget {
         children: [
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               letterSpacing: 0.8,
               fontWeight: FontWeight.w600,
@@ -135,7 +135,7 @@ class _SidebarGroupLabel extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          const Expanded(child: Divider(height: 1, color: AppColors.divider)),
+          Expanded(child: Divider(height: 1, color: AppColors.divider)),
         ],
       ),
     );
@@ -148,12 +148,12 @@ class _PlaceTile extends StatefulWidget {
     required this.icon,
     required this.active,
     required this.onTap,
-    this.iconColor = AppColors.textSecondary,
+    this.iconColor,
   });
 
   final rust_system.Place place;
   final IconData icon;
-  final Color iconColor;
+  final Color? iconColor;
   final bool active;
   final VoidCallback onTap;
 
@@ -196,7 +196,7 @@ class _PlaceTileState extends State<_PlaceTile> {
               Icon(
                 widget.icon,
                 size: 14,
-                color: active ? AppColors.textPrimary : widget.iconColor,
+                color: active ? AppColors.textPrimary : (widget.iconColor ?? AppColors.textSecondary),
               ),
               const SizedBox(width: 9),
               Expanded(
@@ -308,7 +308,7 @@ class _DriveTileState extends State<_DriveTile> {
                   value: ratio?.clamp(0.0, 1.0) ?? 0,
                   minHeight: 3.5,
                   color: usageColor(ratio),
-                  backgroundColor: const Color(0xFF2C3032),
+                  backgroundColor: AppColors.chip,
                 ),
               ),
             ],

@@ -72,10 +72,10 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
             children: [
               Obx(
                 () => controller.showSidebar.value
-                    ? const AppSidebar()
+                    ? AppSidebar()
                     : const SizedBox.shrink(),
               ),
-              const VerticalDivider(
+              VerticalDivider(
                 width: 1,
                 thickness: 1,
                 color: AppColors.divider,
@@ -83,7 +83,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
               Expanded(
                 child: Column(
                   children: [
-                    const ExplorerToolbar(),
+                    ExplorerToolbar(),
                     Expanded(
                       child: Stack(
                         children: [
@@ -119,7 +119,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
                         ],
                       ),
                     ),
-                    const ExplorerStatusBar(),
+                    ExplorerStatusBar(),
                   ],
                 ),
               ),
@@ -449,7 +449,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
               onSelected: () => controller.openTerminalAt(entry.path),
             ),
           ),
-        const ContextMenuSeparator(),
+        ContextMenuSeparator(),
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.content_cut,
@@ -474,7 +474,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
             onSelected: () => _copyPath(targets),
           ),
         ),
-        const ContextMenuSeparator(),
+        ContextMenuSeparator(),
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.drive_file_move_outlined,
@@ -483,7 +483,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
             onSelected: () => _pickDestination(targets, move: true),
           ),
         ),
-        const ContextMenuSeparator(),
+        ContextMenuSeparator(),
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.drive_file_rename_outline,
@@ -510,7 +510,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
             onSelected: () => _removeSelection(),
           ),
         ),
-        const ContextMenuSeparator(),
+        ContextMenuSeparator(),
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.info_outline,
@@ -552,7 +552,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
             onSelected: () => _showCreateFolderDialog(context),
           ),
         ),
-        const ContextMenuSeparator(),
+        ContextMenuSeparator(),
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.refresh,
@@ -570,7 +570,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           ),
         ),
         if (inTrash) ...[
-          const ContextMenuSeparator(),
+          ContextMenuSeparator(),
           ContextMenuActionEntry(
             ContextMenuAction(
               icon: Icons.delete_sweep_outlined,
@@ -748,7 +748,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           const SizedBox(height: 12),
           Text(
             searching ? 'Tidak ada item yang cocok' : 'Folder ini kosong',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12.5,
               color: AppColors.textSecondary,
             ),
@@ -765,13 +765,13 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               size: 42,
               color: AppColors.textFaint,
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Gagal membuka direktori',
               style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
             ),
@@ -779,7 +779,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
             Text(
               error,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
               ),
@@ -874,7 +874,7 @@ class _LoadingShroudState extends State<_LoadingShroud> {
 }
 
 class _SelectionBandPainter extends CustomPainter {
-  const _SelectionBandPainter(this.rect);
+  _SelectionBandPainter(this.rect);
 
   final Rect rect;
 

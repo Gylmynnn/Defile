@@ -29,7 +29,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
   Widget build(BuildContext context) {
     return Container(
       height: 40,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.divider)),
       ),
@@ -116,7 +116,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           _ToolbarIconButton(
             icon: Icons.settings_outlined,
             tooltip: 'Pengaturan',
-            onTap: () => Get.dialog(const SettingsDialog()),
+            onTap: () => Get.dialog(SettingsDialog()),
           ),
         ],
       ),
@@ -139,7 +139,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
             const SizedBox(width: 8),
             Text(
               recent ? 'Recents' : 'Trash',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w500,
@@ -188,7 +188,7 @@ class _Breadcrumb extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (isHome)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(right: 6),
             child: Icon(
               Icons.home_outlined,
@@ -210,7 +210,7 @@ class _Breadcrumb extends StatelessWidget {
           ),
         ),
         if (!isLast)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 7),
             child: Text(
               '/',
@@ -248,7 +248,7 @@ class _SearchField extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, size: 13, color: AppColors.textFaint),
+          Icon(Icons.search, size: 13, color: AppColors.textFaint),
           const SizedBox(width: 6),
           Expanded(
             child: TextField(
@@ -257,11 +257,11 @@ class _SearchField extends StatelessWidget {
               autofocus: true,
               onChanged: onChanged,
               cursorHeight: 13,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textPrimary,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
                 filled: false,
                 border: InputBorder.none,
@@ -276,7 +276,7 @@ class _SearchField extends StatelessWidget {
           InkWell(
             onTap: onClose,
             borderRadius: BorderRadius.circular(4),
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.all(3),
               child: Icon(
                 Icons.close,
@@ -334,7 +334,7 @@ class _ViewModeSwitch extends StatelessWidget {
             child: Icon(
               icon,
               size: 14,
-              color: active ? const Color(0xFF1A1C1D) : AppColors.textSecondary,
+              color: active ? AppColors.windowDeep : AppColors.textSecondary,
             ),
           ),
         ),

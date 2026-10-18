@@ -1,5 +1,6 @@
 import 'package:defile/src/features/file_explorer/services/font_service.dart';
 import 'package:defile/src/features/file_explorer/services/icon_theme_service.dart';
+import 'package:defile/src/features/file_explorer/services/theme_service.dart';
 import 'package:defile/src/features/file_explorer/views/widgets/settings_dialog.dart';
 import 'package:defile/src/rust/frb_generated.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ void main() {
   ) async {
     Get.put(IconThemeService());
     Get.put(FontService());
+    Get.put(ThemeService());
 
     final iconService = Get.find<IconThemeService>();
     final fontService = Get.find<FontService>();

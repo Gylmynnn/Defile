@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../theme/app_theme.dart';
 
 class ContextMenuAction {
-  const ContextMenuAction({
+  ContextMenuAction({
     required this.icon,
     required this.label,
     required this.onSelected,
@@ -22,17 +22,17 @@ class ContextMenuAction {
 }
 
 sealed class ContextMenuEntry {
-  const ContextMenuEntry();
+  ContextMenuEntry();
 }
 
 class ContextMenuActionEntry extends ContextMenuEntry {
-  const ContextMenuActionEntry(this.action);
+  ContextMenuActionEntry(this.action);
 
   final ContextMenuAction action;
 }
 
 class ContextMenuSeparator extends ContextMenuEntry {
-  const ContextMenuSeparator();
+  ContextMenuSeparator();
 }
 
 Future<void> showAppContextMenu({
@@ -148,7 +148,7 @@ class _ContextMenuPanel extends StatelessWidget {
               if (entry case ContextMenuActionEntry(:final action))
                 _MenuRow(action: action, onTap: () => onAction(action))
               else
-                const _MenuSeparator(),
+                _MenuSeparator(),
           ],
         ),
       ),
