@@ -1,5 +1,6 @@
 import 'package:defile/src/features/file_explorer/bindings/file_explorer_binding.dart';
 import 'package:defile/src/features/file_explorer/services/font_service.dart';
+import 'package:defile/src/features/file_explorer/services/icon_theme_service.dart';
 import 'package:defile/src/features/file_explorer/services/theme_service.dart';
 import 'package:defile/src/features/file_explorer/views/file_explorer_page.dart';
 import 'package:defile/src/rust/frb_generated.dart';
@@ -18,6 +19,9 @@ Future<void> main() async {
 
   final themeService = Get.put(ThemeService());
   await themeService.init();
+
+  final iconThemeService = Get.put(IconThemeService());
+  await iconThemeService.init();
 
   final windowOptions = WindowOptions(
     titleBarStyle: TitleBarStyle.hidden,

@@ -10,6 +10,14 @@ class FileSystemService {
     return rust.openFile(path: path);
   }
 
+  Future<List<rust_system.OpenWithApp>> listOpenWithApps(String path) {
+    return rust_system.listOpenWithApps(path: path);
+  }
+
+  Future<void> openWith(String path, String desktopFile) {
+    return rust_system.openWith(path: path, desktopFile: desktopFile);
+  }
+
   Future<String> createDirectory(String parentPath, String directoryName) {
     return rust.createDirectory(
       parentPath: parentPath,

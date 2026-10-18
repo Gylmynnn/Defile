@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
+import '../../utils/app_dialog_route.dart';
 import 'settings_dialog.dart';
 
 class ExplorerToolbar extends StatefulWidget {
@@ -116,7 +117,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           _ToolbarIconButton(
             icon: Icons.settings_outlined,
             tooltip: 'Settings',
-            onTap: () => Get.dialog(SettingsDialog()),
+            onTap: () => showAppDialog(builder: (_) => const SettingsDialog()),
           ),
         ],
       ),

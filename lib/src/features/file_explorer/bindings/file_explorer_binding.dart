@@ -8,7 +8,9 @@ import 'package:get/get.dart';
 class FileExplorerBinding extends Bindings {
   @override
   void dependencies() {
-    Get.put<IconThemeService>(IconThemeService()).init();
+    if (!Get.isRegistered<IconThemeService>()) {
+      Get.put<IconThemeService>(IconThemeService()).init();
+    }
 
     if (!Get.isRegistered<FontService>()) {
       Get.put<FontService>(FontService()).init();

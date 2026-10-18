@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1306623309;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1369827425;
 
 // Section: executor
 
@@ -717,6 +717,39 @@ fn wire__crate__api__icon_theme__list_icon_themes_impl(
         },
     )
 }
+fn wire__crate__api__system__list_open_with_apps_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_open_with_apps",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_path = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Ok::<_, ()>(crate::api::system::list_open_with_apps(api_path))?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__system__list_places_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -948,6 +981,40 @@ fn wire__crate__api__system__open_in_terminal_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::system::open_in_terminal(api_path)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__system__open_with_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "open_with",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_path = <String>::sse_decode(&mut deserializer);
+            let api_desktop_file = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::system::open_with(api_path, api_desktop_file)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -1345,6 +1412,18 @@ impl SseDecode for Vec<crate::api::icon_theme::IconThemeEntry> {
     }
 }
 
+impl SseDecode for Vec<crate::api::system::OpenWithApp> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::system::OpenWithApp>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::system::Place> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1366,6 +1445,24 @@ impl SseDecode for Vec<u8> {
             ans_.push(<u8>::sse_decode(deserializer));
         }
         return ans_;
+    }
+}
+
+impl SseDecode for crate::api::system::OpenWithApp {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_exec = <String>::sse_decode(deserializer);
+        let mut var_comment = <String>::sse_decode(deserializer);
+        let mut var_icon = <String>::sse_decode(deserializer);
+        return crate::api::system::OpenWithApp {
+            id: var_id,
+            name: var_name,
+            exec: var_exec,
+            comment: var_comment,
+            icon: var_icon,
+        };
     }
 }
 
@@ -1486,21 +1583,23 @@ fn pde_ffi_dispatcher_primary_impl(
         20 => {
             wire__crate__api__icon_theme__list_icon_themes_impl(port, ptr, rust_vec_len, data_len)
         }
-        21 => wire__crate__api__system__list_places_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__system__list_recent_files_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__font__list_system_fonts_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__file_entry__move_entry_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__system__move_to_trash_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__file_entry__open_file_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__system__open_in_terminal_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__file_entry__rename_entry_impl(port, ptr, rust_vec_len, data_len),
-        29 => {
+        21 => wire__crate__api__system__list_open_with_apps_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__system__list_places_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__system__list_recent_files_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__font__list_system_fonts_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__file_entry__move_entry_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__system__move_to_trash_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__file_entry__open_file_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__system__open_in_terminal_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__system__open_with_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__file_entry__rename_entry_impl(port, ptr, rust_vec_len, data_len),
+        31 => {
             wire__crate__api__appearance__set_accent_color_impl(port, ptr, rust_vec_len, data_len)
         }
-        30 => wire__crate__api__appearance__set_base_theme_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__font__set_font_family_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__icon_theme__set_icon_theme_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__appearance__set_ui_scale_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__appearance__set_base_theme_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__font__set_font_family_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__icon_theme__set_icon_theme_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__appearance__set_ui_scale_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1651,6 +1750,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::icon_theme::IconThemeEntry>
     for crate::api::icon_theme::IconThemeEntry
 {
     fn into_into_dart(self) -> crate::api::icon_theme::IconThemeEntry {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::system::OpenWithApp {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.exec.into_into_dart().into_dart(),
+            self.comment.into_into_dart().into_dart(),
+            self.icon.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::system::OpenWithApp
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::system::OpenWithApp>
+    for crate::api::system::OpenWithApp
+{
+    fn into_into_dart(self) -> crate::api::system::OpenWithApp {
         self
     }
 }
@@ -1838,6 +1961,16 @@ impl SseEncode for Vec<crate::api::icon_theme::IconThemeEntry> {
     }
 }
 
+impl SseEncode for Vec<crate::api::system::OpenWithApp> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::system::OpenWithApp>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::system::Place> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1855,6 +1988,17 @@ impl SseEncode for Vec<u8> {
         for item in self {
             <u8>::sse_encode(item, serializer);
         }
+    }
+}
+
+impl SseEncode for crate::api::system::OpenWithApp {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.exec, serializer);
+        <String>::sse_encode(self.comment, serializer);
+        <String>::sse_encode(self.icon, serializer);
     }
 }
 

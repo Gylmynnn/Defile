@@ -12,6 +12,14 @@ class ThemeService extends GetxService {
   final RxString accentId = AppAccents.amber.id.obs;
   final RxDouble uiScale = 1.0.obs;
 
+  // ponytail: in-memory only. Add a rust getter/setter (like uiScale) if it
+  // needs to survive restarts.
+  final RxBool animationsEnabled = true.obs;
+
+  Duration get animationDuration => animationsEnabled.value
+      ? const Duration(milliseconds: 200)
+      : Duration.zero;
+
   static const double minScale = 0.75;
   static const double maxScale = 1.5;
 

@@ -8,8 +8,9 @@ import 'file_entry.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `civil_from_days`, `deletion_timestamp`, `home_dir`, `linux_drive_label`, `list_drives`, `shell_quote`, `trash_dir`, `trash_root`, `unique_destination`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `civil_from_days`, `deletion_timestamp`, `desktop_entry_dirs`, `detect_mime_type`, `home_dir`, `linux_drive_label`, `list_drives`, `mime_matches`, `parse_desktop_entry`, `shell_quote`, `trash_dir`, `trash_root`, `unique_destination`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DesktopEntryInfo`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<String> moveToTrash({required String path}) =>
     RustLib.instance.api.crateApiSystemMoveToTrash(path: path);
@@ -38,6 +39,15 @@ Future<List<FileEntry>> listRecentFiles({
 
 Future<void> openInTerminal({required String path}) =>
     RustLib.instance.api.crateApiSystemOpenInTerminal(path: path);
+
+Future<List<OpenWithApp>> listOpenWithApps({required String path}) =>
+    RustLib.instance.api.crateApiSystemListOpenWithApps(path: path);
+
+Future<void> openWith({required String path, required String desktopFile}) =>
+    RustLib.instance.api.crateApiSystemOpenWith(
+      path: path,
+      desktopFile: desktopFile,
+    );
 
 class DiskUsage {
   final String path;
@@ -68,6 +78,41 @@ class DiskUsage {
           totalBytes == other.totalBytes &&
           freeBytes == other.freeBytes &&
           usedBytes == other.usedBytes;
+}
+
+class OpenWithApp {
+  final String id;
+  final String name;
+  final String exec;
+  final String comment;
+  final String icon;
+
+  const OpenWithApp({
+    required this.id,
+    required this.name,
+    required this.exec,
+    required this.comment,
+    required this.icon,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      exec.hashCode ^
+      comment.hashCode ^
+      icon.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is OpenWithApp &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          exec == other.exec &&
+          comment == other.comment &&
+          icon == other.icon;
 }
 
 class Place {

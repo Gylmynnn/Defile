@@ -12,8 +12,20 @@ abstract final class AppColors {
   static ThemePalette get palette => _palette;
   static AccentPreset get accentPreset => _accent;
 
-  static void usePalette(ThemePalette palette) => _palette = palette;
-  static void useAccent(AccentPreset accent) => _accent = accent;
+  static void usePalette(ThemePalette palette) {
+    _palette = palette;
+    _refreshDerived();
+  }
+
+  static void useAccent(AccentPreset accent) {
+    _accent = accent;
+    _refreshDerived();
+  }
+
+  static void _refreshDerived() {
+    _selection = Color.lerp(_palette.window, _accent.color, 0.24)!;
+    _selectionBorder = Color.lerp(_palette.window, _accent.color, 0.5)!;
+  }
 
   static Color get window => _palette.window;
   static Color get windowDeep => _palette.windowDeep;
@@ -48,10 +60,14 @@ abstract final class AppColors {
   static Color get textFaint => _palette.textFaint;
 
   static Color get accent => _accent.color;
-  static Color get selection =>
-      Color.lerp(_palette.window, _accent.color, 0.24)!;
-  static Color get selectionBorder =>
-      Color.lerp(_palette.window, _accent.color, 0.5)!;
+  static Color _selection = Color.lerp(_palette.window, _accent.color, 0.24)!;
+  static Color _selectionBorder = Color.lerp(
+    _palette.window,
+    _accent.color,
+    0.5,
+  )!;
+  static Color get selection => _selection;
+  static Color get selectionBorder => _selectionBorder;
 
   static Color get folder => _palette.folder;
   static Color get folderDark => _palette.folderDark;

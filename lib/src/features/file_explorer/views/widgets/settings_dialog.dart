@@ -11,30 +11,7 @@ import 'entry_glyphs.dart';
 import 'themed_icon.dart';
 
 /// Sections available in the settings popup.
-enum SettingsSection {
-  general,
-  appearance,
-  interface,
-  editor,
-  filesAndLinks,
-  hotkeys,
-  keychain,
-  corePlugins,
-  communityPlugins,
-  // Core plugins
-  backlinks,
-  canvas,
-  commandPalette,
-  dailyNotes,
-  fileRecovery,
-  noteComposer,
-  pagePreview,
-  quickSwitcher,
-  sync,
-  templates,
-  // Community plugins
-  projectManager,
-}
+enum SettingsSection { general, appearance, interface, filesAndLinks, hotkeys }
 
 class _SidebarItemDef {
   const _SidebarItemDef({
@@ -103,13 +80,6 @@ const List<_SidebarItemDef> _allSidebarItems = [
     ],
   ),
   _SidebarItemDef(
-    section: SettingsSection.editor,
-    label: 'Editor',
-    icon: Icons.edit_outlined,
-    category: 'Options',
-    keywords: ['editor', 'text', 'line', 'wrap', 'code'],
-  ),
-  _SidebarItemDef(
     section: SettingsSection.filesAndLinks,
     label: 'Files and links',
     icon: Icons.folder_open_outlined,
@@ -130,108 +100,6 @@ const List<_SidebarItemDef> _allSidebarItems = [
     icon: Icons.keyboard_outlined,
     category: 'Options',
     keywords: ['hotkeys', 'shortcuts', 'keyboard', 'bindings', 'keys'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.keychain,
-    label: 'Keychain',
-    icon: Icons.vpn_key_outlined,
-    category: 'Options',
-    keywords: ['keychain', 'security', 'credentials', 'password'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.corePlugins,
-    label: 'Core plugins',
-    icon: Icons.inventory_2_outlined,
-    category: 'Options',
-    keywords: ['plugins', 'core', 'extensions'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.communityPlugins,
-    label: 'Community plugins',
-    icon: Icons.extension_outlined,
-    category: 'Options',
-    keywords: ['community', 'plugins', 'marketplace', 'third-party'],
-  ),
-
-  // Core plugins
-  _SidebarItemDef(
-    section: SettingsSection.backlinks,
-    label: 'Backlinks',
-    icon: Icons.call_split_outlined,
-    category: 'Core plugins',
-    keywords: ['backlinks', 'links', 'references'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.canvas,
-    label: 'Canvas',
-    icon: Icons.grid_view_outlined,
-    category: 'Core plugins',
-    keywords: ['canvas', 'board', 'visual', 'cards'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.commandPalette,
-    label: 'Command palette',
-    icon: Icons.terminal_outlined,
-    category: 'Core plugins',
-    keywords: ['command', 'palette', 'terminal', 'prompt'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.dailyNotes,
-    label: 'Daily notes',
-    icon: Icons.calendar_today_outlined,
-    category: 'Core plugins',
-    keywords: ['daily', 'notes', 'calendar', 'journal'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.fileRecovery,
-    label: 'File recovery',
-    icon: Icons.history_outlined,
-    category: 'Core plugins',
-    keywords: ['recovery', 'history', 'snapshots', 'backup'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.noteComposer,
-    label: 'Note composer',
-    icon: Icons.note_add_outlined,
-    category: 'Core plugins',
-    keywords: ['composer', 'merge', 'split', 'notes'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.pagePreview,
-    label: 'Page preview',
-    icon: Icons.visibility_outlined,
-    category: 'Core plugins',
-    keywords: ['preview', 'hover', 'tooltip', 'page'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.quickSwitcher,
-    label: 'Quick switcher',
-    icon: Icons.find_in_page_outlined,
-    category: 'Core plugins',
-    keywords: ['quick', 'switcher', 'jump', 'fuzzy', 'search'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.sync,
-    label: 'Sync',
-    icon: Icons.sync_outlined,
-    category: 'Core plugins',
-    keywords: ['sync', 'cloud', 'backup', 'remote'],
-  ),
-  _SidebarItemDef(
-    section: SettingsSection.templates,
-    label: 'Templates',
-    icon: Icons.description_outlined,
-    category: 'Core plugins',
-    keywords: ['templates', 'snippets', 'boilerplate'],
-  ),
-
-  // Community plugins
-  _SidebarItemDef(
-    section: SettingsSection.projectManager,
-    label: 'Project Manager',
-    icon: Icons.folder_special_outlined,
-    category: 'Community plugins',
-    keywords: ['project', 'manager', 'workspaces', 'bookmarks'],
   ),
 ];
 
@@ -271,8 +139,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
   @override
   void initState() {
     super.initState();
-    _iconService.refreshThemes();
-    if (Get.isRegistered<FontService>()) {
+    if (_iconService.themes.isEmpty) {
+      _iconService.refreshThemes();
+    }
+    if (Get.isRegistered<FontService>() && _fontService.fonts.isEmpty) {
       _fontService.refreshFonts();
     }
   }
@@ -527,7 +397,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
               SettingsSection.interface => _buildInterfaceSection(),
               SettingsSection.filesAndLinks => _buildFilesAndLinksSection(),
               SettingsSection.hotkeys => _buildHotkeysSection(),
-              _ => _buildGenericPluginSection(),
             },
           ],
         ),
@@ -966,6 +835,21 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               );
             }),
+            _ObsidianDivider(),
+            Obx(() {
+              final bool enabled = _themeService.animationsEnabled.value;
+
+              return _ObsidianSettingRow(
+                title: 'Smooth animations',
+                subtitle:
+                    'Animate the sidebar and popups when they open and close.',
+                control: _ObsidianSwitch(
+                  value: enabled,
+                  onChanged: (val) =>
+                      _themeService.animationsEnabled.value = val,
+                ),
+              );
+            }),
           ],
         ),
       ],
@@ -1186,47 +1070,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               ),
             ),
-      ],
-    );
-  }
-
-  // ==========================================
-  // Generic Section for Plugins and Other Tabs
-  // ==========================================
-  Widget _buildGenericPluginSection() {
-    final item = _allSidebarItems.firstWhere(
-      (element) => element.section == _activeSection,
-      orElse: () => _allSidebarItems.first,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle(item.label),
-        const SizedBox(height: 8),
-
-        _ObsidianSectionCard(
-          children: [
-            _ObsidianSettingRow(
-              title: 'Enable ${item.label}',
-              subtitle:
-                  'Turn this on to activate ${item.label} features in Defile.',
-              control: _ObsidianSwitch(value: true, onChanged: (_) {}),
-            ),
-            _ObsidianDivider(),
-            _ObsidianSettingRow(
-              title: 'Options',
-              subtitle: 'Configure specific settings and keybindings for this module.',
-              control: _ObsidianButton(
-                label: 'Configure',
-                onTap: () => _showInfoMessage(
-                  item.label,
-                  '${item.label} is currently enabled and active.',
-                ),
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }

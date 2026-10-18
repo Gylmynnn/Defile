@@ -1,6 +1,7 @@
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../utils/formatters.dart';
@@ -14,19 +15,13 @@ typedef EntryMenuCallback = void Function(
   Offset position,
 );
 
-class EntryTileKey extends GlobalKey {
-  const EntryTileKey(this.path) : super.constructor();
+final Map<String, GlobalKey> _entryKeys = <String, GlobalKey>{};
 
-  final String path;
-
-  @override
-  bool operator ==(Object other) => other is EntryTileKey && other.path == path;
-
-  @override
-  int get hashCode => path.hashCode;
-}
-
-Key entryTileKey(String path) => EntryTileKey(path);
+// ponytail: keys cached per path to avoid re-allocating a GlobalKey on every
+// tile build. Never pruned; harmless for typical sessions. Add pruning keyed on
+// the live entry set if enormous unique trees get visited.
+GlobalKey entryTileKey(String path) =>
+    _entryKeys.putIfAbsent(path, GlobalKey.new);
 
 class EntryGridView extends StatelessWidget {
   const EntryGridView({
@@ -40,7 +35,7 @@ class EntryGridView extends StatelessWidget {
   });
 
   final List<rust.FileEntry> entries;
-  final Set<String> selectedPaths;
+  final RxSet<String> selectedPaths;
   final EntryOpenCallback onPress;
   final EntryOpenCallback onTap;
   final EntryOpenCallback onOpen;
@@ -60,13 +55,15 @@ class EntryGridView extends StatelessWidget {
       itemBuilder: (context, index) {
         final entry = entries[index];
 
-        return _GridTile(
-          entry: entry,
-          selected: selectedPaths.contains(entry.path),
-          onPress: () => onPress(entry),
-          onTap: () => onTap(entry),
-          onOpen: () => onOpen(entry),
-          onMenu: (position) => onMenu(entry, position),
+        return Obx(
+          () => _GridTile(
+            entry: entry,
+            selected: selectedPaths.contains(entry.path),
+            onPress: () => onPress(entry),
+            onTap: () => onTap(entry),
+            onOpen: () => onOpen(entry),
+            onMenu: (position) => onMenu(entry, position),
+          ),
         );
       },
     );
@@ -174,7 +171,7 @@ class EntryListView extends StatelessWidget {
   });
 
   final List<rust.FileEntry> entries;
-  final Set<String> selectedPaths;
+  final RxSet<String> selectedPaths;
   final EntryOpenCallback onPress;
   final EntryOpenCallback onTap;
   final EntryOpenCallback onOpen;
@@ -212,13 +209,15 @@ class EntryListView extends StatelessWidget {
             itemBuilder: (context, index) {
               final entry = entries[index];
 
-              return _ListRow(
-                entry: entry,
-                selected: selectedPaths.contains(entry.path),
-                onPress: () => onPress(entry),
-                onTap: () => onTap(entry),
-                onOpen: () => onOpen(entry),
-                onMenu: (position) => onMenu(entry, position),
+              return Obx(
+                () => _ListRow(
+                  entry: entry,
+                  selected: selectedPaths.contains(entry.path),
+                  onPress: () => onPress(entry),
+                  onTap: () => onTap(entry),
+                  onOpen: () => onOpen(entry),
+                  onMenu: (position) => onMenu(entry, position),
+                ),
               );
             },
           ),
@@ -385,7 +384,7 @@ class EntryCompactView extends StatelessWidget {
   });
 
   final List<rust.FileEntry> entries;
-  final Set<String> selectedPaths;
+  final RxSet<String> selectedPaths;
   final EntryOpenCallback onPress;
   final EntryOpenCallback onTap;
   final EntryOpenCallback onOpen;
@@ -399,13 +398,15 @@ class EntryCompactView extends StatelessWidget {
       itemBuilder: (context, index) {
         final entry = entries[index];
 
-        return _CompactRow(
-          entry: entry,
-          selected: selectedPaths.contains(entry.path),
-          onPress: () => onPress(entry),
-          onTap: () => onTap(entry),
-          onOpen: () => onOpen(entry),
-          onMenu: (position) => onMenu(entry, position),
+        return Obx(
+          () => _CompactRow(
+            entry: entry,
+            selected: selectedPaths.contains(entry.path),
+            onPress: () => onPress(entry),
+            onTap: () => onTap(entry),
+            onOpen: () => onOpen(entry),
+            onMenu: (position) => onMenu(entry, position),
+          ),
         );
       },
     );

@@ -69,10 +69,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<IconThemeEntry> dco_decode_list_icon_theme_entry(dynamic raw);
 
   @protected
+  List<OpenWithApp> dco_decode_list_open_with_app(dynamic raw);
+
+  @protected
   List<Place> dco_decode_list_place(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  OpenWithApp dco_decode_open_with_app(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -142,10 +148,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<OpenWithApp> sse_decode_list_open_with_app(SseDeserializer deserializer);
+
+  @protected
   List<Place> sse_decode_list_place(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  OpenWithApp sse_decode_open_with_app(SseDeserializer deserializer);
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -226,6 +238,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_open_with_app(
+    List<OpenWithApp> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_place(List<Place> self, SseSerializer serializer);
 
   @protected
@@ -233,6 +251,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     Uint8List self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_open_with_app(OpenWithApp self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);

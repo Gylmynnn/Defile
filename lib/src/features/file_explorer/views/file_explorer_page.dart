@@ -4,11 +4,14 @@ import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../theme/app_theme.dart';
 import '../controllers/file_explorer_controller.dart';
+import '../services/theme_service.dart';
+import '../utils/app_dialog_route.dart';
 import 'widgets/app_dialog.dart';
 import 'widgets/app_sidebar.dart';
 import 'widgets/context_menu.dart';
@@ -16,6 +19,7 @@ import 'widgets/directory_picker_dialog.dart';
 import 'widgets/entry_views.dart';
 import 'widgets/explorer_status_bar.dart';
 import 'widgets/explorer_toolbar.dart';
+import 'widgets/open_with_submenu.dart';
 import 'widgets/properties_dialog.dart';
 
 class FileExplorerPage extends StatefulWidget {
@@ -40,6 +44,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
   final ValueNotifier<Rect?> _bandRect = ValueNotifier<Rect?>(null);
   Set<String> _bandBase = <String>{};
   final Map<String, Rect> _dragRects = <String, Rect>{};
+  bool _bandUpdateScheduled = false;
 
   @override
   Widget build(BuildContext context) {
@@ -72,11 +77,25 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Obx(
-                () => controller.showSidebar.value
-                    ? AppSidebar()
-                    : const SizedBox.shrink(),
-              ),
+              Obx(() {
+                final Duration duration = Get.isRegistered<ThemeService>()
+                    ? Get.find<ThemeService>().animationDuration
+                    : Duration.zero;
+
+                return AnimatedContainer(
+                  duration: duration,
+                  curve: Curves.easeOutCubic,
+                  width: controller.showSidebar.value ? 178 : 0,
+                  child: ClipRect(
+                    child: OverflowBox(
+                      alignment: Alignment.centerLeft,
+                      minWidth: 178,
+                      maxWidth: 178,
+                      child: AppSidebar(),
+                    ),
+                  ),
+                );
+              }),
               VerticalDivider(width: 1, thickness: 1, color: AppColors.divider),
               Expanded(
                 child: Column(
@@ -171,7 +190,19 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
       _collectDragRects();
     }
 
-    _applyBandSelection();
+    _scheduleBandUpdate();
+  }
+
+  void _scheduleBandUpdate() {
+    if (_bandUpdateScheduled) return;
+
+    _bandUpdateScheduled = true;
+    SchedulerBinding.instance.scheduleFrameCallback((_) {
+      _bandUpdateScheduled = false;
+      if (!mounted || !_bandActive) return;
+      _applyBandSelection();
+    });
+    SchedulerBinding.instance.scheduleFrame();
   }
 
   void _handleBandUp(PointerEvent event) {
@@ -180,7 +211,9 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
 
     if (!_bandActive) return;
 
+    _applyBandSelection();
     _bandActive = false;
+    _bandUpdateScheduled = false;
     _dragRects.clear();
 
     _bandRect.value = null;
@@ -192,7 +225,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     if (layer == null) return;
 
     for (final entry in controller.visibleEntries) {
-      final RenderObject? object = EntryTileKey(entry.path).currentContext
+      final RenderObject? object = entryTileKey(entry.path).currentContext
           ?.findRenderObject();
 
       if (object is! RenderBox || !object.attached) continue;
@@ -342,10 +375,6 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
       return _buildEmpty();
     }
 
-    final Set<String> selectedPaths = controller.selection
-        .map((entry) => entry.path)
-        .toSet();
-
     void openMenu(rust.FileEntry entry, Offset position) {
       if (!controller.isSelected(entry)) {
         controller.selectOnly(entry);
@@ -357,7 +386,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     final Widget view = switch (controller.viewMode.value) {
       ExplorerViewMode.grid => EntryGridView(
         entries: entries,
-        selectedPaths: selectedPaths,
+        selectedPaths: controller.selectedPaths,
         onPress: _handleEntryPress,
         onTap: _handleEntryTap,
         onOpen: _handleEntryOpen,
@@ -365,7 +394,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
       ),
       ExplorerViewMode.list => EntryListView(
         entries: entries,
-        selectedPaths: selectedPaths,
+        selectedPaths: controller.selectedPaths,
         onPress: _handleEntryPress,
         onTap: _handleEntryTap,
         onOpen: _handleEntryOpen,
@@ -373,7 +402,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
       ),
       ExplorerViewMode.compact => EntryCompactView(
         entries: entries,
-        selectedPaths: selectedPaths,
+        selectedPaths: controller.selectedPaths,
         onPress: _handleEntryPress,
         onTap: _handleEntryTap,
         onOpen: _handleEntryOpen,
@@ -461,6 +490,16 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
               label: 'Open in Terminal',
               enabled: !inTrash,
               onSelected: () => controller.openTerminalAt(entry.path),
+            ),
+          ),
+        if (single && entry.isFile && !inTrash)
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: Icons.apps_outlined,
+              label: 'Open with...',
+              onSelected: () {},
+              submenu: (closeMenu) =>
+                  OpenWithSubmenu(entry: entry, onDismiss: closeMenu),
             ),
           ),
         ContextMenuSeparator(),
@@ -615,8 +654,8 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     required String message,
     required String confirmLabel,
   }) async {
-    final bool? result = await Get.dialog<bool>(
-      AppDialog(
+    final bool? result = await showAppDialog<bool>(
+      builder: (_) => AppDialog(
         title: title,
         width: 380,
         content: Padding(
@@ -660,8 +699,9 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     List<rust.FileEntry> entries, {
     required bool move,
   }) async {
-    final String? destination = await Get.dialog<String>(
-      DirectoryPickerDialog(initialPath: controller.currentPath.value),
+    final String? destination = await showAppDialog<String>(
+      builder: (_) =>
+          DirectoryPickerDialog(initialPath: controller.currentPath.value),
     );
 
     if (destination == null) return;
@@ -680,7 +720,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
   }
 
   void _showPropertiesDialog(rust.FileEntry entry) {
-    Get.dialog(PropertiesDialog(entry: entry));
+    showAppDialog(builder: (_) => PropertiesDialog(entry: entry));
   }
 
   void _showRenameDialog(BuildContext context, rust.FileEntry entry) {
@@ -688,8 +728,8 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
       text: entry.name,
     );
 
-    Get.dialog(
-      AppDialog(
+    showAppDialog(
+      builder: (_) => AppDialog(
         title: 'Rename',
         width: 360,
         content: Padding(
@@ -723,8 +763,8 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
   void _showCreateFolderDialog(BuildContext context) {
     final TextEditingController textController = TextEditingController();
 
-    Get.dialog(
-      AppDialog(
+    showAppDialog(
+      builder: (_) => AppDialog(
         title: 'New folder',
         width: 360,
         content: Padding(

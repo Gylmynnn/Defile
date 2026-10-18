@@ -38,17 +38,13 @@ void main() {
 
       // Sidebar Category Headers & menu items (appear both as item under Options and as section header)
       expect(find.text('Options'), findsOneWidget);
-      expect(find.text('Core plugins'), findsWidgets);
-      expect(find.text('Community plugins'), findsWidgets);
 
       // Sidebar items
       expect(find.text('General'), findsOneWidget);
       expect(find.text('Appearance'), findsOneWidget);
       expect(find.text('Interface'), findsOneWidget);
-      expect(find.text('Editor'), findsOneWidget);
       expect(find.text('Files and links'), findsOneWidget);
       expect(find.text('Hotkeys'), findsOneWidget);
-      expect(find.text('Backlinks'), findsOneWidget);
       // Right Content default is General
       expect(find.text('Version 1.14.4'), findsOneWidget);
       expect(find.text('Check for updates'), findsOneWidget);
@@ -79,10 +75,10 @@ void main() {
       expect(find.text('Ctrl'), findsWidgets);
 
       // Search settings filter in sidebar
-      await tester.enterText(find.byType(TextField).first, 'canvas');
+      await tester.enterText(find.byType(TextField).first, 'files');
       await tester.pumpAndSettle();
 
-      expect(find.text('Canvas'), findsOneWidget);
+      expect(find.text('Files and links'), findsOneWidget);
       expect(find.text('General'), findsNothing);
 
       // Reset search

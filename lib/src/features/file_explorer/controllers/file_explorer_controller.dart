@@ -17,9 +17,20 @@ class FileExplorerController extends GetxController {
   final RxString currentPath = ''.obs;
   final RxList<rust.FileEntry> entries = <rust.FileEntry>[].obs;
   final RxList<rust_system.Place> places = <rust_system.Place>[].obs;
+  final RxList<rust_system.Place> quickPlaces = <rust_system.Place>[].obs;
+  final RxList<rust_system.Place> folderPlaces = <rust_system.Place>[].obs;
+  final RxList<rust_system.Place> drivePlaces = <rust_system.Place>[].obs;
   final RxMap<String, rust_system.DiskUsage> driveUsages =
       <String, rust_system.DiskUsage>{}.obs;
   final Rxn<rust_system.DiskUsage> diskUsage = Rxn();
+
+  int _entriesRevision = 0;
+  List<rust.FileEntry>? _visibleCache;
+  int _visibleCacheRevision = -1;
+  String? _visibleCacheQuery;
+
+  List<String>? _breadcrumbsCache;
+  String? _breadcrumbsKey;
 
   final RxBool isLoading = false.obs;
   final RxnString errorMessage = RxnString();
@@ -31,6 +42,7 @@ class FileExplorerController extends GetxController {
   final RxString searchQuery = ''.obs;
 
   final RxList<rust.FileEntry> selection = <rust.FileEntry>[].obs;
+  final RxSet<String> selectedPaths = <String>{}.obs;
   final RxnString selectionAnchor = RxnString();
   final RxList<rust.FileEntry> clipboardEntries = <rust.FileEntry>[].obs;
   final RxBool clipboardIsCut = false.obs;
@@ -41,6 +53,26 @@ class FileExplorerController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    ever(entries, (_) => _entriesRevision++);
+    ever(
+      selection,
+      (_) => selectedPaths.assignAll(selection.map((e) => e.path)),
+    );
+    ever(places, (_) {
+      quickPlaces.assignAll(
+        places.where(
+          (place) =>
+              place.kind != rust_system.PlaceKind.folder &&
+              place.kind != rust_system.PlaceKind.drive,
+        ),
+      );
+      folderPlaces.assignAll(
+        places.where((place) => place.kind == rust_system.PlaceKind.folder),
+      );
+      drivePlaces.assignAll(
+        places.where((place) => place.kind == rust_system.PlaceKind.drive),
+      );
+    });
     _bootstrap();
   }
 
@@ -72,22 +104,6 @@ class FileExplorerController extends GetxController {
     }
   }
 
-  List<rust_system.Place> get quickPlaces => places
-      .where(
-        (place) =>
-            place.kind != rust_system.PlaceKind.folder &&
-            place.kind != rust_system.PlaceKind.drive,
-      )
-      .toList();
-
-  List<rust_system.Place> get folderPlaces => places
-      .where((place) => place.kind == rust_system.PlaceKind.folder)
-      .toList();
-
-  List<rust_system.Place> get drivePlaces => places
-      .where((place) => place.kind == rust_system.PlaceKind.drive)
-      .toList();
-
   bool isPlaceActive(rust_system.Place place) {
     switch (place.kind) {
       case rust_system.PlaceKind.recent:
@@ -108,11 +124,24 @@ class FileExplorerController extends GetxController {
 
   List<rust.FileEntry> get visibleEntries {
     final String query = searchQuery.value.trim().toLowerCase();
-    if (query.isEmpty) return entries;
 
-    return entries
-        .where((entry) => entry.name.toLowerCase().contains(query))
-        .toList();
+    if (_visibleCache != null &&
+        _visibleCacheRevision == _entriesRevision &&
+        _visibleCacheQuery == query &&
+        _visibleCache!.length == entries.length) {
+      return _visibleCache!;
+    }
+
+    final List<rust.FileEntry> result = query.isEmpty
+        ? entries
+        : entries
+              .where((entry) => entry.name.toLowerCase().contains(query))
+              .toList();
+
+    _visibleCache = result;
+    _visibleCacheRevision = _entriesRevision;
+    _visibleCacheQuery = query;
+    return result;
   }
 
   bool get canGoToParent =>
@@ -128,6 +157,11 @@ class FileExplorerController extends GetxController {
 
   List<String> get breadcrumbs {
     final String normalized = p.normalize(currentPath.value);
+
+    if (_breadcrumbsCache != null && _breadcrumbsKey == normalized) {
+      return _breadcrumbsCache!;
+    }
+
     final List<String> parts = p.split(normalized);
 
     final List<String> result = <String>[];
@@ -140,6 +174,8 @@ class FileExplorerController extends GetxController {
       result.add(accumulatedPath);
     }
 
+    _breadcrumbsKey = normalized;
+    _breadcrumbsCache = result;
     return result;
   }
 
@@ -350,8 +386,7 @@ class FileExplorerController extends GetxController {
 
   bool get isCurrentInTrash => isInTrash(currentPath.value);
 
-  bool isSelected(rust.FileEntry entry) =>
-      selection.any((selected) => selected.path == entry.path);
+  bool isSelected(rust.FileEntry entry) => selectedPaths.contains(entry.path);
 
   void selectOnly(rust.FileEntry entry) {
     selection.assignAll([entry]);
@@ -740,6 +775,25 @@ class FileExplorerController extends GetxController {
 
     try {
       await fileSystemService.openFile(entry.path);
+    } catch (error) {
+      Get.snackbar(
+        'Failed to open file',
+        error.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<List<rust_system.OpenWithApp>> listOpenWithApps(String path) {
+    return fileSystemService.listOpenWithApps(path);
+  }
+
+  Future<void> openWith(
+    rust.FileEntry entry,
+    rust_system.OpenWithApp app,
+  ) async {
+    try {
+      await fileSystemService.openWith(entry.path, app.id);
     } catch (error) {
       Get.snackbar(
         'Failed to open file',
