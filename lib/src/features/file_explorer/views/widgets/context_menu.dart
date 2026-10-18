@@ -45,17 +45,22 @@ Future<void> showAppContextMenu({
   const double menuWidth = 248;
   const double edgePadding = 8;
 
+  final RenderObject? overlayObject = overlay.context.findRenderObject();
+  final Offset localPosition = overlayObject is RenderBox
+      ? overlayObject.globalToLocal(position)
+      : position;
+
   double estimatedHeight = 12;
   for (final entry in entries) {
     estimatedHeight += entry is ContextMenuSeparator ? 9 : 30;
   }
 
   final Size screen = overlay.context.size ?? const Size(1920, 1080);
-  final double left = position.dx.clamp(
+  final double left = localPosition.dx.clamp(
     edgePadding,
     (screen.width - menuWidth - edgePadding).clamp(edgePadding, screen.width),
   );
-  final double top = position.dy.clamp(
+  final double top = localPosition.dy.clamp(
     edgePadding,
     (screen.height - estimatedHeight - edgePadding).clamp(
       edgePadding,
