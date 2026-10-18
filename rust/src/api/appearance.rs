@@ -28,11 +28,11 @@ fn write_setting(name: &str, value: &str) -> Result<(), std::string::String> {
 
     if let Some(parent) = file.parent() {
         fs::create_dir_all(parent)
-            .map_err(|error| format!("Gagal menyiapkan folder pengaturan: {error}"))?;
+            .map_err(|error| format!("Failed to prepare settings folder: {error}"))?;
     }
 
     fs::write(&file, value.trim())
-        .map_err(|error| format!("Gagal menyimpan pengaturan tampilan: {error}"))
+        .map_err(|error| format!("Failed to save appearance settings: {error}"))
 }
 
 #[flutter_rust_bridge::frb]

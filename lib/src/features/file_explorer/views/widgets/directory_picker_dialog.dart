@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../controllers/directory_picker_controller.dart';
+import 'app_dialog.dart';
 
 class DirectoryPickerDialog extends StatefulWidget {
   const DirectoryPickerDialog({super.key, required this.initialPath});
@@ -35,11 +36,20 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Pilih folder tujuan'),
-      content: SizedBox(
-        width: 520,
-        height: 420,
+    return AppDialog(
+      title: 'Choose destination folder',
+      width: 520,
+      maxHeight: 480,
+      actions: [
+        AppDialogButton(label: 'Cancel', onTap: Get.back),
+        AppDialogButton(
+          label: 'Choose this folder',
+          primary: true,
+          onTap: pickerController.selectCurrentDirectory,
+        ),
+      ],
+      content: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -59,7 +69,7 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
                           ? null
                           : pickerController.goToParent,
                       icon: const Icon(Icons.arrow_upward, size: 15),
-                      tooltip: 'Folder induk',
+                      tooltip: 'Parent folder',
                       visualDensity: VisualDensity.compact,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(
@@ -132,7 +142,7 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
                   if (pickerController.directories.isEmpty) {
                     return Center(
                       child: Text(
-                        'Tidak ada subfolder',
+                        'No subfolders',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textFaint,
@@ -163,13 +173,6 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
           ],
         ),
       ),
-      actions: [
-        TextButton(onPressed: Get.back, child: const Text('Batal')),
-        FilledButton(
-          onPressed: pickerController.selectCurrentDirectory,
-          child: const Text('Pilih folder ini'),
-        ),
-      ],
     );
   }
 }
@@ -224,11 +227,7 @@ class _FolderRowState extends State<_FolderRow> {
                   ),
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                size: 15,
-                color: AppColors.textFaint,
-              ),
+              Icon(Icons.chevron_right, size: 15, color: AppColors.textFaint),
             ],
           ),
         ),

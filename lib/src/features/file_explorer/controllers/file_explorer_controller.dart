@@ -182,7 +182,7 @@ class FileExplorerController extends GetxController {
       case rust_system.PlaceKind.network:
         Get.snackbar(
           'Network',
-          'Penjelajahan jaringan belum didukung.',
+          'Network browsing is not supported yet.',
           snackPosition: SnackPosition.BOTTOM,
         );
     }
@@ -229,7 +229,7 @@ class FileExplorerController extends GetxController {
     if (trashPath.isEmpty) {
       Get.snackbar(
         'Trash',
-        'Trash tidak tersedia di platform ini.',
+        'Trash is not available on this platform.',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
@@ -240,7 +240,7 @@ class FileExplorerController extends GetxController {
     } catch (_) {
       Get.snackbar(
         'Trash',
-        'Folder trash masih kosong.',
+        'Trash folder is empty.',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
@@ -417,10 +417,10 @@ class FileExplorerController extends GetxController {
     clipboardIsCut.value = false;
 
     Get.snackbar(
-      'Disalin',
+      'Copied',
       entries.length == 1
-          ? '"${entries.first.name}" siap disalin ke folder lain.'
-          : '${entries.length} item siap disalin ke folder lain.',
+          ? '"${entries.first.name}" is ready to be copied to another folder.'
+          : '${entries.length} items ready to be copied to another folder.',
       snackPosition: SnackPosition.BOTTOM,
     );
   }
@@ -432,10 +432,10 @@ class FileExplorerController extends GetxController {
     clipboardIsCut.value = true;
 
     Get.snackbar(
-      'Dipindahkan',
+      'Cut',
       entries.length == 1
-          ? '"${entries.first.name}" siap dipindahkan ke folder lain.'
-          : '${entries.length} item siap dipindahkan ke folder lain.',
+          ? '"${entries.first.name}" is ready to be moved to another folder.'
+          : '${entries.length} items ready to be moved to another folder.',
       snackPosition: SnackPosition.BOTTOM,
     );
   }
@@ -489,16 +489,16 @@ class FileExplorerController extends GetxController {
 
     await refreshDirectory();
 
-    final String label = move ? 'dipindahkan' : 'disalin';
+    final String label = move ? 'moved' : 'copied';
 
     if (succeeded == entries.length) {
-      Get.snackbar('Berhasil', '${entries.length} item berhasil $label.');
+      Get.snackbar('Success', '${entries.length} item(s) $label.');
     } else if (entries.length == 1 && lastError != null) {
-      Get.snackbar('Gagal', lastError);
+      Get.snackbar('Failed', lastError);
     } else {
       Get.snackbar(
-        'Selesai sebagian',
-        '$succeeded dari ${entries.length} item berhasil $label.',
+        'Partially completed',
+        '$succeeded of ${entries.length} items $label.',
       );
     }
   }
@@ -524,19 +524,19 @@ class FileExplorerController extends GetxController {
     if (succeeded == entries.length) {
       Get.snackbar(
         'Trash',
-        '${entries.length} item dipindahkan ke Trash.',
+        '${entries.length} item(s) moved to Trash.',
         snackPosition: SnackPosition.BOTTOM,
       );
     } else if (entries.length == 1 && lastError != null) {
       Get.snackbar(
-        'Gagal memindahkan ke Trash',
+        'Failed to move to Trash',
         lastError,
         snackPosition: SnackPosition.BOTTOM,
       );
     } else {
       Get.snackbar(
-        'Sebagian gagal',
-        '$succeeded dari ${entries.length} item dipindahkan ke Trash.',
+        'Partially failed',
+        '$succeeded of ${entries.length} items moved to Trash.',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -569,20 +569,20 @@ class FileExplorerController extends GetxController {
 
     if (succeeded == entries.length) {
       Get.snackbar(
-        'Dihapus',
-        '${entries.length} item dihapus permanen.',
+        'Deleted',
+        '${entries.length} item(s) permanently deleted.',
         snackPosition: SnackPosition.BOTTOM,
       );
     } else if (entries.length == 1 && lastError != null) {
       Get.snackbar(
-        'Gagal menghapus',
+        'Failed to delete',
         lastError,
         snackPosition: SnackPosition.BOTTOM,
       );
     } else {
       Get.snackbar(
-        'Sebagian gagal',
-        '$succeeded dari ${entries.length} item berhasil dihapus.',
+        'Partially failed',
+        '$succeeded of ${entries.length} items deleted.',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -594,13 +594,13 @@ class FileExplorerController extends GetxController {
       await refreshDirectory();
 
       Get.snackbar(
-        'Trash dikosongkan',
-        '$removed item dihapus permanen.',
+        'Trash emptied',
+        '$removed item(s) permanently deleted.',
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (error) {
       Get.snackbar(
-        'Gagal mengosongkan Trash',
+        'Failed to empty Trash',
         error.toString(),
         snackPosition: SnackPosition.BOTTOM,
       );
@@ -673,8 +673,8 @@ class FileExplorerController extends GetxController {
     final String trimmedName = newName.trim();
     if (trimmedName.isEmpty) {
       Get.snackbar(
-        'Nama kosong',
-        'Masukkan nama baru terlebih dahulu.',
+        'Empty name',
+        'Enter a new name first.',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
@@ -685,13 +685,13 @@ class FileExplorerController extends GetxController {
       await refreshDirectory();
 
       Get.snackbar(
-        'Berhasil',
-        '"${entry.name}" berhasil diganti namanya.',
+        'Success',
+        '"${entry.name}" was renamed.',
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (error) {
       Get.snackbar(
-        'Gagal rename',
+        'Rename failed',
         error.toString(),
         snackPosition: SnackPosition.BOTTOM,
       );
@@ -702,8 +702,8 @@ class FileExplorerController extends GetxController {
     final String trimmedName = name.trim();
     if (trimmedName.isEmpty) {
       Get.snackbar(
-        'Nama folder kosong',
-        'Masukkan nama folder terlebih dahulu',
+        'Empty folder name',
+        'Enter a folder name first',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
@@ -714,13 +714,13 @@ class FileExplorerController extends GetxController {
       await refreshDirectory();
 
       Get.snackbar(
-        'Berhasil',
-        'Folder "$trimmedName" berhasil dibuat',
+        'Success',
+        'Folder "$trimmedName" created',
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (error) {
       Get.snackbar(
-        'Gagal membuat folder',
+        'Failed to create folder',
         error.toString(),
         snackPosition: SnackPosition.BOTTOM,
       );
@@ -742,7 +742,7 @@ class FileExplorerController extends GetxController {
       await fileSystemService.openFile(entry.path);
     } catch (error) {
       Get.snackbar(
-        'Gagal membuka file',
+        'Failed to open file',
         error.toString(),
         snackPosition: SnackPosition.BOTTOM,
       );

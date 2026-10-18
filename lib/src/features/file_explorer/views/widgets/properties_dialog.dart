@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../utils/formatters.dart';
+import 'app_dialog.dart';
 import 'entry_glyphs.dart';
 import 'image_thumbnail.dart';
 import 'themed_icon.dart';
@@ -84,7 +85,7 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
   Future<void> _copyPath() async {
     await Clipboard.setData(ClipboardData(text: widget.entry.path));
     Get.snackbar(
-      'Path disalin',
+      'Path copied',
       widget.entry.path,
       snackPosition: SnackPosition.BOTTOM,
     );
@@ -92,96 +93,29 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      shape: const RoundedRectangleBorder(),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      child: Center(
-        child: Container(
-          width: 500,
-          constraints: const BoxConstraints(maxHeight: 620),
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: AppColors.windowDeep,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0xA6000000),
-                blurRadius: 36,
-                offset: Offset(0, 14),
-              ),
-            ],
-          ),
-          foregroundDecoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.cardBorder, width: 1),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(context),
-              Container(height: 1, color: AppColors.divider),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (_showPreview) _buildPreview(),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (!_showPreview)
-                            SizedBox(width: 62, child: _buildIcon()),
-                          Expanded(child: _buildDetails()),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Container(height: 1, color: AppColors.divider),
-              _buildFooter(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Properti',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
+    return AppDialog(
+      title: 'Properties',
+      width: 500,
+      maxHeight: 620,
+      actions: [
+        AppDialogButton(label: 'Copy path', onTap: _copyPath),
+        AppDialogButton(label: 'Close', primary: true, onTap: Get.back),
+      ],
+      content: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_showPreview) _buildPreview(),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!_showPreview) SizedBox(width: 62, child: _buildIcon()),
+                Expanded(child: _buildDetails()),
+              ],
             ),
-          ),
-          _PropCloseButton(onTap: () => Navigator.of(context).pop()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFooter() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          _PropButton(label: 'Salin path', onTap: _copyPath),
-          const SizedBox(width: 8),
-          _PropButton(label: 'Tutup', primary: true, onTap: Get.back),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -236,11 +170,11 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _row('Nama:', _buildNameField()),
-        _row('Tipe:', Text(_properties?.kind ?? _fallbackKind())),
-        _row('Lokasi:', SelectableText(widget.entry.path)),
+        _row('Name:', _buildNameField()),
+        _row('Type:', Text(_properties?.kind ?? _fallbackKind())),
+        _row('Location:', SelectableText(widget.entry.path)),
         if (_properties?.linkTarget != null)
-          _row('Tautan:', SelectableText(_properties!.linkTarget!)),
+          _row('Link:', SelectableText(_properties!.linkTarget!)),
         const SizedBox(height: 10),
         if (_loading)
           const Padding(
@@ -258,27 +192,24 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
               _error!,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.dangerBright,
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.dangerBright),
             ),
           )
         else ...[
-          _row('Dibuat:', Text(formatDateNumeric(_created))),
-          _row('Diubah:', Text(formatDateNumeric(_modified))),
-          _row('Diakses:', Text(formatDateNumeric(_accessed))),
+          _row('Created:', Text(formatDateNumeric(_created))),
+          _row('Modified:', Text(formatDateNumeric(_modified))),
+          _row('Accessed:', Text(formatDateNumeric(_accessed))),
           const SizedBox(height: 10),
-          _row('Ukuran:', Text(_sizeLabel)),
-          _row('Ukuran Disk:', Text(_sizeOnDiskLabel)),
+          _row('Size:', Text(_sizeLabel)),
+          _row('Size on disk:', Text(_sizeOnDiskLabel)),
           if (_properties!.isDirectory) ...[
             const SizedBox(height: 10),
-            _row('Isi:', Text(_contentLabel)),
+            _row('Contents:', Text(_contentLabel)),
           ],
           if (_usage != null) ...[
             const SizedBox(height: 10),
-            _row('Kapasitas:', Text(formatBytesIec(_usage!.totalBytes))),
-            _row('Pemakaian:', _buildUsageText()),
+            _row('Capacity:', Text(formatBytesIec(_usage!.totalBytes))),
+            _row('Usage:', _buildUsageText()),
             const SizedBox(height: 6),
             _buildUsageBar(),
           ],
@@ -324,19 +255,13 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
             child: Text(
               label,
               textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: DefaultTextStyle.merge(
-              style: TextStyle(
-                fontSize: 12.5,
-                color: AppColors.textPrimary,
-              ),
+              style: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
               child: value,
             ),
           ),
@@ -376,7 +301,7 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
     final int files = properties.fileCount.toInt();
     final int folders = properties.folderCount.toInt();
 
-    return '${files + folders} item ($files file, $folders folder)';
+    return '${files + folders} items ($files files, $folders folders)';
   }
 
   Widget _buildUsageText() {
@@ -425,122 +350,6 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
         minHeight: 8,
         color: AppColors.folder,
         backgroundColor: AppColors.chip,
-      ),
-    );
-  }
-}
-
-class _PropButton extends StatefulWidget {
-  const _PropButton({
-    required this.label,
-    required this.onTap,
-    this.primary = false,
-  });
-
-  final String label;
-  final VoidCallback onTap;
-  final bool primary;
-
-  @override
-  State<_PropButton> createState() => _PropButtonState();
-}
-
-class _PropButtonState extends State<_PropButton> {
-  bool _hovered = false;
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color bgColor;
-    final Color borderColor;
-    final Color textColor;
-
-    if (widget.primary) {
-      bgColor = _pressed
-          ? AppColors.selection
-          : _hovered
-              ? AppColors.selectionBorder
-              : AppColors.selection;
-      borderColor = AppColors.selectionBorder;
-      textColor = AppColors.textPrimary;
-    } else {
-      bgColor = _pressed
-          ? AppColors.rowHover
-          : _hovered
-              ? AppColors.elevatedHover
-              : AppColors.elevated;
-      borderColor =
-          _hovered ? AppColors.elevatedBorderHover : AppColors.elevatedBorder;
-      textColor = _hovered ? Colors.white : AppColors.textLabel;
-    }
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() {
-        _hovered = false;
-        _pressed = false;
-      }),
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: borderColor, width: 1),
-          ),
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: textColor,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PropCloseButton extends StatefulWidget {
-  const _PropCloseButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  State<_PropCloseButton> createState() => _PropCloseButtonState();
-}
-
-class _PropCloseButtonState extends State<_PropCloseButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: _hovered ? AppColors.elevatedHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(
-            Icons.close,
-            size: 15,
-            color: _hovered ? Colors.white : AppColors.textFaint,
-          ),
-        ),
       ),
     );
   }

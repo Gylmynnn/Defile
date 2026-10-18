@@ -39,7 +39,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           Obx(
             () => _ToolbarIconButton(
               icon: Icons.chevron_left,
-              tooltip: 'Kembali',
+              tooltip: 'Back',
               onTap: controller.pathHistory.isEmpty ? null : controller.goBack,
             ),
           ),
@@ -55,7 +55,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           Obx(
             () => _ToolbarIconButton(
               icon: Icons.keyboard_arrow_up,
-              tooltip: 'Folder induk',
+              tooltip: 'Parent folder',
               onTap: controller.canGoToParent ? controller.goToParent : null,
             ),
           ),
@@ -73,7 +73,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
             if (!controller.isSearching.value) {
               return _ToolbarIconButton(
                 icon: Icons.search,
-                tooltip: 'Cari',
+                tooltip: 'Search',
                 onTap: () {
                   controller.startSearch();
                   _searchFocus.requestFocus();
@@ -98,8 +98,8 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
                   ? Icons.view_sidebar
                   : Icons.view_sidebar_outlined,
               tooltip: controller.showSidebar.value
-                  ? 'Sembunyikan panel'
-                  : 'Tampilkan panel',
+                  ? 'Hide sidebar'
+                  : 'Show sidebar',
               active: controller.showSidebar.value,
               onTap: controller.toggleSidebar,
             ),
@@ -107,7 +107,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           Obx(
             () => _ToolbarIconButton(
               icon: Icons.terminal,
-              tooltip: 'Buka terminal di folder ini',
+              tooltip: 'Open terminal in this folder',
               onTap: controller.location.value == ExplorerLocation.directory
                   ? controller.openTerminal
                   : null,
@@ -115,7 +115,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           ),
           _ToolbarIconButton(
             icon: Icons.settings_outlined,
-            tooltip: 'Pengaturan',
+            tooltip: 'Settings',
             onTap: () => Get.dialog(SettingsDialog()),
           ),
         ],
@@ -268,7 +268,7 @@ class _SearchField extends StatelessWidget {
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
-                hintText: 'Cari item...',
+                hintText: 'Search items...',
                 hintStyle: TextStyle(fontSize: 12, color: AppColors.textFaint),
               ),
             ),

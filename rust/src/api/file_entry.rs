@@ -60,7 +60,7 @@ fn validate_name(name: &str) -> Result<(), FileOperationError> {
         || name.contains('\\')
     {
         return Err(FileOperationError::InvalidName(
-            "Nama tujuan tidak valid".to_string(),
+            "Invalid destination name".to_string(),
         ));
     }
 
@@ -115,7 +115,7 @@ pub fn copy_entry(
 
     if !destination_dir.is_dir() {
         return Err(FileOperationError::InvalidPath(
-            "Folder tujuan tidak ditemukan".to_string(),
+            "Destination folder not found".to_string(),
         ));
     }
 
@@ -130,7 +130,7 @@ pub fn copy_entry(
     if metadata.is_dir() {
         if destination.starts_with(&source) || source.starts_with(&destination) {
             return Err(FileOperationError::InvalidPath(
-                "Folder sumber dan tujuan tidak valid".to_string(),
+                "Invalid source and destination folders".to_string(),
             ));
         }
 
@@ -139,7 +139,7 @@ pub fn copy_entry(
         fs::copy(&source, &destination)?;
     } else {
         return Err(FileOperationError::InvalidPath(
-            "Tipe file tidak didukung".to_string(),
+            "Unsupported file type".to_string(),
         ));
     }
 
@@ -162,7 +162,7 @@ pub fn move_entry(
 
     if !destination_dir.is_dir() {
         return Err(FileOperationError::InvalidPath(
-            "Folder tujuan tidak ditemukan".to_string(),
+            "Destination folder not found".to_string(),
         ));
     }
 
@@ -176,7 +176,7 @@ pub fn move_entry(
 
     if metadata.is_dir() && (destination.starts_with(&source) || source.starts_with(&destination)) {
         return Err(FileOperationError::InvalidPath(
-            "Folder sumber dan tujuan tidak valid".to_string(),
+            "Invalid source and destination folders".to_string(),
         ));
     }
 
@@ -189,15 +189,15 @@ pub fn delete_entry(path: std::string::String) -> Result<(), std::string::String
     let target = Path::new(&path);
 
     let metadata = fs::symlink_metadata(target)
-        .map_err(|error| format!("Item tidak ditemukan atau tidak dapat diakses: {error}"))?;
+        .map_err(|error| format!("Item not found or not accessible: {error}"))?;
 
     let file_type = metadata.file_type();
 
     if file_type.is_dir() {
         fs::remove_dir(target)
-            .map_err(|error| format!("Gagal menghapus folder. Pastikan folder kosong: {error}"))?;
+            .map_err(|error| format!("Failed to delete folder. Make sure the folder is empty: {error}"))?;
     } else {
-        fs::remove_file(target).map_err(|error| format!("Gagal menghapus file: {error}"))?;
+        fs::remove_file(target).map_err(|error| format!("Failed to delete file: {error}"))?;
     }
 
     Ok(())
@@ -207,17 +207,17 @@ pub fn delete_entry_recursive(path: std::string::String) -> Result<(), std::stri
     let target = Path::new(&path);
 
     let metadata = fs::symlink_metadata(target)
-        .map_err(|error| format!("Item tidak ditemukan atau tidak dapat diakses: {error}"))?;
+        .map_err(|error| format!("Item not found or not accessible: {error}"))?;
 
     let file_type = metadata.file_type();
 
     if file_type.is_symlink() || file_type.is_file() {
-        fs::remove_file(target).map_err(|error| format!("Gagal menghapus file: {error}"))?;
+        fs::remove_file(target).map_err(|error| format!("Failed to delete file: {error}"))?;
     } else if file_type.is_dir() {
         fs::remove_dir_all(target)
-            .map_err(|error| format!("Gagal menghapus folder dan isinya: {error}"))?;
+            .map_err(|error| format!("Failed to delete folder and its contents: {error}"))?;
     } else {
-        return Err("Tipe item tidak didukung".to_string());
+        return Err("Unsupported item type".to_string());
     }
 
     Ok(())
@@ -230,22 +230,22 @@ pub fn rename_entry(
     let source = Path::new(&source_path);
 
     if !source.exists() {
-        return Err(format!("File atau folder tidak ditemukan: {source_path}"));
+        return Err(format!("File or folder not found: {source_path}"));
     }
 
     let name = new_name.trim();
 
     if name.is_empty() {
-        return Err("Nama baru tidak boleh kosong".to_string());
+        return Err("New name cannot be empty".to_string());
     }
 
     if name == "." || name == ".." || name.contains('/') || name.contains('\\') {
-        return Err("Nama baru tidak valid".to_string());
+        return Err("Invalid new name".to_string());
     }
 
     let parent = source
         .parent()
-        .ok_or("Tidak dapat menentukan direktori induk")?;
+        .ok_or("Cannot determine parent directory")?;
 
     let destination = parent.join(name);
 
@@ -254,10 +254,10 @@ pub fn rename_entry(
     }
 
     if destination.exists() {
-        return Err(format!("Nama '{}' sudah digunakan", name));
+        return Err(format!("Name '{}' is already in use", name));
     }
 
-    fs::rename(source, &destination).map_err(|error| format!("Gagal mengganti nama: {error}"))?;
+    fs::rename(source, &destination).map_err(|error| format!("Failed to rename: {error}"))?;
 
     Ok(destination.to_string_lossy().into_owned())
 }
@@ -269,26 +269,26 @@ pub fn create_directory(
     let parent = Path::new(&parent_path);
 
     if !parent.exists() {
-        return Err(format!("Direktori induk tidak ditemukan: {parent_path}"));
+        return Err(format!("Parent directory not found: {parent_path}"));
     }
 
     if !parent.is_dir() {
-        return Err("Path induk bukan direktori".to_string());
+        return Err("Parent path is not a directory".to_string());
     }
 
     let name = directory_name.trim();
 
     if name.is_empty() {
-        return Err("Nama folder tidak boleh kosong".to_string());
+        return Err("Folder name cannot be empty".to_string());
     }
 
     if name == "." || name == ".." || name.contains('/') || name.contains('\\') {
-        return Err("Nama folder tidak valid".to_string());
+        return Err("Invalid folder name".to_string());
     }
 
     let new_path = parent.join(name);
 
-    fs::create_dir(&new_path).map_err(|error| format!("Gagal membuat folder: {error}"))?;
+    fs::create_dir(&new_path).map_err(|error| format!("Failed to create folder: {error}"))?;
 
     Ok(new_path.to_string_lossy().into_owned())
 }
@@ -296,11 +296,11 @@ pub fn create_directory(
 pub fn list_directory(path: std::string::String) -> Result<Vec<FileEntry>, std::string::String> {
     let directory = Path::new(&path);
     if !directory.exists() {
-        return Err(format!("Path tidak ditemukan: {}", path));
+        return Err(format!("Path not found: {}", path));
     }
 
     if !directory.is_dir() {
-        return Err(format!("Path bukan directory: {}", path));
+        return Err(format!("Path is not a directory: {}", path));
     }
 
     let entries = fs::read_dir(directory).map_err(|err| err.to_string())?;
@@ -331,20 +331,20 @@ pub fn open_file(path: String) -> Result<(), String> {
     let file_path = Path::new(&path);
 
     if !file_path.exists() {
-        return Err(format!("File tidak ditemukan: {path}"));
+        return Err(format!("File not found: {path}"));
     }
 
     if !file_path.is_file() {
-        return Err(format!("Path bukan file: {path}"));
+        return Err(format!("Path is not a file: {path}"));
     }
 
     let status = Command::new("xdg-open")
         .arg(file_path)
         .status()
-        .map_err(|error| format!("Gagal menjalankan xdg-open: {error}"))?;
+        .map_err(|error| format!("Failed to run xdg-open: {error}"))?;
 
     if !status.success() {
-        return Err(format!("xdg-open gagal membuka file: {path}"));
+        return Err(format!("xdg-open failed to open file: {path}"));
     }
 
     Ok(())

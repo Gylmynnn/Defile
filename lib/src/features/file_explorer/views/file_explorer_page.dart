@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,7 @@ import 'package:get/get.dart';
 
 import '../../../theme/app_theme.dart';
 import '../controllers/file_explorer_controller.dart';
+import 'widgets/app_dialog.dart';
 import 'widgets/app_sidebar.dart';
 import 'widgets/context_menu.dart';
 import 'widgets/directory_picker_dialog.dart';
@@ -35,7 +37,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
   bool _bandActive = false;
   Offset? _bandStart;
   Offset? _bandCurrent;
-  Rect? _bandRect;
+  final ValueNotifier<Rect?> _bandRect = ValueNotifier<Rect?>(null);
   Set<String> _bandBase = <String>{};
   final Map<String, Rect> _dragRects = <String, Rect>{};
 
@@ -75,11 +77,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
                     ? AppSidebar()
                     : const SizedBox.shrink(),
               ),
-              VerticalDivider(
-                width: 1,
-                thickness: 1,
-                color: AppColors.divider,
-              ),
+              VerticalDivider(width: 1, thickness: 1, color: AppColors.divider),
               Expanded(
                 child: Column(
                   children: [
@@ -109,9 +107,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
                               onPointerCancel: _handleBandUp,
                               child: IgnorePointer(
                                 child: CustomPaint(
-                                  painter: _bandRect == null
-                                      ? null
-                                      : _SelectionBandPainter(_bandRect!),
+                                  painter: _SelectionBandPainter(_bandRect),
                                 ),
                               ),
                             ),
@@ -131,6 +127,12 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
   }
 
   bool get _keyboardBlocked => controller.isSearching.value;
+
+  @override
+  void dispose() {
+    _bandRect.dispose();
+    super.dispose();
+  }
 
   void _handleBackgroundTap() {
     _pendingOpenPath = null;
@@ -181,7 +183,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     _bandActive = false;
     _dragRects.clear();
 
-    setState(() => _bandRect = null);
+    _bandRect.value = null;
   }
 
   void _collectDragRects() {
@@ -208,11 +210,23 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
       if (tile.value.overlaps(band)) paths.add(tile.key);
     }
 
-    controller.selection.assignAll(
-      controller.visibleEntries.where((entry) => paths.contains(entry.path)),
-    );
+    _bandRect.value = band;
 
-    setState(() => _bandRect = band);
+    final List<rust.FileEntry> next = controller.visibleEntries
+        .where((entry) => paths.contains(entry.path))
+        .toList();
+
+    if (_matchesSelection(next)) return;
+    controller.selection.assignAll(next);
+  }
+
+  bool _matchesSelection(List<rust.FileEntry> next) {
+    final List<rust.FileEntry> current = controller.selection;
+    if (current.length != next.length) return false;
+    for (int i = 0; i < next.length; i++) {
+      if (current[i].path != next[i].path) return false;
+    }
+    return true;
   }
 
   Future<void> _openSelected() async {
@@ -247,11 +261,11 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
 
     if (controller.isCurrentInTrash) {
       final bool confirmed = await _confirm(
-        title: 'Hapus permanen?',
+        title: 'Delete permanently?',
         message: selected.length == 1
-            ? '"${selected.first.name}" akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.'
-            : '${selected.length} item akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
-        confirmLabel: 'Hapus Permanen',
+            ? '"${selected.first.name}" will be permanently deleted. This action cannot be undone.'
+            : '${selected.length} items will be permanently deleted. This action cannot be undone.',
+        confirmLabel: 'Delete Permanently',
       );
 
       if (!confirmed) return;
@@ -431,7 +445,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.open_in_new,
-            label: single ? 'Buka' : 'Buka ${targets.length} Item',
+            label: single ? 'Open' : 'Open ${targets.length} Items',
             shortcut: 'Enter',
             onSelected: () async {
               for (final item in targets) {
@@ -444,7 +458,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           ContextMenuActionEntry(
             ContextMenuAction(
               icon: Icons.terminal,
-              label: 'Buka di Terminal',
+              label: 'Open in Terminal',
               enabled: !inTrash,
               onSelected: () => controller.openTerminalAt(entry.path),
             ),
@@ -453,7 +467,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.content_cut,
-            label: 'Potong',
+            label: 'Cut',
             shortcut: 'Ctrl+X',
             enabled: !inTrash,
             onSelected: () => controller.cutToClipboard(targets),
@@ -462,7 +476,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.content_copy,
-            label: 'Salin',
+            label: 'Copy',
             shortcut: 'Ctrl+C',
             onSelected: () => controller.copyToClipboard(targets),
           ),
@@ -470,7 +484,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.assignment_outlined,
-            label: 'Salin Path',
+            label: 'Copy Path',
             onSelected: () => _copyPath(targets),
           ),
         ),
@@ -478,7 +492,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.drive_file_move_outlined,
-            label: 'Pindahkan ke...',
+            label: 'Move to...',
             enabled: !inTrash,
             onSelected: () => _pickDestination(targets, move: true),
           ),
@@ -487,7 +501,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.drive_file_rename_outline,
-            label: 'Ganti Nama...',
+            label: 'Rename...',
             shortcut: 'F2',
             enabled: single && !inTrash,
             onSelected: () => _showRenameDialog(context, entry),
@@ -500,11 +514,11 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
                 : Icons.delete_outline,
             label: inTrash
                 ? single
-                      ? 'Hapus Permanen'
-                      : 'Hapus ${targets.length} Item Permanen'
+                      ? 'Delete Permanently'
+                      : 'Delete ${targets.length} Items Permanently'
                 : single
-                ? 'Pindahkan ke Trash'
-                : 'Pindahkan ${targets.length} Item ke Trash',
+                ? 'Move to Trash'
+                : 'Move ${targets.length} Items to Trash',
             shortcut: 'Delete',
             danger: true,
             onSelected: () => _removeSelection(),
@@ -514,7 +528,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.info_outline,
-            label: 'Properti',
+            label: 'Properties',
             enabled: single,
             onSelected: () => _showPropertiesDialog(entry),
           ),
@@ -537,7 +551,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.content_paste,
-            label: 'Tempel',
+            label: 'Paste',
             shortcut: 'Ctrl+V',
             enabled: controller.hasClipboard && inDirectory && !inTrash,
             onSelected: controller.pasteIntoCurrentDirectory,
@@ -546,7 +560,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.create_new_folder_outlined,
-            label: 'Folder Baru',
+            label: 'New Folder',
             shortcut: 'Ctrl+Shift+N',
             enabled: inDirectory && !inTrash,
             onSelected: () => _showCreateFolderDialog(context),
@@ -556,7 +570,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.refresh,
-            label: 'Segarkan',
+            label: 'Refresh',
             shortcut: 'Ctrl+R',
             onSelected: controller.refreshDirectory,
           ),
@@ -564,7 +578,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.terminal,
-            label: 'Buka di Terminal',
+            label: 'Open in Terminal',
             enabled: inDirectory && !inTrash,
             onSelected: controller.openTerminal,
           ),
@@ -574,7 +588,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           ContextMenuActionEntry(
             ContextMenuAction(
               icon: Icons.delete_sweep_outlined,
-              label: 'Kosongkan Trash',
+              label: 'Empty Trash',
               danger: true,
               onSelected: () => _emptyTrash(),
             ),
@@ -586,9 +600,9 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
 
   Future<void> _emptyTrash() async {
     final bool confirmed = await _confirm(
-      title: 'Kosongkan Trash?',
-      message: 'Semua item di Trash akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
-      confirmLabel: 'Kosongkan',
+      title: 'Empty Trash?',
+      message: 'All items in Trash will be permanently deleted. This action cannot be undone.',
+      confirmLabel: 'Empty',
     );
 
     if (!confirmed) return;
@@ -602,18 +616,22 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     required String confirmLabel,
   }) async {
     final bool? result = await Get.dialog<bool>(
-      AlertDialog(
-        title: Text(title),
-        content: SizedBox(width: 380, child: Text(message)),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Batal'),
+      AppDialog(
+        title: title,
+        width: 380,
+        content: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+          child: Text(
+            message,
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Get.back(result: true),
-            child: Text(confirmLabel),
+        ),
+        actions: [
+          AppDialogButton(label: 'Cancel', onTap: () => Get.back(result: false)),
+          AppDialogButton(
+            label: confirmLabel,
+            danger: true,
+            onTap: () => Get.back(result: true),
           ),
         ],
       ),
@@ -627,10 +645,10 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     await Clipboard.setData(ClipboardData(text: value));
 
     Get.snackbar(
-      'Path disalin',
+      'Path copied',
       entries.length == 1
           ? entries.first.path
-          : '${entries.length} path disalin.',
+          : '${entries.length} paths copied.',
       snackPosition: SnackPosition.BOTTOM,
     );
   }
@@ -668,14 +686,15 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     );
 
     Get.dialog(
-      AlertDialog(
-        title: const Text('Ganti nama'),
-        content: SizedBox(
-          width: 360,
+      AppDialog(
+        title: 'Rename',
+        width: 360,
+        content: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
           child: TextField(
             controller: textController,
             autofocus: true,
-            decoration: const InputDecoration(labelText: 'Nama baru'),
+            decoration: const InputDecoration(labelText: 'New name'),
             onSubmitted: (value) {
               Get.back();
               controller.renameEntry(entry, value);
@@ -683,14 +702,15 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           ),
         ),
         actions: [
-          TextButton(onPressed: Get.back, child: const Text('Batal')),
-          FilledButton(
-            onPressed: () {
+          AppDialogButton(label: 'Cancel', onTap: Get.back),
+          AppDialogButton(
+            label: 'Save',
+            primary: true,
+            onTap: () {
               final String newName = textController.text;
               Get.back();
               controller.renameEntry(entry, newName);
             },
-            child: const Text('Simpan'),
           ),
         ],
       ),
@@ -701,16 +721,17 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     final TextEditingController textController = TextEditingController();
 
     Get.dialog(
-      AlertDialog(
-        title: const Text('Folder baru'),
-        content: SizedBox(
-          width: 360,
+      AppDialog(
+        title: 'New folder',
+        width: 360,
+        content: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
           child: TextField(
             controller: textController,
             autofocus: true,
             decoration: const InputDecoration(
-              labelText: 'Nama folder',
-              hintText: 'Contoh: Projects',
+              labelText: 'Folder name',
+              hintText: 'Example: Projects',
             ),
             onSubmitted: (value) {
               Get.back();
@@ -719,14 +740,15 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           ),
         ),
         actions: [
-          TextButton(onPressed: Get.back, child: const Text('Batal')),
-          FilledButton(
-            onPressed: () {
+          AppDialogButton(label: 'Cancel', onTap: Get.back),
+          AppDialogButton(
+            label: 'Create',
+            primary: true,
+            onTap: () {
               final String name = textController.text;
               Get.back();
               controller.createDirectory(name);
             },
-            child: const Text('Buat'),
           ),
         ],
       ),
@@ -747,11 +769,8 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            searching ? 'Tidak ada item yang cocok' : 'Folder ini kosong',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: AppColors.textSecondary,
-            ),
+            searching ? 'No matching items' : 'This folder is empty',
+            style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -765,30 +784,23 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 42,
-              color: AppColors.textFaint,
-            ),
+            Icon(Icons.error_outline, size: 42, color: AppColors.textFaint),
             const SizedBox(height: 12),
             Text(
-              'Gagal membuka direktori',
+              'Failed to open directory',
               style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
             ),
             const SizedBox(height: 6),
             Text(
               error,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: controller.refreshDirectory,
               icon: const Icon(Icons.refresh, size: 15),
-              label: const Text('Coba lagi'),
+              label: const Text('Try again'),
             ),
           ],
         ),
@@ -874,20 +886,23 @@ class _LoadingShroudState extends State<_LoadingShroud> {
 }
 
 class _SelectionBandPainter extends CustomPainter {
-  _SelectionBandPainter(this.rect);
+  _SelectionBandPainter(this.rect) : super(repaint: rect);
 
-  final Rect rect;
+  final ValueListenable<Rect?> rect;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final RRect band = RRect.fromRectAndRadius(rect, const Radius.circular(3));
+    final Rect? band = rect.value;
+    if (band == null) return;
+
+    final RRect rrect = RRect.fromRectAndRadius(band, const Radius.circular(3));
 
     canvas.drawRRect(
-      band,
+      rrect,
       Paint()..color = AppColors.selectionBorder.withValues(alpha: 0.14),
     );
     canvas.drawRRect(
-      band,
+      rrect,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1

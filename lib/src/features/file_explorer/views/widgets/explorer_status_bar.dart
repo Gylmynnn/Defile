@@ -30,8 +30,8 @@ class ExplorerStatusBar extends GetView<FileExplorerController> {
           children: [
             Text(
               selectedCount > 0
-                  ? '$selectedCount dipilih dari ${entries.length} item'
-                  : '${entries.length} item ($folders folder, $files file)',
+                  ? '$selectedCount of ${entries.length} selected'
+                  : '${entries.length} items ($folders folders, $files files)',
               style: TextStyle(
                 fontSize: 11.5,
                 color: AppColors.textSecondary,

@@ -90,49 +90,49 @@ pub fn move_to_trash(
     let source = PathBuf::from(&path);
 
     let _metadata = fs::symlink_metadata(&source)
-        .map_err(|error| format!("Item tidak ditemukan atau tidak dapat diakses: {error}"))?;
+        .map_err(|error| format!("Item not found or not accessible: {error}"))?;
 
     if cfg!(windows) {
-        return Err("Move to Trash belum didukung di Windows".to_string());
+        return Err("Move to Trash is not supported on Windows yet".to_string());
     }
 
     let home = home_dir();
     if source == Path::new("/") || source == home {
-        return Err("Item ini tidak dapat dipindahkan ke Trash".to_string());
+        return Err("This item cannot be moved to Trash".to_string());
     }
 
     let name = source
         .file_name()
         .map(Path::new)
-        .ok_or("Nama item tidak valid")?
+        .ok_or("Invalid item name")?
         .to_path_buf();
 
     #[cfg(target_os = "macos")]
     {
         let trash = home.join(".Trash");
-        fs::create_dir_all(&trash).map_err(|error| format!("Gagal menyiapkan Trash: {error}"))?;
+        fs::create_dir_all(&trash).map_err(|error| format!("Failed to set up Trash: {error}"))?;
 
         let destination = unique_destination(&trash, &name);
         fs::rename(&source, &destination)
-            .map_err(|error| format!("Gagal memindahkan ke Trash: {error}"))?;
+            .map_err(|error| format!("Failed to move to Trash: {error}"))?;
 
         return Ok(destination.to_string_lossy().into_owned());
     }
 
     #[cfg(all(unix, not(target_os = "macos")))]
     {
-        let root = trash_root().ok_or("Trash tidak tersedia")?;
+        let root = trash_root().ok_or("Trash is not available")?;
         let files_dir = root.join("files");
         let info_dir = root.join("info");
 
         fs::create_dir_all(&files_dir)
-            .map_err(|error| format!("Gagal menyiapkan Trash: {error}"))?;
+            .map_err(|error| format!("Failed to set up Trash: {error}"))?;
         fs::create_dir_all(&info_dir)
-            .map_err(|error| format!("Gagal menyiapkan Trash: {error}"))?;
+            .map_err(|error| format!("Failed to set up Trash: {error}"))?;
 
         let destination = unique_destination(&files_dir, &name);
         fs::rename(&source, &destination)
-            .map_err(|error| format!("Gagal memindahkan ke Trash: {error}"))?;
+            .map_err(|error| format!("Failed to move to Trash: {error}"))?;
 
         let info_name = destination
             .file_name()
@@ -151,24 +151,24 @@ pub fn move_to_trash(
     }
 
     #[allow(unreachable_code)]
-    Err("Move to Trash belum didukung di platform ini".to_string())
+    Err("Move to Trash is not supported on this platform yet".to_string())
 }
 
 #[flutter_rust_bridge::frb]
 pub fn delete_from_trash(path: std::string::String) -> Result<(), std::string::String> {
     let source = PathBuf::from(&path);
-    let root = trash_root().ok_or("Trash tidak tersedia di platform ini")?;
+    let root = trash_root().ok_or("Trash is not available on this platform")?;
 
     if !source.starts_with(&root) {
-        return Err("Item bukan bagian dari Trash".to_string());
+        return Err("Item is not part of Trash".to_string());
     }
 
     if source == root {
-        return Err("Gunakan Kosongkan Trash untuk menghapus semua item".to_string());
+        return Err("Use Empty Trash to delete all items".to_string());
     }
 
     let metadata = fs::symlink_metadata(&source)
-        .map_err(|error| format!("Item tidak ditemukan atau tidak dapat diakses: {error}"))?;
+        .map_err(|error| format!("Item not found or not accessible: {error}"))?;
 
     let removal = if metadata.is_dir() {
         fs::remove_dir_all(&source)
@@ -176,7 +176,7 @@ pub fn delete_from_trash(path: std::string::String) -> Result<(), std::string::S
         fs::remove_file(&source)
     };
 
-    removal.map_err(|error| format!("Gagal menghapus: {error}"))?;
+    removal.map_err(|error| format!("Failed to delete: {error}"))?;
 
     if let Some(name) = source.file_name() {
         let info = root
@@ -191,8 +191,8 @@ pub fn delete_from_trash(path: std::string::String) -> Result<(), std::string::S
 
 #[flutter_rust_bridge::frb]
 pub fn empty_trash() -> Result<u32, std::string::String> {
-    let root = trash_root().ok_or("Trash tidak tersedia di platform ini")?;
-    let files_dir = trash_dir().ok_or("Trash tidak tersedia di platform ini")?;
+    let root = trash_root().ok_or("Trash is not available on this platform")?;
+    let files_dir = trash_dir().ok_or("Trash is not available on this platform")?;
 
     let mut removed: u32 = 0;
 
@@ -326,7 +326,7 @@ pub fn get_disk_usage(path: std::string::String) -> Result<DiskUsage, std::strin
     let target = Path::new(&path);
 
     if !target.exists() {
-        return Err(format!("Path tidak ditemukan: {path}"));
+        return Err(format!("Path not found: {path}"));
     }
 
     let total_bytes = fs2::total_space(target).map_err(|error| error.to_string())?;
@@ -446,7 +446,7 @@ pub fn list_recent_files(
     let root = PathBuf::from(&root);
 
     if !root.is_dir() {
-        return Err(format!("Path bukan direktori: {root:?}"));
+        return Err(format!("Path is not a directory: {root:?}"));
     }
 
     let max_visited: usize = 20_000;
@@ -503,7 +503,7 @@ pub fn open_in_terminal(path: std::string::String) -> Result<(), std::string::St
     let directory = Path::new(&path);
 
     if !directory.is_dir() {
-        return Err(format!("Direktori tidak ditemukan: {path}"));
+        return Err(format!("Directory not found: {path}"));
     }
 
     #[cfg(target_os = "macos")]
@@ -513,7 +513,7 @@ pub fn open_in_terminal(path: std::string::String) -> Result<(), std::string::St
             .arg("Terminal")
             .arg(directory)
             .status()
-            .map_err(|error| format!("Gagal membuka Terminal: {error}"))?;
+            .map_err(|error| format!("Failed to open Terminal: {error}"))?;
 
         return Ok(());
     }
@@ -524,7 +524,7 @@ pub fn open_in_terminal(path: std::string::String) -> Result<(), std::string::St
             .args(["/C", "start", "cmd", "/K"])
             .arg(format!("cd /d {}", directory.display()))
             .spawn()
-            .map_err(|error| format!("Gagal membuka Command Prompt: {error}"))?;
+            .map_err(|error| format!("Failed to open Command Prompt: {error}"))?;
 
         return Ok(());
     }
@@ -566,18 +566,18 @@ pub fn open_in_terminal(path: std::string::String) -> Result<(), std::string::St
             std::process::Command::new("sh")
                 .args(["-c", &format!("setsid {command} >/dev/null 2>&1 &")])
                 .status()
-                .map_err(|error| format!("Gagal menjalankan {program}: {error}"))?;
+                .map_err(|error| format!("Failed to run {program}: {error}"))?;
 
             return Ok(());
         }
 
         return Err(
-            "Tidak ada terminal yang terpasang (gnome-terminal, konsole, xterm, ...)".to_string(),
+            "No terminal installed (gnome-terminal, konsole, xterm, ...)".to_string(),
         );
     }
 
     #[allow(unreachable_code)]
-    Err("Terminal tidak didukung pada platform ini".to_string())
+    Err("Terminal is not supported on this platform".to_string())
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
