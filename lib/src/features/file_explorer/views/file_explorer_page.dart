@@ -20,6 +20,7 @@ import 'widgets/entry_views.dart';
 import 'widgets/explorer_status_bar.dart';
 import 'widgets/explorer_toolbar.dart';
 import 'widgets/open_with_submenu.dart';
+import 'widgets/preview_panel.dart';
 import 'widgets/properties_dialog.dart';
 
 class FileExplorerPage extends StatefulWidget {
@@ -98,43 +99,50 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
               }),
               VerticalDivider(width: 1, thickness: 1, color: AppColors.divider),
               Expanded(
-                child: Column(
+                child: Row(
                   children: [
-                    ExplorerToolbar(),
                     Expanded(
-                      child: Stack(
+                      child: Column(
                         children: [
-                          Positioned.fill(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: _handleBackgroundTap,
-                              onSecondaryTapUp: (details) =>
-                                  _showBackgroundMenu(
-                                    context,
-                                    details.globalPosition,
+                          ExplorerToolbar(),
+                          Expanded(
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.translucent,
+                                    onTap: _handleBackgroundTap,
+                                    onSecondaryTapUp: (details) =>
+                                        _showBackgroundMenu(
+                                          context,
+                                          details.globalPosition,
+                                        ),
+                                    child: Obx(() => _buildContent(context)),
                                   ),
-                              child: Obx(() => _buildContent(context)),
-                            ),
-                          ),
-                          Positioned.fill(
-                            child: Listener(
-                              key: _selectionLayerKey,
-                              behavior: HitTestBehavior.translucent,
-                              onPointerDown: _handleBandDown,
-                              onPointerMove: _handleBandMove,
-                              onPointerUp: _handleBandUp,
-                              onPointerCancel: _handleBandUp,
-                              child: IgnorePointer(
-                                child: CustomPaint(
-                                  painter: _SelectionBandPainter(_bandRect),
                                 ),
-                              ),
+                                Positioned.fill(
+                                  child: Listener(
+                                    key: _selectionLayerKey,
+                                    behavior: HitTestBehavior.translucent,
+                                    onPointerDown: _handleBandDown,
+                                    onPointerMove: _handleBandMove,
+                                    onPointerUp: _handleBandUp,
+                                    onPointerCancel: _handleBandUp,
+                                    child: IgnorePointer(
+                                      child: CustomPaint(
+                                        painter: _SelectionBandPainter(_bandRect),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          ExplorerStatusBar(),
                         ],
                       ),
                     ),
-                    ExplorerStatusBar(),
+                    PreviewPanel(),
                   ],
                 ),
               ),

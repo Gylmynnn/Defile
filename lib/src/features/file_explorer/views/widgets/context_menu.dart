@@ -213,7 +213,8 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final Size screenSize = MediaQuery.sizeOf(context);
+    final MediaQueryData mq = MediaQuery.of(context);
+    final Size screenSize = mq.size;
     const double flyoutWidth = 472;
     const double flyoutHeight = 320;
     const double edgePadding = 8;
@@ -224,11 +225,8 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
     }
     flyoutLeft = flyoutLeft.clamp(
       edgePadding,
-      (screenSize.width - flyoutWidth - edgePadding).clamp(
-        edgePadding,
-        screenSize.width,
-      ),
-    );
+      screenSize.width - flyoutWidth - edgePadding,
+    ).clamp(0, screenSize.width);
 
     double flyoutTop = widget.top + _submenuOffset;
     if (flyoutTop + flyoutHeight + edgePadding > screenSize.height) {
@@ -236,11 +234,8 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
     }
     flyoutTop = flyoutTop.clamp(
       edgePadding,
-      (screenSize.height - flyoutHeight - edgePadding).clamp(
-        edgePadding,
-        screenSize.height,
-      ),
-    );
+      screenSize.height - flyoutHeight - edgePadding,
+    ).clamp(0, screenSize.height);
 
     final Animation<double> curved = CurvedAnimation(
       parent: _controller,

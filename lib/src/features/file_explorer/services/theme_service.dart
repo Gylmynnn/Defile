@@ -15,6 +15,7 @@ class ThemeService extends GetxService {
   // ponytail: in-memory only. Add a rust getter/setter (like uiScale) if it
   // needs to survive restarts.
   final RxBool animationsEnabled = true.obs;
+  final RxBool previewEnabled = false.obs;
 
   Duration get animationDuration => animationsEnabled.value
       ? const Duration(milliseconds: 200)

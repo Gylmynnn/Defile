@@ -47,6 +47,8 @@ class FileExplorerController extends GetxController {
   final RxList<rust.FileEntry> clipboardEntries = <rust.FileEntry>[].obs;
   final RxBool clipboardIsCut = false.obs;
 
+  final Rxn<rust.FileEntry> previewFile = Rxn();
+
   final RxList<String> pathHistory = <String>[].obs;
   final RxList<String> forwardHistory = <String>[].obs;
 
@@ -184,6 +186,7 @@ class FileExplorerController extends GetxController {
     errorMessage.value = null;
     location.value = ExplorerLocation.directory;
     clearSelection();
+    previewFile.value = null;
 
     try {
       final result = await fileSystemService.listDirectory(path);
@@ -391,6 +394,7 @@ class FileExplorerController extends GetxController {
   void selectOnly(rust.FileEntry entry) {
     selection.assignAll([entry]);
     selectionAnchor.value = entry.path;
+    previewFile.value = entry;
   }
 
   void toggleSelection(rust.FileEntry entry) {

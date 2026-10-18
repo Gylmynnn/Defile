@@ -4,56 +4,45 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `find_icon_candidates_in_roots`, `find_icon_in_roots`, `icon_png_in_roots`, `icon_search_roots`, `list_icon_themes_in_roots`, `locate_theme`, `parse_index_theme`, `render_svg`, `settings_file`, `theme_chain`, `theme_is_usable`
+
+            // These functions are ignored because they are not marked as `pub`: `find_icon_candidates_in_roots`, `find_icon_in_roots`, `icon_png_in_roots`, `icon_search_roots`, `list_icon_themes_in_roots`, `locate_theme`, `parse_index_theme`, `render_svg`, `settings_file`, `theme_chain`, `theme_is_usable`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `IconDir`, `ThemeIndex`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
-Future<List<IconThemeEntry>> listIconThemes() =>
-    RustLib.instance.api.crateApiIconThemeListIconThemes();
 
-Future<String?> findIcon({
-  required String theme,
-  required List<String> iconNames,
-  required int size,
-}) => RustLib.instance.api.crateApiIconThemeFindIcon(
-  theme: theme,
-  iconNames: iconNames,
-  size: size,
-);
+            Future<List<IconThemeEntry>>  listIconThemes() => RustLib.instance.api.crateApiIconThemeListIconThemes();
 
-Future<Uint8List?> iconPng({
-  required String theme,
-  required List<String> iconNames,
-  required int size,
-}) => RustLib.instance.api.crateApiIconThemeIconPng(
-  theme: theme,
-  iconNames: iconNames,
-  size: size,
-);
+Future<String?>  findIcon({required String theme , required List<String> iconNames , required int size }) => RustLib.instance.api.crateApiIconThemeFindIcon(theme: theme, iconNames: iconNames, size: size);
 
-Future<String> getIconTheme() =>
-    RustLib.instance.api.crateApiIconThemeGetIconTheme();
+Future<Uint8List?>  iconPng({required String theme , required List<String> iconNames , required int size }) => RustLib.instance.api.crateApiIconThemeIconPng(theme: theme, iconNames: iconNames, size: size);
 
-Future<void> setIconTheme({required String name}) =>
-    RustLib.instance.api.crateApiIconThemeSetIconTheme(name: name);
+Future<String>  getIconTheme() => RustLib.instance.api.crateApiIconThemeGetIconTheme();
 
-class IconThemeEntry {
-  final String name;
-  final String path;
+Future<void>  setIconTheme({required String name }) => RustLib.instance.api.crateApiIconThemeSetIconTheme(name: name);
 
-  const IconThemeEntry({required this.name, required this.path});
+            class IconThemeEntry  {
+                final String name;
+final String path;
 
-  @override
-  int get hashCode => name.hashCode ^ path.hashCode;
+                const IconThemeEntry({required this.name ,required this.path ,});
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is IconThemeEntry &&
-          runtimeType == other.runtimeType &&
-          name == other.name &&
-          path == other.path;
-}
+
+
+
+
+        @override
+        int get hashCode => name.hashCode^path.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is IconThemeEntry &&
+                runtimeType == other.runtimeType
+                && name == other.name&& path == other.path;
+
+            }
+            

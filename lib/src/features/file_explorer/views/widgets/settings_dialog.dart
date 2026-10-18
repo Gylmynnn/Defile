@@ -917,6 +917,17 @@ class _SettingsDialogState extends State<SettingsDialog> {
               subtitle: 'Display total and available capacity bars underneath mounted drives.',
               control: _ObsidianSwitch(value: true, onChanged: (_) {}),
             ),
+            _ObsidianDivider(),
+            Obx(() {
+              return _ObsidianSettingRow(
+                title: 'Show preview panel',
+                subtitle: 'Display file preview in right sidebar when selecting files.',
+                control: _ObsidianSwitch(
+                  value: _themeService.previewEnabled.value,
+                  onChanged: (val) => _themeService.previewEnabled.value = val,
+                ),
+              );
+            }),
           ],
         ),
       ],

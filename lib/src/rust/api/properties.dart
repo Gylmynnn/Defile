@@ -4,76 +4,48 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `allocated_bytes`, `describe_kind`, `directory_totals`, `seconds`
+
+            // These functions are ignored because they are not marked as `pub`: `allocated_bytes`, `describe_kind`, `directory_totals`, `seconds`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DirectoryTotals`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 // These functions are ignored (category: IgnoreBecauseOwnerTyShouldIgnore): `default`
 
-Future<EntryProperties> getEntryProperties({required String path}) =>
-    RustLib.instance.api.crateApiPropertiesGetEntryProperties(path: path);
 
-class EntryProperties {
-  final String name;
-  final String path;
-  final String kind;
-  final String? linkTarget;
-  final bool isDirectory;
-  final BigInt sizeBytes;
-  final BigInt sizeOnDiskBytes;
-  final PlatformInt64 createdSeconds;
-  final PlatformInt64 modifiedSeconds;
-  final PlatformInt64 accessedSeconds;
-  final BigInt fileCount;
-  final BigInt folderCount;
+            Future<EntryProperties>  getEntryProperties({required String path }) => RustLib.instance.api.crateApiPropertiesGetEntryProperties(path: path);
 
-  const EntryProperties({
-    required this.name,
-    required this.path,
-    required this.kind,
-    this.linkTarget,
-    required this.isDirectory,
-    required this.sizeBytes,
-    required this.sizeOnDiskBytes,
-    required this.createdSeconds,
-    required this.modifiedSeconds,
-    required this.accessedSeconds,
-    required this.fileCount,
-    required this.folderCount,
-  });
+            class EntryProperties  {
+                final String name;
+final String path;
+final String kind;
+final String? linkTarget;
+final bool isDirectory;
+final BigInt sizeBytes;
+final BigInt sizeOnDiskBytes;
+final PlatformInt64 createdSeconds;
+final PlatformInt64 modifiedSeconds;
+final PlatformInt64 accessedSeconds;
+final BigInt fileCount;
+final BigInt folderCount;
 
-  @override
-  int get hashCode =>
-      name.hashCode ^
-      path.hashCode ^
-      kind.hashCode ^
-      linkTarget.hashCode ^
-      isDirectory.hashCode ^
-      sizeBytes.hashCode ^
-      sizeOnDiskBytes.hashCode ^
-      createdSeconds.hashCode ^
-      modifiedSeconds.hashCode ^
-      accessedSeconds.hashCode ^
-      fileCount.hashCode ^
-      folderCount.hashCode;
+                const EntryProperties({required this.name ,required this.path ,required this.kind ,this.linkTarget ,required this.isDirectory ,required this.sizeBytes ,required this.sizeOnDiskBytes ,required this.createdSeconds ,required this.modifiedSeconds ,required this.accessedSeconds ,required this.fileCount ,required this.folderCount ,});
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is EntryProperties &&
-          runtimeType == other.runtimeType &&
-          name == other.name &&
-          path == other.path &&
-          kind == other.kind &&
-          linkTarget == other.linkTarget &&
-          isDirectory == other.isDirectory &&
-          sizeBytes == other.sizeBytes &&
-          sizeOnDiskBytes == other.sizeOnDiskBytes &&
-          createdSeconds == other.createdSeconds &&
-          modifiedSeconds == other.modifiedSeconds &&
-          accessedSeconds == other.accessedSeconds &&
-          fileCount == other.fileCount &&
-          folderCount == other.folderCount;
-}
+
+
+
+
+        @override
+        int get hashCode => name.hashCode^path.hashCode^kind.hashCode^linkTarget.hashCode^isDirectory.hashCode^sizeBytes.hashCode^sizeOnDiskBytes.hashCode^createdSeconds.hashCode^modifiedSeconds.hashCode^accessedSeconds.hashCode^fileCount.hashCode^folderCount.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is EntryProperties &&
+                runtimeType == other.runtimeType
+                && name == other.name&& path == other.path&& kind == other.kind&& linkTarget == other.linkTarget&& isDirectory == other.isDirectory&& sizeBytes == other.sizeBytes&& sizeOnDiskBytes == other.sizeOnDiskBytes&& createdSeconds == other.createdSeconds&& modifiedSeconds == other.modifiedSeconds&& accessedSeconds == other.accessedSeconds&& fileCount == other.fileCount&& folderCount == other.folderCount;
+
+            }
+            

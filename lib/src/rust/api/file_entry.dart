@@ -4,114 +4,70 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'file_entry.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `copy_directory_recursive`, `entry_from_metadata`, `validate_name`
+            // These functions are ignored because they are not marked as `pub`: `copy_directory_recursive`, `entry_from_metadata`, `validate_name`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `fmt`, `from`
 
-Future<void> copyEntry({
-  required String sourcePath,
-  required String destinationDirectory,
-  required String newName,
-}) => RustLib.instance.api.crateApiFileEntryCopyEntry(
-  sourcePath: sourcePath,
-  destinationDirectory: destinationDirectory,
-  newName: newName,
-);
 
-Future<void> moveEntry({
-  required String sourcePath,
-  required String destinationDirectory,
-  required String newName,
-}) => RustLib.instance.api.crateApiFileEntryMoveEntry(
-  sourcePath: sourcePath,
-  destinationDirectory: destinationDirectory,
-  newName: newName,
-);
+            Future<void>  copyEntry({required String sourcePath , required String destinationDirectory , required String newName }) => RustLib.instance.api.crateApiFileEntryCopyEntry(sourcePath: sourcePath, destinationDirectory: destinationDirectory, newName: newName);
 
-Future<void> deleteEntry({required String path}) =>
-    RustLib.instance.api.crateApiFileEntryDeleteEntry(path: path);
+Future<void>  moveEntry({required String sourcePath , required String destinationDirectory , required String newName }) => RustLib.instance.api.crateApiFileEntryMoveEntry(sourcePath: sourcePath, destinationDirectory: destinationDirectory, newName: newName);
 
-Future<void> deleteEntryRecursive({required String path}) =>
-    RustLib.instance.api.crateApiFileEntryDeleteEntryRecursive(path: path);
+Future<void>  deleteEntry({required String path }) => RustLib.instance.api.crateApiFileEntryDeleteEntry(path: path);
 
-Future<String> renameEntry({
-  required String sourcePath,
-  required String newName,
-}) => RustLib.instance.api.crateApiFileEntryRenameEntry(
-  sourcePath: sourcePath,
-  newName: newName,
-);
+Future<void>  deleteEntryRecursive({required String path }) => RustLib.instance.api.crateApiFileEntryDeleteEntryRecursive(path: path);
 
-Future<String> createDirectory({
-  required String parentPath,
-  required String directoryName,
-}) => RustLib.instance.api.crateApiFileEntryCreateDirectory(
-  parentPath: parentPath,
-  directoryName: directoryName,
-);
+Future<String>  renameEntry({required String sourcePath , required String newName }) => RustLib.instance.api.crateApiFileEntryRenameEntry(sourcePath: sourcePath, newName: newName);
 
-Future<List<FileEntry>> listDirectory({required String path}) =>
-    RustLib.instance.api.crateApiFileEntryListDirectory(path: path);
+Future<String>  createDirectory({required String parentPath , required String directoryName }) => RustLib.instance.api.crateApiFileEntryCreateDirectory(parentPath: parentPath, directoryName: directoryName);
 
-Future<void> openFile({required String path}) =>
-    RustLib.instance.api.crateApiFileEntryOpenFile(path: path);
+Future<List<FileEntry>>  listDirectory({required String path }) => RustLib.instance.api.crateApiFileEntryListDirectory(path: path);
 
-class FileEntry {
-  final String name;
-  final String path;
-  final bool isDirectory;
-  final bool isFile;
-  final BigInt sizeBytes;
-  final PlatformInt64 modifiedSeconds;
+Future<void>  openFile({required String path }) => RustLib.instance.api.crateApiFileEntryOpenFile(path: path);
 
-  const FileEntry({
-    required this.name,
-    required this.path,
-    required this.isDirectory,
-    required this.isFile,
-    required this.sizeBytes,
-    required this.modifiedSeconds,
-  });
+            class FileEntry  {
+                final String name;
+final String path;
+final bool isDirectory;
+final bool isFile;
+final BigInt sizeBytes;
+final PlatformInt64 modifiedSeconds;
 
-  @override
-  int get hashCode =>
-      name.hashCode ^
-      path.hashCode ^
-      isDirectory.hashCode ^
-      isFile.hashCode ^
-      sizeBytes.hashCode ^
-      modifiedSeconds.hashCode;
+                const FileEntry({required this.name ,required this.path ,required this.isDirectory ,required this.isFile ,required this.sizeBytes ,required this.modifiedSeconds ,});
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is FileEntry &&
-          runtimeType == other.runtimeType &&
-          name == other.name &&
-          path == other.path &&
-          isDirectory == other.isDirectory &&
-          isFile == other.isFile &&
-          sizeBytes == other.sizeBytes &&
-          modifiedSeconds == other.modifiedSeconds;
-}
+
+
+
+
+        @override
+        int get hashCode => name.hashCode^path.hashCode^isDirectory.hashCode^isFile.hashCode^sizeBytes.hashCode^modifiedSeconds.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is FileEntry &&
+                runtimeType == other.runtimeType
+                && name == other.name&& path == other.path&& isDirectory == other.isDirectory&& isFile == other.isFile&& sizeBytes == other.sizeBytes&& modifiedSeconds == other.modifiedSeconds;
+
+            }
 
 @freezed
-sealed class FileOperationError
-    with _$FileOperationError
-    implements FrbException {
-  const FileOperationError._();
+                sealed class FileOperationError with _$FileOperationError implements FrbException {
+                    const FileOperationError._();
 
-  const factory FileOperationError.io(String field0) = FileOperationError_Io;
-  const factory FileOperationError.invalidName(String field0) =
-      FileOperationError_InvalidName;
-  const factory FileOperationError.destinationExists(String field0) =
-      FileOperationError_DestinationExists;
-  const factory FileOperationError.unsupportedSymlink(String field0) =
-      FileOperationError_UnsupportedSymlink;
-  const factory FileOperationError.invalidPath(String field0) =
-      FileOperationError_InvalidPath;
-}
+                     const factory FileOperationError.io(  String field0,) = FileOperationError_Io;
+ const factory FileOperationError.invalidName(  String field0,) = FileOperationError_InvalidName;
+ const factory FileOperationError.destinationExists(  String field0,) = FileOperationError_DestinationExists;
+ const factory FileOperationError.unsupportedSymlink(  String field0,) = FileOperationError_UnsupportedSymlink;
+ const factory FileOperationError.invalidPath(  String field0,) = FileOperationError_InvalidPath;
+
+                    
+
+                    
+                }
+            
