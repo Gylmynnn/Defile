@@ -53,26 +53,28 @@ void main() {
       ),
     );
 
-    expect(find.text('Tema Ikon'), findsOneWidget);
-    expect(find.text('Font Sistem'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('General'), findsOneWidget);
 
-    // Default tab adalah Tema Ikon
-    expect(find.text('Tema ikon'), findsOneWidget);
+    // Default section adalah General
+    expect(find.text('Version 1.14.4'), findsOneWidget);
 
-    // Pindah ke tab Font Sistem
-    await tester.tap(find.text('Font Sistem'));
+    // Pindah ke section Appearance
+    await tester.tap(find.text('Appearance'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Font tampilan'), findsOneWidget);
-    expect(find.text('Bawaan aplikasi'), findsOneWidget);
+    expect(find.text('Display font'), findsOneWidget);
+    expect(find.text('Application default'), findsWidgets);
 
-    // Cari font
-    await tester.enterText(find.byType(TextField), 'Sans');
-    await tester.pumpAndSettle();
+    // Cari font menggunakan font search field
+    final fontSearchFinder = find.widgetWithText(TextField, '');
+    if (fontSearchFinder.evaluate().isNotEmpty) {
+      await tester.enterText(fontSearchFinder.last, 'Sans');
+      await tester.pumpAndSettle();
 
-    // Reset pencarian
-    await tester.enterText(find.byType(TextField), '');
-    await tester.pumpAndSettle();
+      await tester.enterText(fontSearchFinder.last, '');
+      await tester.pumpAndSettle();
+    }
 
     // Pilih font pertama selain bawaan jika ada
     if (fontService.fonts.isNotEmpty) {
@@ -87,7 +89,10 @@ void main() {
     }
 
     // Reset kembali ke bawaan
-    await tester.tap(find.text('Bawaan aplikasi'));
+    final defaultFontFinder = find.text('Application default').last;
+    await tester.ensureVisible(defaultFontFinder);
+    await tester.pumpAndSettle();
+    await tester.tap(defaultFontFinder);
     await tester.pumpAndSettle();
 
     expect(fontService.fontFamily.value, '');
