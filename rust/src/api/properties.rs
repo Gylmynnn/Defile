@@ -35,8 +35,8 @@ pub fn get_entry_properties(
 ) -> Result<EntryProperties, std::string::String> {
     let target = PathBuf::from(&path);
 
-    let metadata = fs::symlink_metadata(&target)
-        .map_err(|error| format!("Item tidak dapat dibaca: {error}"))?;
+    let metadata =
+        fs::symlink_metadata(&target).map_err(|error| format!("Item cannot be read: {error}"))?;
 
     let file_type = metadata.file_type();
     let name = target

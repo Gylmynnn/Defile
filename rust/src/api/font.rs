@@ -11,12 +11,12 @@ use crate::api::system::home_dir;
 pub fn list_system_fonts() -> Vec<std::string::String> {
     let mut families: HashSet<std::string::String> = HashSet::new();
 
-    // 1. Coba lewat fc-list (Linux, BSD)
+    // 1. Try via fc-list (Linux, BSD)
     if let Some(fc_fonts) = list_fonts_from_fc_list() {
         families.extend(fc_fonts);
     }
 
-    // 2. Jika fc-list tidak tersedia atau kosong, pindai folder font standar
+    // 2. If fc-list is unavailable or empty, scan the standard font folders
     if families.is_empty() {
         for root in font_search_roots() {
             scan_fonts_in_dir(&root, &mut families);
@@ -184,8 +184,8 @@ fn parse_font_family_from_bytes(data: &[u8]) -> Option<std::string::String> {
         let platform_id = u16::from_be_bytes([data[rec_start], data[rec_start + 1]]);
         let name_id = u16::from_be_bytes([data[rec_start + 6], data[rec_start + 7]]);
         let length = u16::from_be_bytes([data[rec_start + 8], data[rec_start + 9]]) as usize;
-        let str_offset =
-            string_offset + u16::from_be_bytes([data[rec_start + 10], data[rec_start + 11]]) as usize;
+        let str_offset = string_offset
+            + u16::from_be_bytes([data[rec_start + 10], data[rec_start + 11]]) as usize;
 
         if name_id == 1 && str_offset + length <= data.len() {
             let bytes = &data[str_offset..str_offset + length];
@@ -240,11 +240,10 @@ pub fn set_font_family(name: std::string::String) -> Result<(), std::string::Str
 
     if let Some(parent) = file.parent() {
         fs::create_dir_all(parent)
-            .map_err(|error| format!("Gagal menyiapkan folder pengaturan: {error}"))?;
+            .map_err(|error| format!("Failed to prepare settings folder: {error}"))?;
     }
 
-    fs::write(&file, name.trim())
-        .map_err(|error| format!("Gagal menyimpan pengaturan font: {error}"))
+    fs::write(&file, name.trim()).map_err(|error| format!("Failed to save font settings: {error}"))
 }
 
 #[cfg(test)]
@@ -263,14 +262,8 @@ mod tests {
 
     #[test]
     fn clean_font_stem_extracts_family() {
-        assert_eq!(
-            clean_font_stem("Roboto-BoldItalic").unwrap(),
-            "Roboto"
-        );
-        assert_eq!(
-            clean_font_stem("FiraCode-Regular").unwrap(),
-            "FiraCode"
-        );
+        assert_eq!(clean_font_stem("Roboto-BoldItalic").unwrap(), "Roboto");
+        assert_eq!(clean_font_stem("FiraCode-Regular").unwrap(), "FiraCode");
     }
 
     #[test]

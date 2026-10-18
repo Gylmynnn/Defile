@@ -196,7 +196,10 @@ class EntryListView extends StatelessWidget {
               SizedBox(width: 24),
               Expanded(child: Text('Name', style: _headerStyle)),
               SizedBox(width: 92, child: Text('Size', style: _headerStyle)),
-              SizedBox(width: 158, child: Text('Modified', style: _headerStyle)),
+              SizedBox(
+                width: 158,
+                child: Text('Modified', style: _headerStyle),
+              ),
               SizedBox(width: 64, child: Text('Type', style: _headerStyle)),
               SizedBox(width: 30),
             ],

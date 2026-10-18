@@ -59,21 +59,48 @@ const List<_SidebarItemDef> _allSidebarItems = [
     label: 'General',
     icon: Icons.account_circle_outlined,
     category: 'Options',
-    keywords: ['general', 'version', 'update', 'language', 'account', 'license', 'advanced', 'startup', 'help'],
+    keywords: [
+      'general',
+      'version',
+      'update',
+      'language',
+      'account',
+      'license',
+      'advanced',
+      'startup',
+      'help',
+    ],
   ),
   _SidebarItemDef(
     section: SettingsSection.appearance,
     label: 'Appearance',
     icon: Icons.palette_outlined,
     category: 'Options',
-    keywords: ['appearance', 'theme', 'icon', 'font', 'color', 'accent', 'display'],
+    keywords: [
+      'appearance',
+      'theme',
+      'icon',
+      'font',
+      'color',
+      'accent',
+      'display',
+    ],
   ),
   _SidebarItemDef(
     section: SettingsSection.interface,
     label: 'Interface',
     icon: Icons.desktop_windows_outlined,
     category: 'Options',
-    keywords: ['interface', 'view', 'grid', 'list', 'compact', 'sidebar', 'disk', 'layout'],
+    keywords: [
+      'interface',
+      'view',
+      'grid',
+      'list',
+      'compact',
+      'sidebar',
+      'disk',
+      'layout',
+    ],
   ),
   _SidebarItemDef(
     section: SettingsSection.editor,
@@ -87,7 +114,15 @@ const List<_SidebarItemDef> _allSidebarItems = [
     label: 'Files and links',
     icon: Icons.folder_open_outlined,
     category: 'Options',
-    keywords: ['files', 'links', 'trash', 'terminal', 'home', 'delete', 'directory'],
+    keywords: [
+      'files',
+      'links',
+      'trash',
+      'terminal',
+      'home',
+      'delete',
+      'directory',
+    ],
   ),
   _SidebarItemDef(
     section: SettingsSection.hotkeys,
@@ -230,8 +265,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
   ThemeService get _themeService => Get.find<ThemeService>();
   FileExplorerController? get _explorerController =>
       Get.isRegistered<FileExplorerController>()
-          ? Get.find<FileExplorerController>()
-          : null;
+      ? Get.find<FileExplorerController>()
+      : null;
 
   @override
   void initState() {
@@ -259,10 +294,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.sizeOf(context);
-    final double dialogWidth =
-        (screenSize.width * 0.86).clamp(760.0, 940.0);
-    final double dialogHeight =
-        (screenSize.height * 0.84).clamp(500.0, 680.0);
+    final double dialogWidth = (screenSize.width * 0.86).clamp(760.0, 940.0);
+    final double dialogHeight = (screenSize.height * 0.84).clamp(500.0, 680.0);
 
     return Obx(() {
       _themeService.baseThemeId.value;
@@ -297,29 +330,23 @@ class _SettingsDialogState extends State<SettingsDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Left Sidebar
-                SizedBox(
-                  width: 235,
-                  child: _buildSidebar(),
-                ),
+                SizedBox(width: 235, child: _buildSidebar()),
 
                 // Vertical Border Divider
-                Container(
-                  width: 1,
-                  color: AppColors.divider,
-                ),
+                Container(width: 1, color: AppColors.divider),
 
                 // Right Content Panel
                 Expanded(
                   child: Stack(
                     children: [
-                      Positioned.fill(
-                        child: _buildContentPanel(),
-                      ),
+                      Positioned.fill(child: _buildContentPanel()),
                       // Close button at top right
                       Positioned(
                         top: 14,
                         right: 18,
-                        child: _CloseButton(onTap: () => Navigator.of(context).pop()),
+                        child: _CloseButton(
+                          onTap: () => Navigator.of(context).pop(),
+                        ),
                       ),
                     ],
                   ),
@@ -340,10 +367,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
     for (final item in _allSidebarItems) {
       if (_searchQuery.isNotEmpty) {
-        final bool labelMatches = item.label.toLowerCase().contains(_searchQuery);
-        final bool categoryMatches = item.category.toLowerCase().contains(_searchQuery);
-        final bool keywordMatches =
-            item.keywords.any((k) => k.toLowerCase().contains(_searchQuery));
+        final bool labelMatches = item.label.toLowerCase().contains(
+          _searchQuery,
+        );
+        final bool categoryMatches = item.category.toLowerCase().contains(
+          _searchQuery,
+        );
+        final bool keywordMatches = item.keywords.any(
+          (k) => k.toLowerCase().contains(_searchQuery),
+        );
 
         if (!labelMatches && !categoryMatches && !keywordMatches) {
           continue;
@@ -413,10 +445,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               onChanged: _onSearchChanged,
               cursorHeight: 14,
               cursorColor: AppColors.accent,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textPrimary,
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
               decoration: InputDecoration(
                 isDense: true,
                 filled: false,
@@ -425,10 +454,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 hintText: 'Search settings...',
-                hintStyle: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textFaint,
-                ),
+                hintStyle: TextStyle(fontSize: 12, color: AppColors.textFaint),
               ),
             ),
           ),
@@ -442,7 +468,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 cursor: SystemMouseCursors.click,
                 child: Padding(
                   padding: EdgeInsets.all(2),
-                  child: Icon(Icons.close, size: 13, color: AppColors.textFaint),
+                  child: Icon(
+                    Icons.close,
+                    size: 13,
+                    color: AppColors.textFaint,
+                  ),
                 ),
               ),
             ),
@@ -520,19 +550,26 @@ class _SettingsDialogState extends State<SettingsDialog> {
               subtitle: 'Installer version: 1.14.4',
               linkText: 'Read the changelog.',
               onLinkTap: () {
-                _showInfoMessage('Changelog', 'Defile 1.14.4 introduces custom themes, obsidian styling, and lightning-fast file navigation.');
+                _showInfoMessage(
+                  'Changelog',
+                  'Defile 1.14.4 introduces custom themes, obsidian styling, and lightning-fast file navigation.',
+                );
               },
               control: _ObsidianButton(
                 label: 'Check for updates',
                 onTap: () {
-                  _showInfoMessage('Update Check', 'You are running the latest version of Defile.');
+                  _showInfoMessage(
+                    'Update Check',
+                    'You are running the latest version of Defile.',
+                  );
                 },
               ),
             ),
             _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Automatic updates',
-              subtitle: 'Turn this off to prevent the app from checking for updates.',
+              subtitle:
+                  'Turn this off to prevent the app from checking for updates.',
               control: _ObsidianSwitch(
                 value: _automaticUpdates,
                 onChanged: (val) => setState(() => _automaticUpdates = val),
@@ -546,7 +583,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 value: _selectedLanguage,
                 items: const [
                   DropdownMenuItem(value: 'English', child: Text('English')),
-                  DropdownMenuItem(value: 'Bahasa Indonesia', child: Text('Bahasa Indonesia')),
+                  DropdownMenuItem(
+                    value: 'Bahasa Indonesia',
+                    child: Text('Bahasa Indonesia'),
+                  ),
                   DropdownMenuItem(value: '日本語', child: Text('日本語')),
                   DropdownMenuItem(value: 'Deutsch', child: Text('Deutsch')),
                   DropdownMenuItem(value: 'Français', child: Text('Français')),
@@ -559,11 +599,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
             _ObsidianDivider(),
             _ObsidianSettingRow(
               title: 'Help',
-              subtitle: 'Learn how to use Obsidian and get help from the community.',
+              subtitle:
+                  'Learn how to use Obsidian and get help from the community.',
               control: _ObsidianButton(
                 label: 'Open',
                 onTap: () {
-                  _showInfoMessage('Help & Support', 'Visit docs at https://github.com/Gylmynnn/defile');
+                  _showInfoMessage(
+                    'Help & Support',
+                    'Visit docs at https://github.com/Gylmynnn/defile',
+                  );
                 },
               ),
             ),
@@ -579,19 +623,20 @@ class _SettingsDialogState extends State<SettingsDialog> {
           children: [
             _ObsidianSettingRow(
               title: 'Your account',
-              subtitle:
-                  "You're not logged in right now. An account is only needed for Obsidian Sync,\nObsidian Publish, and early access versions.",
+              subtitle: "You're not logged in right now. An account is only needed for Obsidian Sync,\nObsidian Publish, and early access versions.",
               control: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _ObsidianButton(
                     label: 'Log in',
-                    onTap: () => _showInfoMessage('Account', 'Log in feature ready.'),
+                    onTap: () =>
+                        _showInfoMessage('Account', 'Log in feature ready.'),
                   ),
                   const SizedBox(width: 8),
                   _ObsidianButton(
                     label: 'Sign up',
-                    onTap: () => _showInfoMessage('Account', 'Sign up feature ready.'),
+                    onTap: () =>
+                        _showInfoMessage('Account', 'Sign up feature ready.'),
                   ),
                 ],
               ),
@@ -601,18 +646,25 @@ class _SettingsDialogState extends State<SettingsDialog> {
               title: 'Commercial license',
               subtitle: 'Help keep Obsidian 100% user-supported.',
               linkText: 'Learn more',
-              onLinkTap: () => _showInfoMessage('License', 'Defile is open-source under MIT/Apache licenses.'),
+              onLinkTap: () => _showInfoMessage(
+                'License',
+                'Defile is open-source under MIT/Apache licenses.',
+              ),
               control: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _ObsidianButton(
                     label: 'Activate',
-                    onTap: () => _showInfoMessage('License', 'Activate commercial key.'),
+                    onTap: () =>
+                        _showInfoMessage('License', 'Activate commercial key.'),
                   ),
                   const SizedBox(width: 8),
                   _ObsidianButton(
                     label: 'Purchase',
-                    onTap: () => _showInfoMessage('License', 'Redirecting to purchase portal.'),
+                    onTap: () => _showInfoMessage(
+                      'License',
+                      'Redirecting to purchase portal.',
+                    ),
                   ),
                 ],
               ),
@@ -629,12 +681,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
           children: [
             _ObsidianSettingRow(
               title: 'Notify if startup takes longer than expected',
-              subtitle:
-                  'Diagnose issues with your app by seeing what is causing the app to load slowly.',
+              subtitle: 'Diagnose issues with your app by seeing what is causing the app to load slowly.',
               control: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.timer_outlined, size: 16, color: AppColors.textFaint),
+                  Icon(
+                    Icons.timer_outlined,
+                    size: 16,
+                    color: AppColors.textFaint,
+                  ),
                   const SizedBox(width: 8),
                   _ObsidianSwitch(
                     value: _notifyStartup,
@@ -658,7 +713,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
               subtitle: 'Install defile launcher to open folders and files directly from shell.',
               control: _ObsidianButton(
                 label: 'Install',
-                onTap: () => _showInfoMessage('CLI', 'Defile CLI installed to /usr/local/bin/defile'),
+                onTap: () => _showInfoMessage(
+                  'CLI',
+                  'Defile CLI installed to /usr/local/bin/defile',
+                ),
               ),
             ),
           ],
@@ -682,18 +740,21 @@ class _SettingsDialogState extends State<SettingsDialog> {
           children: [
             Obx(() {
               final String currentTheme = _iconService.themeName.value;
-              final String display =
-                  currentTheme.isEmpty ? 'Application default' : currentTheme;
+              final String display = currentTheme.isEmpty
+                  ? 'Application default'
+                  : currentTheme;
 
               return _ObsidianSettingRow(
                 title: 'Icon theme',
-                subtitle:
-                    'Icons are loaded from themes installed on this system. Applies across all files and folders.',
+                subtitle: 'Icons are loaded from themes installed on this system. Applies across all files and folders.',
                 control: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.chip,
                         borderRadius: BorderRadius.circular(4),
@@ -738,18 +799,21 @@ class _SettingsDialogState extends State<SettingsDialog> {
           children: [
             Obx(() {
               final String currentFont = _fontService.fontFamily.value;
-              final String display =
-                  currentFont.isEmpty ? 'Application default' : currentFont;
+              final String display = currentFont.isEmpty
+                  ? 'Application default'
+                  : currentFont;
 
               return _ObsidianSettingRow(
                 title: 'Display font',
-                subtitle:
-                    'Select a font installed on your system. Defile will immediately render with the chosen typeface.',
+                subtitle: 'Select a font installed on your system. Defile will immediately render with the chosen typeface.',
                 control: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.chip,
                         borderRadius: BorderRadius.circular(4),
@@ -796,7 +860,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
               return _ObsidianSettingRow(
                 title: 'Base color theme',
-                subtitle: 'Select the base dark scheme for the whole interface.',
+                subtitle:
+                    'Select the base dark scheme for the whole interface.',
                 control: _ObsidianDropdown<String>(
                   value: AppPalettes.byId(currentTheme).id,
                   items: [
@@ -818,7 +883,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
               return _ObsidianSettingRow(
                 title: 'Accent color',
-                subtitle: 'Color highlight for selections, badges, and focus rings.',
+                subtitle:
+                    'Color highlight for selections, badges, and focus rings.',
                 control: Wrap(
                   spacing: 6,
                   children: [
@@ -846,8 +912,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
               return _ObsidianSettingRow(
                 title: 'Interface scale',
-                subtitle:
-                    'Enlarge or shrink the whole interface, similar to display scaling on your monitor.',
+                subtitle: 'Enlarge or shrink the whole interface, similar to display scaling on your monitor.',
                 control: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -966,10 +1031,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             _ObsidianSettingRow(
               title: 'Show storage usage bar',
               subtitle: 'Display total and available capacity bars underneath mounted drives.',
-              control: _ObsidianSwitch(
-                value: true,
-                onChanged: (_) {},
-              ),
+              control: _ObsidianSwitch(value: true, onChanged: (_) {}),
             ),
           ],
         ),
@@ -1006,10 +1068,22 @@ class _SettingsDialogState extends State<SettingsDialog> {
               control: _ObsidianDropdown<String>(
                 value: _terminalChoice,
                 items: const [
-                  DropdownMenuItem(value: 'System default', child: Text('System default')),
-                  DropdownMenuItem(value: 'gnome-terminal', child: Text('gnome-terminal')),
-                  DropdownMenuItem(value: 'x-terminal-emulator', child: Text('x-terminal-emulator')),
-                  DropdownMenuItem(value: 'kitty / alacritty', child: Text('kitty / alacritty')),
+                  DropdownMenuItem(
+                    value: 'System default',
+                    child: Text('System default'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'gnome-terminal',
+                    child: Text('gnome-terminal'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'x-terminal-emulator',
+                    child: Text('x-terminal-emulator'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'kitty / alacritty',
+                    child: Text('kitty / alacritty'),
+                  ),
                 ],
                 onChanged: (val) {
                   if (val != null) setState(() => _terminalChoice = val);
@@ -1018,17 +1092,19 @@ class _SettingsDialogState extends State<SettingsDialog> {
             ),
             if (controller != null) ...[
               _ObsidianDivider(),
-              Obx(() => _ObsidianSettingRow(
-                    title: 'Home directory',
-                    subtitle: controller.homePath.value,
-                    control: _ObsidianButton(
-                      label: 'Open',
-                      onTap: () {
-                        controller.navigateTo(controller.homePath.value);
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  )),
+              Obx(
+                () => _ObsidianSettingRow(
+                  title: 'Home directory',
+                  subtitle: controller.homePath.value,
+                  control: _ObsidianButton(
+                    label: 'Open',
+                    onTap: () {
+                      controller.navigateTo(controller.homePath.value);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ),
+              ),
             ],
           ],
         ),
@@ -1133,11 +1209,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
           children: [
             _ObsidianSettingRow(
               title: 'Enable ${item.label}',
-              subtitle: 'Turn this on to activate ${item.label} features in Defile.',
-              control: _ObsidianSwitch(
-                value: true,
-                onChanged: (_) {},
-              ),
+              subtitle:
+                  'Turn this on to activate ${item.label} features in Defile.',
+              control: _ObsidianSwitch(value: true, onChanged: (_) {}),
             ),
             _ObsidianDivider(),
             _ObsidianSettingRow(
@@ -1145,7 +1219,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
               subtitle: 'Configure specific settings and keybindings for this module.',
               control: _ObsidianButton(
                 label: 'Configure',
-                onTap: () => _showInfoMessage(item.label, '${item.label} is currently enabled and active.'),
+                onTap: () => _showInfoMessage(
+                  item.label,
+                  '${item.label} is currently enabled and active.',
+                ),
               ),
             ),
           ],
@@ -1173,7 +1250,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
           Expanded(
             child: TextField(
               controller: _themeSearchController,
-              onChanged: (val) => setState(() => _themeQuery = val.trim().toLowerCase()),
+              onChanged: (val) =>
+                  setState(() => _themeQuery = val.trim().toLowerCase()),
               cursorHeight: 12,
               style: TextStyle(fontSize: 11.5, color: AppColors.textPrimary),
               decoration: InputDecoration(
@@ -1184,7 +1262,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 hintText: 'Search icon themes...',
-                hintStyle: TextStyle(fontSize: 11.5, color: AppColors.textFaint),
+                hintStyle: TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.textFaint,
+                ),
               ),
             ),
           ),
@@ -1206,7 +1287,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final List<_ThemeChoice> choices = [
       _ThemeChoice(name: '', path: null),
       for (final theme in _iconService.themes)
-        if (_themeQuery.isEmpty || theme.name.toLowerCase().contains(_themeQuery))
+        if (_themeQuery.isEmpty ||
+            theme.name.toLowerCase().contains(_themeQuery))
           _ThemeChoice(name: theme.name, path: theme.path),
     ];
 
@@ -1252,7 +1334,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
           Expanded(
             child: TextField(
               controller: _fontSearchController,
-              onChanged: (val) => setState(() => _fontQuery = val.trim().toLowerCase()),
+              onChanged: (val) =>
+                  setState(() => _fontQuery = val.trim().toLowerCase()),
               cursorHeight: 12,
               style: TextStyle(fontSize: 11.5, color: AppColors.textPrimary),
               decoration: InputDecoration(
@@ -1263,7 +1346,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 hintText: 'Search fonts...',
-                hintStyle: TextStyle(fontSize: 11.5, color: AppColors.textFaint),
+                hintStyle: TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.textFaint,
+                ),
               ),
             ),
           ),
@@ -1285,8 +1371,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final List<String> filtered = [
       '',
       for (final font in _fontService.fonts)
-        if (_fontQuery.isEmpty || font.toLowerCase().contains(_fontQuery))
-          font,
+        if (_fontQuery.isEmpty || font.toLowerCase().contains(_fontQuery)) font,
     ];
 
     if (_fontService.isLoading.value && _fontService.fonts.isEmpty) {
@@ -1408,7 +1493,9 @@ class _SidebarItemWidgetState extends State<_SidebarItemWidget> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12.5,
-                    fontWeight: widget.active ? FontWeight.w500 : FontWeight.w400,
+                    fontWeight: widget.active
+                        ? FontWeight.w500
+                        : FontWeight.w400,
                     color: contentColor,
                   ),
                 ),
@@ -1447,10 +1534,7 @@ class _ObsidianDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 1,
-      color: AppColors.chip,
-    );
+    return Container(height: 1, color: AppColors.chip);
   }
 }
 
@@ -1529,10 +1613,7 @@ class _ObsidianSettingRow extends StatelessWidget {
 }
 
 class _ObsidianButton extends StatefulWidget {
-  const _ObsidianButton({
-    required this.label,
-    required this.onTap,
-  });
+  const _ObsidianButton({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback onTap;
@@ -1550,14 +1631,14 @@ class _ObsidianButtonState extends State<_ObsidianButton> {
     final Color bgColor = _pressed
         ? AppColors.rowHover
         : _hovered
-            ? AppColors.elevatedHover
-            : AppColors.elevated;
+        ? AppColors.elevatedHover
+        : AppColors.elevated;
 
-    final Color borderColor =
-        _hovered ? AppColors.elevatedBorderHover : AppColors.elevatedBorder;
+    final Color borderColor = _hovered
+        ? AppColors.elevatedBorderHover
+        : AppColors.elevatedBorder;
 
-    final Color textColor =
-        _hovered ? Colors.white : AppColors.textLabel;
+    final Color textColor = _hovered ? Colors.white : AppColors.textLabel;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -1594,10 +1675,7 @@ class _ObsidianButtonState extends State<_ObsidianButton> {
 }
 
 class _ObsidianSwitch extends StatelessWidget {
-  const _ObsidianSwitch({
-    required this.value,
-    required this.onChanged,
-  });
+  const _ObsidianSwitch({required this.value, required this.onChanged});
 
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -1672,7 +1750,11 @@ class _ObsidianDropdown<T> extends StatelessWidget {
           onChanged: onChanged,
           icon: Padding(
             padding: EdgeInsets.only(left: 6),
-            child: Icon(Icons.unfold_more, size: 14, color: AppColors.textFaint),
+            child: Icon(
+              Icons.unfold_more,
+              size: 14,
+              color: AppColors.textFaint,
+            ),
           ),
           dropdownColor: AppColors.rowHover,
           style: TextStyle(fontSize: 12, color: AppColors.textLabel),
@@ -1796,11 +1878,7 @@ class _ObsidianThemeRowState extends State<_ObsidianThemeRow> {
             iconNames: const ['folder', 'inode-directory'],
             size: 18,
             theme: widget.choice.name,
-            fallback: Icon(
-              Icons.folder,
-              size: 16,
-              color: AppColors.textFaint,
-            ),
+            fallback: Icon(Icons.folder, size: 16, color: AppColors.textFaint),
           );
 
     final Widget row = Container(
@@ -1811,8 +1889,8 @@ class _ObsidianThemeRowState extends State<_ObsidianThemeRow> {
         color: widget.selected
             ? AppColors.rowSelected
             : _hovered
-                ? AppColors.rowHover
-                : Colors.transparent,
+            ? AppColors.rowHover
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -1873,7 +1951,9 @@ class _ObsidianFontRowState extends State<_ObsidianFontRow> {
 
   @override
   Widget build(BuildContext context) {
-    final String label = widget.isDefault ? 'Application default' : widget.fontName;
+    final String label = widget.isDefault
+        ? 'Application default'
+        : widget.fontName;
     final String? previewFamily = widget.isDefault ? null : widget.fontName;
 
     return MouseRegion(
@@ -1890,8 +1970,8 @@ class _ObsidianFontRowState extends State<_ObsidianFontRow> {
             color: widget.selected
                 ? AppColors.rowSelected
                 : _hovered
-                    ? AppColors.rowHover
-                    : Colors.transparent,
+                ? AppColors.rowHover
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Row(
@@ -1910,7 +1990,9 @@ class _ObsidianFontRowState extends State<_ObsidianFontRow> {
                     fontFamily: previewFamily,
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
-                    color: widget.selected ? AppColors.accent : AppColors.textSecondary,
+                    color: widget.selected
+                        ? AppColors.accent
+                        : AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -1924,7 +2006,9 @@ class _ObsidianFontRowState extends State<_ObsidianFontRow> {
                     fontFamily: previewFamily,
                     fontSize: 12,
                     color: widget.selected ? Colors.white : AppColors.textLabel,
-                    fontWeight: widget.selected ? FontWeight.w500 : FontWeight.w400,
+                    fontWeight: widget.selected
+                        ? FontWeight.w500
+                        : FontWeight.w400,
                   ),
                 ),
               ),

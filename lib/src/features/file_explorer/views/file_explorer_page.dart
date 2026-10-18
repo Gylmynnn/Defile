@@ -627,7 +627,10 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
           ),
         ),
         actions: [
-          AppDialogButton(label: 'Cancel', onTap: () => Get.back(result: false)),
+          AppDialogButton(
+            label: 'Cancel',
+            onTap: () => Get.back(result: false),
+          ),
           AppDialogButton(
             label: confirmLabel,
             danger: true,

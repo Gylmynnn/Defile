@@ -48,7 +48,8 @@ abstract final class AppColors {
   static Color get textFaint => _palette.textFaint;
 
   static Color get accent => _accent.color;
-  static Color get selection => Color.lerp(_palette.window, _accent.color, 0.24)!;
+  static Color get selection =>
+      Color.lerp(_palette.window, _accent.color, 0.24)!;
   static Color get selectionBorder =>
       Color.lerp(_palette.window, _accent.color, 0.5)!;
 
@@ -75,8 +76,8 @@ abstract final class AppTheme {
   static ThemeData dark({String? fontFamily}) {
     final String? resolvedFamily =
         (fontFamily != null && fontFamily.trim().isNotEmpty)
-            ? fontFamily.trim()
-            : null;
+        ? fontFamily.trim()
+        : null;
 
     final ThemeData base = ThemeData.dark(useMaterial3: true);
     final ColorScheme scheme = base.colorScheme.copyWith(
@@ -216,10 +217,7 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(8),
           side: BorderSide(color: AppColors.border),
         ),
-        textStyle: TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 12.5,
-        ),
+        textStyle: TextStyle(color: AppColors.textPrimary, fontSize: 12.5),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: AppColors.accent,

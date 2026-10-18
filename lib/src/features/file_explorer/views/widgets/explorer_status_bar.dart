@@ -32,10 +32,7 @@ class ExplorerStatusBar extends GetView<FileExplorerController> {
               selectedCount > 0
                   ? '$selectedCount of ${entries.length} selected'
                   : '${entries.length} items ($folders folders, $files files)',
-              style: TextStyle(
-                fontSize: 11.5,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
             ),
             const Spacer(),
             if (usage != null) ...[

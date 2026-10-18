@@ -18,7 +18,7 @@ void main() {
 
   tearDown(Get.reset);
 
-  testWidgets('ThemeService menerapkan base color theme dan accent color', (
+  testWidgets('ThemeService applies the base color theme and accent color', (
     tester,
   ) async {
     Get.put(ThemeService());
@@ -27,10 +27,7 @@ void main() {
     await tester.runAsync(service.init);
 
     await tester.pumpWidget(
-      GetMaterialApp(
-        theme: AppTheme.dark(),
-        home: const SizedBox.shrink(),
-      ),
+      GetMaterialApp(theme: AppTheme.dark(), home: const SizedBox.shrink()),
     );
 
     await tester.runAsync(() => service.setBaseTheme('gruvbox'));
@@ -48,8 +45,10 @@ void main() {
     expect(service.accentId.value, 'blue');
     expect(AppColors.accent, AppAccents.blue.color);
 
-    // Reset kembali ke pengaturan bawaan.
-    await tester.runAsync(() => service.setBaseTheme(AppPalettes.obsidianDark.id));
+    // Reset back to the default settings.
+    await tester.runAsync(
+      () => service.setBaseTheme(AppPalettes.obsidianDark.id),
+    );
     await tester.runAsync(() => service.setAccent(AppAccents.amber.id));
     expect(AppColors.window, AppPalettes.obsidianDark.window);
     expect(AppColors.accent, AppAccents.amber.color);

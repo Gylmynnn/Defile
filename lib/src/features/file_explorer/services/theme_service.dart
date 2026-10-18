@@ -62,7 +62,9 @@ class ThemeService extends GetxService {
   }
 
   void setUiScale(double value) {
-    uiScale.value = double.parse(value.clamp(minScale, maxScale).toStringAsFixed(2));
+    uiScale.value = double.parse(
+      value.clamp(minScale, maxScale).toStringAsFixed(2),
+    );
 
     try {
       rust.setUiScale(scale: uiScale.value);

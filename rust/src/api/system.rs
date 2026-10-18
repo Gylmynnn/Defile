@@ -571,9 +571,7 @@ pub fn open_in_terminal(path: std::string::String) -> Result<(), std::string::St
             return Ok(());
         }
 
-        return Err(
-            "No terminal installed (gnome-terminal, konsole, xterm, ...)".to_string(),
-        );
+        return Err("No terminal installed (gnome-terminal, konsole, xterm, ...)".to_string());
     }
 
     #[allow(unreachable_code)]

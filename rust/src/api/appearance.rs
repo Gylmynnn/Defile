@@ -67,7 +67,7 @@ pub fn get_ui_scale() -> f64 {
 #[flutter_rust_bridge::frb]
 pub fn set_ui_scale(scale: f64) -> Result<(), std::string::String> {
     if !scale.is_finite() || scale <= 0.0 {
-        return Err("Skala antarmuka tidak valid".to_string());
+        return Err("Invalid interface scale".to_string());
     }
 
     write_setting("ui-scale", &format!("{scale}"))

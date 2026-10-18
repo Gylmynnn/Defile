@@ -196,7 +196,9 @@ class _PlaceTileState extends State<_PlaceTile> {
               Icon(
                 widget.icon,
                 size: 14,
-                color: active ? AppColors.textPrimary : (widget.iconColor ?? AppColors.textSecondary),
+                color: active
+                    ? AppColors.textPrimary
+                    : (widget.iconColor ?? AppColors.textSecondary),
               ),
               const SizedBox(width: 9),
               Expanded(

@@ -257,10 +257,7 @@ class _SearchField extends StatelessWidget {
               autofocus: true,
               onChanged: onChanged,
               cursorHeight: 13,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textPrimary,
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
               decoration: InputDecoration(
                 isDense: true,
                 filled: false,
@@ -308,8 +305,8 @@ class _ViewModeSwitch extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _segment(ExplorerViewMode.grid, Icons.grid_view_rounded, 'Grid'),
-          _segment(ExplorerViewMode.list, Icons.view_list_rounded, 'Daftar'),
-          _segment(ExplorerViewMode.compact, Icons.view_headline, 'Ringkas'),
+          _segment(ExplorerViewMode.list, Icons.view_list_rounded, 'List'),
+          _segment(ExplorerViewMode.compact, Icons.view_headline, 'Compact'),
         ],
       ),
     );

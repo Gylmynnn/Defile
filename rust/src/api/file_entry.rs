@@ -194,8 +194,9 @@ pub fn delete_entry(path: std::string::String) -> Result<(), std::string::String
     let file_type = metadata.file_type();
 
     if file_type.is_dir() {
-        fs::remove_dir(target)
-            .map_err(|error| format!("Failed to delete folder. Make sure the folder is empty: {error}"))?;
+        fs::remove_dir(target).map_err(|error| {
+            format!("Failed to delete folder. Make sure the folder is empty: {error}")
+        })?;
     } else {
         fs::remove_file(target).map_err(|error| format!("Failed to delete file: {error}"))?;
     }
@@ -243,9 +244,7 @@ pub fn rename_entry(
         return Err("Invalid new name".to_string());
     }
 
-    let parent = source
-        .parent()
-        .ok_or("Cannot determine parent directory")?;
+    let parent = source.parent().ok_or("Cannot determine parent directory")?;
 
     let destination = parent.join(name);
 

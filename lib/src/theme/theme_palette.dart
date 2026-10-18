@@ -109,7 +109,11 @@ class ThemePalette {
 /// and the active base palette at runtime.
 @immutable
 class AccentPreset {
-  const AccentPreset({required this.id, required this.label, required this.color});
+  const AccentPreset({
+    required this.id,
+    required this.label,
+    required this.color,
+  });
 
   final String id;
   final String label;
@@ -264,7 +268,10 @@ abstract final class AppPalettes {
   static const List<ThemePalette> all = [obsidianDark, everblush, gruvbox];
 
   static ThemePalette byId(String id) {
-    return all.firstWhere((palette) => palette.id == id, orElse: () => obsidianDark);
+    return all.firstWhere(
+      (palette) => palette.id == id,
+      orElse: () => obsidianDark,
+    );
   }
 }
 

@@ -19,7 +19,7 @@ void main() {
 
   tearDown(Get.reset);
 
-  testWidgets('FontService memuat list font sistem dan memperbarui tema', (
+  testWidgets('FontService loads the system font list and updates the theme', (
     tester,
   ) async {
     Get.put(FontService());
@@ -36,7 +36,7 @@ void main() {
     expect(service.fontFamily.value, '');
   });
 
-  testWidgets('SettingsDialog memiliki tab Font Sistem dan bisa memilih font', (
+  testWidgets('SettingsDialog has a System Font tab and can select a font', (
     tester,
   ) async {
     Get.put(IconThemeService());
@@ -50,15 +50,13 @@ void main() {
     await tester.runAsync(fontService.init);
 
     await tester.pumpWidget(
-      const GetMaterialApp(
-        home: Scaffold(body: SettingsDialog()),
-      ),
+      const GetMaterialApp(home: Scaffold(body: SettingsDialog())),
     );
 
     expect(find.text('Appearance'), findsOneWidget);
     expect(find.text('General'), findsOneWidget);
 
-    // Default section adalah General
+    // Default section is General
     expect(find.text('Version 1.14.4'), findsOneWidget);
 
     // Pindah ke section Appearance
@@ -68,7 +66,7 @@ void main() {
     expect(find.text('Display font'), findsOneWidget);
     expect(find.text('Application default'), findsWidgets);
 
-    // Cari font menggunakan font search field
+    // Search for a font using the font search field
     final fontSearchFinder = find.widgetWithText(TextField, '');
     if (fontSearchFinder.evaluate().isNotEmpty) {
       await tester.enterText(fontSearchFinder.last, 'Sans');
@@ -78,7 +76,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    // Pilih font pertama selain bawaan jika ada
+    // Pick the first non-default font if any
     if (fontService.fonts.isNotEmpty) {
       final String firstFont = fontService.fonts.first;
       final target = find.text(firstFont);
@@ -90,7 +88,7 @@ void main() {
       }
     }
 
-    // Reset kembali ke bawaan
+    // Reset back to default
     final defaultFontFinder = find.text('Application default').last;
     await tester.ensureVisible(defaultFontFinder);
     await tester.pumpAndSettle();

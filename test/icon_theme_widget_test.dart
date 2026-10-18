@@ -17,7 +17,7 @@ void main() {
 
   tearDown(Get.reset);
 
-  testWidgets('memilih tema memperbarui ThemedIcon', (tester) async {
+  testWidgets('selecting a theme updates ThemedIcon', (tester) async {
     Get.put(IconThemeService());
     final service = Get.find<IconThemeService>();
 
@@ -79,7 +79,9 @@ void main() {
     expect(find.text('fallback'), findsOneWidget);
   });
 
-  testWidgets('grid size (56) memuat ikon dari tema yang dipilih', (tester) async {
+  testWidgets('grid size (56) loads icons from the selected theme', (
+    tester,
+  ) async {
     Get.put(IconThemeService());
     final service = Get.find<IconThemeService>();
 

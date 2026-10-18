@@ -347,11 +347,10 @@ pub fn set_icon_theme(name: std::string::String) -> Result<(), std::string::Stri
 
     if let Some(parent) = file.parent() {
         fs::create_dir_all(parent)
-            .map_err(|error| format!("Gagal menyiapkan folder pengaturan: {error}"))?;
+            .map_err(|error| format!("Failed to prepare settings folder: {error}"))?;
     }
 
-    fs::write(&file, name.trim())
-        .map_err(|error| format!("Gagal menyimpan pengaturan icon: {error}"))
+    fs::write(&file, name.trim()).map_err(|error| format!("Failed to save icon settings: {error}"))
 }
 
 #[cfg(test)]
@@ -463,19 +462,19 @@ mod tests {
 
         write_theme(
             &root,
-            "Tema",
-            "[Icon Theme]\nName=Tema\n\n[48x48/places]\nSize=48\n\n[scalable/places]\nSize=128\nType=Scalable\n",
+            "Theme",
+            "[Icon Theme]\nName=Theme\n\n[48x48/places]\nSize=48\n\n[scalable/places]\nSize=128\nType=Scalable\n",
         );
 
-        write_png(&root.join("Tema/48x48/places/folder.png"));
-        write_svg(&root.join("Tema/scalable/places/network-workgroup.svg"));
+        write_png(&root.join("Theme/48x48/places/folder.png"));
+        write_svg(&root.join("Theme/scalable/places/network-workgroup.svg"));
 
         let names = |name: &str| vec![name.to_string()];
 
-        let png = icon_png_in_roots(&roots, "Tema", &names("folder"), 48).unwrap();
+        let png = icon_png_in_roots(&roots, "Theme", &names("folder"), 48).unwrap();
         assert!(png.starts_with(&PNG_SIGNATURE));
 
-        let rendered = icon_png_in_roots(&roots, "Tema", &names("network-workgroup"), 32).unwrap();
+        let rendered = icon_png_in_roots(&roots, "Theme", &names("network-workgroup"), 32).unwrap();
         assert_eq!(&rendered[..4], &[0x89, b'P', b'N', b'G']);
 
         let pixmap = resvg::tiny_skia::Pixmap::decode_png(&rendered).unwrap();
