@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-int getPdfPageCount({required String path}) =>
+Future<int> getPdfPageCount({required String path}) =>
     RustLib.instance.api.crateApiPdfGetPdfPageCount(path: path);
 
 Future<Uint8List> renderPdfPage({
@@ -20,11 +20,13 @@ Future<Uint8List> renderPdfPage({
   width: width,
 );
 
-PdfPageInfo getPdfPageInfo({required String path, required int pageIndex}) =>
-    RustLib.instance.api.crateApiPdfGetPdfPageInfo(
-      path: path,
-      pageIndex: pageIndex,
-    );
+Future<PdfPageInfo> getPdfPageInfo({
+  required String path,
+  required int pageIndex,
+}) => RustLib.instance.api.crateApiPdfGetPdfPageInfo(
+  path: path,
+  pageIndex: pageIndex,
+);
 
 class PdfPageInfo {
   final double width;

@@ -7,6 +7,7 @@ import '../../controllers/file_explorer_controller.dart';
 import '../../services/font_service.dart';
 import '../../services/icon_theme_service.dart';
 import '../../services/theme_service.dart';
+import '../../utils/app_toast.dart';
 import 'entry_glyphs.dart';
 import 'themed_icon.dart';
 
@@ -1274,17 +1275,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
   }
 
   void _showInfoMessage(String title, String message) {
-    Get.rawSnackbar(
-      title: title,
-      message: message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: AppColors.rowHover,
-      borderRadius: 8,
-      margin: const EdgeInsets.all(16),
-      duration: const Duration(seconds: 3),
-      borderColor: AppColors.chipBorder,
-      borderWidth: 1,
-    );
+    showAppToast(title: title, message: message);
   }
 }
 

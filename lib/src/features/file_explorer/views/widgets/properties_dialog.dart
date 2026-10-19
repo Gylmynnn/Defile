@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../utils/formatters.dart';
+import '../../utils/app_toast.dart';
 import 'app_dialog.dart';
 import 'entry_glyphs.dart';
 import 'image_thumbnail.dart';
@@ -84,11 +85,7 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
 
   Future<void> _copyPath() async {
     await Clipboard.setData(ClipboardData(text: widget.entry.path));
-    Get.snackbar(
-      'Path copied',
-      widget.entry.path,
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    showAppToast(title: 'Path copied', message: widget.entry.path);
   }
 
   @override

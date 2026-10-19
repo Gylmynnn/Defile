@@ -7,1458 +7,2104 @@ import 'api/appearance.dart';
 import 'api/file_entry.dart';
 import 'api/font.dart';
 import 'api/icon_theme.dart';
+import 'api/pdf.dart';
 import 'api/properties.dart';
 import 'api/simple.dart';
 import 'api/system.dart';
+
 import 'dart:async';
 import 'dart:convert';
+
 import 'frb_generated.dart';
-import 'frb_generated.io.dart' if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'frb_generated.io.dart'
+    if (dart.library.js_interop) 'frb_generated.web.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+/// Main entrypoint of the Rust API
+class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
+  @internal
+  static final instance = RustLib._();
 
-                /// Main entrypoint of the Rust API
-                class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
-                  @internal
-                  static final instance = RustLib._();
+  RustLib._();
 
-                  RustLib._();
+  /// Initialize flutter_rust_bridge
+  static Future<void> init({
+    RustLibApi? api,
+    BaseHandler? handler,
+    ExternalLibrary? externalLibrary,
+    bool forceSameCodegenVersion = true,
+  }) async {
+    await instance.initImpl(
+      api: api,
+      handler: handler,
+      externalLibrary: externalLibrary,
+      forceSameCodegenVersion: forceSameCodegenVersion,
+    );
+  }
 
-                  /// Initialize flutter_rust_bridge
-                  static Future<void> init({
-                    RustLibApi? api,
-                    BaseHandler? handler,
-                    ExternalLibrary? externalLibrary,
-                    bool forceSameCodegenVersion = true,
-                  }) async {
-                    await instance.initImpl(
-                      api: api,
-                      handler: handler,
-                      externalLibrary: externalLibrary,
-                      forceSameCodegenVersion: forceSameCodegenVersion,
-                    );
-                  }
+  /// Initialize flutter_rust_bridge in mock mode.
+  /// No libraries for FFI are loaded.
+  static void initMock({required RustLibApi api}) {
+    instance.initMockImpl(api: api);
+  }
 
-                  /// Initialize flutter_rust_bridge in mock mode.
-                  /// No libraries for FFI are loaded.
-                  static void initMock({
-                    required RustLibApi api,
-                  }) {
-                    instance.initMockImpl(
-                      api: api,
-                    );
-                  }
+  /// Dispose flutter_rust_bridge
+  ///
+  /// The call to this function is optional, since flutter_rust_bridge (and everything else)
+  /// is automatically disposed when the app stops.
+  static void dispose() => instance.disposeImpl();
 
-                  /// Dispose flutter_rust_bridge
-                  ///
-                  /// The call to this function is optional, since flutter_rust_bridge (and everything else)
-                  /// is automatically disposed when the app stops.
-                  static void dispose() => instance.disposeImpl();
+  @override
+  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor =>
+      RustLibApiImpl.new;
 
-                  @override
-                  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor => RustLibApiImpl.new;
+  @override
+  WireConstructor<RustLibWire> get wireConstructor =>
+      RustLibWire.fromExternalLibrary;
 
-                  @override
-                  WireConstructor<RustLibWire> get wireConstructor => RustLibWire.fromExternalLibrary;
+  @override
+  Future<void> executeRustInitializers() async {
+    await api.crateApiSimpleInitApp();
+  }
 
-                  @override
-                  Future<void> executeRustInitializers() async {
-                    await api.crateApiSimpleInitApp();
+  @override
+  ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig =>
+      kDefaultExternalLibraryLoaderConfig;
 
-                    
-                  }
+  @override
+  String get codegenVersion => '2.13.0';
 
-                  @override
-                  ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig => kDefaultExternalLibraryLoaderConfig;
+  @override
+  int get rustContentHash => -736325328;
 
-                  @override
-                  String get codegenVersion => '2.13.0';
+  static const kDefaultExternalLibraryLoaderConfig =
+      ExternalLibraryLoaderConfig(
+        stem: 'rust_lib_defile',
+        ioDirectory: 'rust/target/release/',
+        webPrefix: 'pkg/',
+        wasmBindgenName: 'wasm_bindgen',
+      );
+}
 
-                  @override
-                  int get rustContentHash => 1369827425;
+abstract class RustLibApi extends BaseApi {
+  Future<void> crateApiFileEntryCopyEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+  });
 
-                  static const kDefaultExternalLibraryLoaderConfig = ExternalLibraryLoaderConfig(
-                    stem: 'rust_lib_defile',
-                    ioDirectory: 'rust/target/release/',
-                    webPrefix: 'pkg/',
-                    wasmBindgenName: 'wasm_bindgen',
-                  );
-                }
-                
+  Future<String> crateApiFileEntryCreateDirectory({
+    required String parentPath,
+    required String directoryName,
+  });
 
-                abstract class RustLibApi extends BaseApi {
-                  Future<void> crateApiFileEntryCopyEntry({required String sourcePath , required String destinationDirectory , required String newName });
+  Future<void> crateApiFileEntryDeleteEntry({required String path});
 
-Future<String> crateApiFileEntryCreateDirectory({required String parentPath , required String directoryName });
+  Future<void> crateApiFileEntryDeleteEntryRecursive({required String path});
 
-Future<void> crateApiFileEntryDeleteEntry({required String path });
+  Future<void> crateApiSystemDeleteFromTrash({required String path});
 
-Future<void> crateApiFileEntryDeleteEntryRecursive({required String path });
+  Future<int> crateApiSystemEmptyTrash();
 
-Future<void> crateApiSystemDeleteFromTrash({required String path });
+  Future<String?> crateApiIconThemeFindIcon({
+    required String theme,
+    required List<String> iconNames,
+    required int size,
+  });
 
-Future<int> crateApiSystemEmptyTrash();
+  Future<String> crateApiAppearanceGetAccentColor();
 
-Future<String?> crateApiIconThemeFindIcon({required String theme , required List<String> iconNames , required int size });
+  Future<String> crateApiAppearanceGetBaseTheme();
 
-Future<String> crateApiAppearanceGetAccentColor();
+  Future<DiskUsage> crateApiSystemGetDiskUsage({required String path});
 
-Future<String> crateApiAppearanceGetBaseTheme();
+  Future<EntryProperties> crateApiPropertiesGetEntryProperties({
+    required String path,
+  });
 
-Future<DiskUsage> crateApiSystemGetDiskUsage({required String path });
+  Future<String> crateApiFontGetFontFamily();
 
-Future<EntryProperties> crateApiPropertiesGetEntryProperties({required String path });
+  String crateApiSystemGetHomeDirectory();
 
-Future<String> crateApiFontGetFontFamily();
+  Future<String> crateApiIconThemeGetIconTheme();
 
-String crateApiSystemGetHomeDirectory();
+  Future<int> crateApiPdfGetPdfPageCount({required String path});
 
-Future<String> crateApiIconThemeGetIconTheme();
+  Future<PdfPageInfo> crateApiPdfGetPdfPageInfo({
+    required String path,
+    required int pageIndex,
+  });
 
-Future<double> crateApiAppearanceGetUiScale();
+  Future<double> crateApiAppearanceGetUiScale();
 
-String crateApiSimpleGreet({required String name });
+  String crateApiSimpleGreet({required String name});
 
-Future<Uint8List?> crateApiIconThemeIconPng({required String theme , required List<String> iconNames , required int size });
+  Future<Uint8List?> crateApiIconThemeIconPng({
+    required String theme,
+    required List<String> iconNames,
+    required int size,
+  });
 
-Future<void> crateApiSimpleInitApp();
+  Future<void> crateApiSimpleInitApp();
 
-Future<List<FileEntry>> crateApiFileEntryListDirectory({required String path });
+  Future<List<FileEntry>> crateApiFileEntryListDirectory({
+    required String path,
+  });
 
-Future<List<IconThemeEntry>> crateApiIconThemeListIconThemes();
+  Future<List<IconThemeEntry>> crateApiIconThemeListIconThemes();
 
-Future<List<OpenWithApp>> crateApiSystemListOpenWithApps({required String path });
+  Future<List<OpenWithApp>> crateApiSystemListOpenWithApps({
+    required String path,
+  });
 
-Future<List<Place>> crateApiSystemListPlaces();
+  Future<List<Place>> crateApiSystemListPlaces();
 
-Future<List<FileEntry>> crateApiSystemListRecentFiles({required String root , required int limit });
+  Future<List<FileEntry>> crateApiSystemListRecentFiles({
+    required String root,
+    required int limit,
+  });
 
-Future<List<String>> crateApiFontListSystemFonts();
+  Future<List<String>> crateApiFontListSystemFonts();
 
-Future<void> crateApiFileEntryMoveEntry({required String sourcePath , required String destinationDirectory , required String newName });
+  Future<void> crateApiFileEntryMoveEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+  });
 
-Future<String> crateApiSystemMoveToTrash({required String path });
+  Future<String> crateApiSystemMoveToTrash({required String path});
 
-Future<void> crateApiFileEntryOpenFile({required String path });
+  Future<void> crateApiFileEntryOpenFile({required String path});
 
-Future<void> crateApiSystemOpenInTerminal({required String path });
+  Future<void> crateApiSystemOpenInTerminal({required String path});
 
-Future<void> crateApiSystemOpenWith({required String path , required String desktopFile });
+  Future<void> crateApiSystemOpenWith({
+    required String path,
+    required String desktopFile,
+  });
 
-Future<String> crateApiFileEntryRenameEntry({required String sourcePath , required String newName });
+  Future<String> crateApiFileEntryRenameEntry({
+    required String sourcePath,
+    required String newName,
+  });
 
-Future<void> crateApiAppearanceSetAccentColor({required String name });
+  Future<Uint8List> crateApiPdfRenderPdfPage({
+    required String path,
+    required int pageIndex,
+    required int width,
+  });
 
-Future<void> crateApiAppearanceSetBaseTheme({required String name });
+  Future<void> crateApiAppearanceSetAccentColor({required String name});
 
-Future<void> crateApiFontSetFontFamily({required String name });
+  Future<void> crateApiAppearanceSetBaseTheme({required String name});
 
-Future<void> crateApiIconThemeSetIconTheme({required String name });
+  Future<void> crateApiFontSetFontFamily({required String name});
 
-Future<void> crateApiAppearanceSetUiScale({required double scale });
+  Future<void> crateApiIconThemeSetIconTheme({required String name});
 
+  Future<void> crateApiAppearanceSetUiScale({required double scale});
+}
 
-                }
-                
+class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
+  RustLibApiImpl({
+    required super.handler,
+    required super.wire,
+    required super.generalizedFrbRustBinding,
+    required super.portManager,
+  });
 
-                class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
-                  RustLibApiImpl({
-                    required super.handler,
-                    required super.wire,
-                    required super.generalizedFrbRustBinding,
-                    required super.portManager,
-                  });
-
-                  @override Future<void> crateApiFileEntryCopyEntry({required String sourcePath , required String destinationDirectory , required String newName })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(sourcePath, serializer);
-sse_encode_String(destinationDirectory, serializer);
-sse_encode_String(newName, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiFileEntryCopyEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sourcePath, serializer);
+          sse_encode_String(destinationDirectory, serializer);
+          sse_encode_String(newName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_file_operation_error,
-        )
-        ,
-            constMeta: kCrateApiFileEntryCopyEntryConstMeta,
-            argValues: [sourcePath, destinationDirectory, newName],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFileEntryCopyEntryConstMeta,
+        argValues: [sourcePath, destinationDirectory, newName],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFileEntryCopyEntryConstMeta => const TaskConstMeta(
+    debugName: "copy_entry",
+    argNames: ["sourcePath", "destinationDirectory", "newName"],
+  );
 
-        TaskConstMeta get kCrateApiFileEntryCopyEntryConstMeta => const TaskConstMeta(
-            debugName: "copy_entry",
-            argNames: ["sourcePath", "destinationDirectory", "newName"],
-        );
-        
-
-@override Future<String> crateApiFileEntryCreateDirectory({required String parentPath , required String directoryName })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(parentPath, serializer);
-sse_encode_String(directoryName, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiFileEntryCreateDirectory({
+    required String parentPath,
+    required String directoryName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(parentPath, serializer);
+          sse_encode_String(directoryName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiFileEntryCreateDirectoryConstMeta,
-            argValues: [parentPath, directoryName],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFileEntryCreateDirectoryConstMeta,
+        argValues: [parentPath, directoryName],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFileEntryCreateDirectoryConstMeta =>
+      const TaskConstMeta(
+        debugName: "create_directory",
+        argNames: ["parentPath", "directoryName"],
+      );
 
-        TaskConstMeta get kCrateApiFileEntryCreateDirectoryConstMeta => const TaskConstMeta(
-            debugName: "create_directory",
-            argNames: ["parentPath", "directoryName"],
-        );
-        
-
-@override Future<void> crateApiFileEntryDeleteEntry({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiFileEntryDeleteEntry({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiFileEntryDeleteEntryConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFileEntryDeleteEntryConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFileEntryDeleteEntryConstMeta =>
+      const TaskConstMeta(debugName: "delete_entry", argNames: ["path"]);
 
-        TaskConstMeta get kCrateApiFileEntryDeleteEntryConstMeta => const TaskConstMeta(
-            debugName: "delete_entry",
-            argNames: ["path"],
-        );
-        
-
-@override Future<void> crateApiFileEntryDeleteEntryRecursive({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiFileEntryDeleteEntryRecursive({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiFileEntryDeleteEntryRecursiveConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFileEntryDeleteEntryRecursiveConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFileEntryDeleteEntryRecursiveConstMeta =>
+      const TaskConstMeta(
+        debugName: "delete_entry_recursive",
+        argNames: ["path"],
+      );
 
-        TaskConstMeta get kCrateApiFileEntryDeleteEntryRecursiveConstMeta => const TaskConstMeta(
-            debugName: "delete_entry_recursive",
-            argNames: ["path"],
-        );
-        
-
-@override Future<void> crateApiSystemDeleteFromTrash({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiSystemDeleteFromTrash({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiSystemDeleteFromTrashConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemDeleteFromTrashConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemDeleteFromTrashConstMeta =>
+      const TaskConstMeta(debugName: "delete_from_trash", argNames: ["path"]);
 
-        TaskConstMeta get kCrateApiSystemDeleteFromTrashConstMeta => const TaskConstMeta(
-            debugName: "delete_from_trash",
-            argNames: ["path"],
-        );
-        
-
-@override Future<int> crateApiSystemEmptyTrash()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<int> crateApiSystemEmptyTrash() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_u_32,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiSystemEmptyTrashConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemEmptyTrashConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemEmptyTrashConstMeta =>
+      const TaskConstMeta(debugName: "empty_trash", argNames: []);
 
-        TaskConstMeta get kCrateApiSystemEmptyTrashConstMeta => const TaskConstMeta(
-            debugName: "empty_trash",
-            argNames: [],
-        );
-        
-
-@override Future<String?> crateApiIconThemeFindIcon({required String theme , required List<String> iconNames , required int size })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(theme, serializer);
-sse_encode_list_String(iconNames, serializer);
-sse_encode_u_32(size, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String?> crateApiIconThemeFindIcon({
+    required String theme,
+    required List<String> iconNames,
+    required int size,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(theme, serializer);
+          sse_encode_list_String(iconNames, serializer);
+          sse_encode_u_32(size, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiIconThemeFindIconConstMeta,
-            argValues: [theme, iconNames, size],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiIconThemeFindIconConstMeta,
+        argValues: [theme, iconNames, size],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiIconThemeFindIconConstMeta => const TaskConstMeta(
+    debugName: "find_icon",
+    argNames: ["theme", "iconNames", "size"],
+  );
 
-        TaskConstMeta get kCrateApiIconThemeFindIconConstMeta => const TaskConstMeta(
-            debugName: "find_icon",
-            argNames: ["theme", "iconNames", "size"],
-        );
-        
-
-@override Future<String> crateApiAppearanceGetAccentColor()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiAppearanceGetAccentColor() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiAppearanceGetAccentColorConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiAppearanceGetAccentColorConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiAppearanceGetAccentColorConstMeta =>
+      const TaskConstMeta(debugName: "get_accent_color", argNames: []);
 
-        TaskConstMeta get kCrateApiAppearanceGetAccentColorConstMeta => const TaskConstMeta(
-            debugName: "get_accent_color",
-            argNames: [],
-        );
-        
-
-@override Future<String> crateApiAppearanceGetBaseTheme()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiAppearanceGetBaseTheme() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiAppearanceGetBaseThemeConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiAppearanceGetBaseThemeConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiAppearanceGetBaseThemeConstMeta =>
+      const TaskConstMeta(debugName: "get_base_theme", argNames: []);
 
-        TaskConstMeta get kCrateApiAppearanceGetBaseThemeConstMeta => const TaskConstMeta(
-            debugName: "get_base_theme",
-            argNames: [],
-        );
-        
-
-@override Future<DiskUsage> crateApiSystemGetDiskUsage({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<DiskUsage> crateApiSystemGetDiskUsage({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_disk_usage,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiSystemGetDiskUsageConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemGetDiskUsageConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemGetDiskUsageConstMeta =>
+      const TaskConstMeta(debugName: "get_disk_usage", argNames: ["path"]);
 
-        TaskConstMeta get kCrateApiSystemGetDiskUsageConstMeta => const TaskConstMeta(
-            debugName: "get_disk_usage",
-            argNames: ["path"],
-        );
-        
-
-@override Future<EntryProperties> crateApiPropertiesGetEntryProperties({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<EntryProperties> crateApiPropertiesGetEntryProperties({
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_entry_properties,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiPropertiesGetEntryPropertiesConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiPropertiesGetEntryPropertiesConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiPropertiesGetEntryPropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_entry_properties",
+        argNames: ["path"],
+      );
 
-        TaskConstMeta get kCrateApiPropertiesGetEntryPropertiesConstMeta => const TaskConstMeta(
-            debugName: "get_entry_properties",
-            argNames: ["path"],
-        );
-        
-
-@override Future<String> crateApiFontGetFontFamily()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiFontGetFontFamily() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 12,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiFontGetFontFamilyConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFontGetFontFamilyConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFontGetFontFamilyConstMeta =>
+      const TaskConstMeta(debugName: "get_font_family", argNames: []);
 
-        TaskConstMeta get kCrateApiFontGetFontFamilyConstMeta => const TaskConstMeta(
-            debugName: "get_font_family",
-            argNames: [],
-        );
-        
-
-@override String crateApiSystemGetHomeDirectory()  { return handler.executeSync(SyncTask(
-            callFfi: () {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  String crateApiSystemGetHomeDirectory() {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiSystemGetHomeDirectoryConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemGetHomeDirectoryConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemGetHomeDirectoryConstMeta =>
+      const TaskConstMeta(debugName: "get_home_directory", argNames: []);
 
-        TaskConstMeta get kCrateApiSystemGetHomeDirectoryConstMeta => const TaskConstMeta(
-            debugName: "get_home_directory",
-            argNames: [],
-        );
-        
-
-@override Future<String> crateApiIconThemeGetIconTheme()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiIconThemeGetIconTheme() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiIconThemeGetIconThemeConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiIconThemeGetIconThemeConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiIconThemeGetIconThemeConstMeta =>
+      const TaskConstMeta(debugName: "get_icon_theme", argNames: []);
 
-        TaskConstMeta get kCrateApiIconThemeGetIconThemeConstMeta => const TaskConstMeta(
-            debugName: "get_icon_theme",
-            argNames: [],
-        );
-        
+  @override
+  Future<int> crateApiPdfGetPdfPageCount({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 15,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_i_32,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPdfGetPdfPageCountConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
-@override Future<double> crateApiAppearanceGetUiScale()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  TaskConstMeta get kCrateApiPdfGetPdfPageCountConstMeta =>
+      const TaskConstMeta(debugName: "get_pdf_page_count", argNames: ["path"]);
+
+  @override
+  Future<PdfPageInfo> crateApiPdfGetPdfPageInfo({
+    required String path,
+    required int pageIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          sse_encode_i_32(pageIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_pdf_page_info,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPdfGetPdfPageInfoConstMeta,
+        argValues: [path, pageIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPdfGetPdfPageInfoConstMeta => const TaskConstMeta(
+    debugName: "get_pdf_page_info",
+    argNames: ["path", "pageIndex"],
+  );
+
+  @override
+  Future<double> crateApiAppearanceGetUiScale() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_f_64,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiAppearanceGetUiScaleConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiAppearanceGetUiScaleConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiAppearanceGetUiScaleConstMeta =>
+      const TaskConstMeta(debugName: "get_ui_scale", argNames: []);
 
-        TaskConstMeta get kCrateApiAppearanceGetUiScaleConstMeta => const TaskConstMeta(
-            debugName: "get_ui_scale",
-            argNames: [],
-        );
-        
-
-@override String crateApiSimpleGreet({required String name })  { return handler.executeSync(SyncTask(
-            callFfi: () {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(name, serializer);
-            return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  String crateApiSimpleGreet({required String name}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiSimpleGreetConstMeta,
-            argValues: [name],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSimpleGreetConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSimpleGreetConstMeta =>
+      const TaskConstMeta(debugName: "greet", argNames: ["name"]);
 
-        TaskConstMeta get kCrateApiSimpleGreetConstMeta => const TaskConstMeta(
-            debugName: "greet",
-            argNames: ["name"],
-        );
-        
-
-@override Future<Uint8List?> crateApiIconThemeIconPng({required String theme , required List<String> iconNames , required int size })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(theme, serializer);
-sse_encode_list_String(iconNames, serializer);
-sse_encode_u_32(size, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<Uint8List?> crateApiIconThemeIconPng({
+    required String theme,
+    required List<String> iconNames,
+    required int size,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(theme, serializer);
+          sse_encode_list_String(iconNames, serializer);
+          sse_encode_u_32(size, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_opt_list_prim_u_8_strict,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiIconThemeIconPngConstMeta,
-            argValues: [theme, iconNames, size],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiIconThemeIconPngConstMeta,
+        argValues: [theme, iconNames, size],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiIconThemeIconPngConstMeta => const TaskConstMeta(
+    debugName: "icon_png",
+    argNames: ["theme", "iconNames", "size"],
+  );
 
-        TaskConstMeta get kCrateApiIconThemeIconPngConstMeta => const TaskConstMeta(
-            debugName: "icon_png",
-            argNames: ["theme", "iconNames", "size"],
-        );
-        
-
-@override Future<void> crateApiSimpleInitApp()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiSimpleInitApp() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiSimpleInitAppConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSimpleInitAppConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSimpleInitAppConstMeta =>
+      const TaskConstMeta(debugName: "init_app", argNames: []);
 
-        TaskConstMeta get kCrateApiSimpleInitAppConstMeta => const TaskConstMeta(
-            debugName: "init_app",
-            argNames: [],
-        );
-        
-
-@override Future<List<FileEntry>> crateApiFileEntryListDirectory({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<List<FileEntry>> crateApiFileEntryListDirectory({
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 21,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_list_file_entry,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiFileEntryListDirectoryConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFileEntryListDirectoryConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFileEntryListDirectoryConstMeta =>
+      const TaskConstMeta(debugName: "list_directory", argNames: ["path"]);
 
-        TaskConstMeta get kCrateApiFileEntryListDirectoryConstMeta => const TaskConstMeta(
-            debugName: "list_directory",
-            argNames: ["path"],
-        );
-        
-
-@override Future<List<IconThemeEntry>> crateApiIconThemeListIconThemes()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<List<IconThemeEntry>> crateApiIconThemeListIconThemes() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_list_icon_theme_entry,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiIconThemeListIconThemesConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiIconThemeListIconThemesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiIconThemeListIconThemesConstMeta =>
+      const TaskConstMeta(debugName: "list_icon_themes", argNames: []);
 
-        TaskConstMeta get kCrateApiIconThemeListIconThemesConstMeta => const TaskConstMeta(
-            debugName: "list_icon_themes",
-            argNames: [],
-        );
-        
-
-@override Future<List<OpenWithApp>> crateApiSystemListOpenWithApps({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<List<OpenWithApp>> crateApiSystemListOpenWithApps({
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 23,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_list_open_with_app,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiSystemListOpenWithAppsConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemListOpenWithAppsConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemListOpenWithAppsConstMeta =>
+      const TaskConstMeta(debugName: "list_open_with_apps", argNames: ["path"]);
 
-        TaskConstMeta get kCrateApiSystemListOpenWithAppsConstMeta => const TaskConstMeta(
-            debugName: "list_open_with_apps",
-            argNames: ["path"],
-        );
-        
-
-@override Future<List<Place>> crateApiSystemListPlaces()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<List<Place>> crateApiSystemListPlaces() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 24,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_list_place,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiSystemListPlacesConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemListPlacesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemListPlacesConstMeta =>
+      const TaskConstMeta(debugName: "list_places", argNames: []);
 
-        TaskConstMeta get kCrateApiSystemListPlacesConstMeta => const TaskConstMeta(
-            debugName: "list_places",
-            argNames: [],
-        );
-        
-
-@override Future<List<FileEntry>> crateApiSystemListRecentFiles({required String root , required int limit })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(root, serializer);
-sse_encode_u_32(limit, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<List<FileEntry>> crateApiSystemListRecentFiles({
+    required String root,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(root, serializer);
+          sse_encode_u_32(limit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 25,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_list_file_entry,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiSystemListRecentFilesConstMeta,
-            argValues: [root, limit],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemListRecentFilesConstMeta,
+        argValues: [root, limit],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemListRecentFilesConstMeta =>
+      const TaskConstMeta(
+        debugName: "list_recent_files",
+        argNames: ["root", "limit"],
+      );
 
-        TaskConstMeta get kCrateApiSystemListRecentFilesConstMeta => const TaskConstMeta(
-            debugName: "list_recent_files",
-            argNames: ["root", "limit"],
-        );
-        
-
-@override Future<List<String>> crateApiFontListSystemFonts()  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<List<String>> crateApiFontListSystemFonts() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 26,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiFontListSystemFontsConstMeta,
-            argValues: [],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFontListSystemFontsConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFontListSystemFontsConstMeta =>
+      const TaskConstMeta(debugName: "list_system_fonts", argNames: []);
 
-        TaskConstMeta get kCrateApiFontListSystemFontsConstMeta => const TaskConstMeta(
-            debugName: "list_system_fonts",
-            argNames: [],
-        );
-        
-
-@override Future<void> crateApiFileEntryMoveEntry({required String sourcePath , required String destinationDirectory , required String newName })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(sourcePath, serializer);
-sse_encode_String(destinationDirectory, serializer);
-sse_encode_String(newName, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiFileEntryMoveEntry({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sourcePath, serializer);
+          sse_encode_String(destinationDirectory, serializer);
+          sse_encode_String(newName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 27,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_file_operation_error,
-        )
-        ,
-            constMeta: kCrateApiFileEntryMoveEntryConstMeta,
-            argValues: [sourcePath, destinationDirectory, newName],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFileEntryMoveEntryConstMeta,
+        argValues: [sourcePath, destinationDirectory, newName],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFileEntryMoveEntryConstMeta => const TaskConstMeta(
+    debugName: "move_entry",
+    argNames: ["sourcePath", "destinationDirectory", "newName"],
+  );
 
-        TaskConstMeta get kCrateApiFileEntryMoveEntryConstMeta => const TaskConstMeta(
-            debugName: "move_entry",
-            argNames: ["sourcePath", "destinationDirectory", "newName"],
-        );
-        
-
-@override Future<String> crateApiSystemMoveToTrash({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiSystemMoveToTrash({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 28,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiSystemMoveToTrashConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemMoveToTrashConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemMoveToTrashConstMeta =>
+      const TaskConstMeta(debugName: "move_to_trash", argNames: ["path"]);
 
-        TaskConstMeta get kCrateApiSystemMoveToTrashConstMeta => const TaskConstMeta(
-            debugName: "move_to_trash",
-            argNames: ["path"],
-        );
-        
-
-@override Future<void> crateApiFileEntryOpenFile({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiFileEntryOpenFile({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 29,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiFileEntryOpenFileConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFileEntryOpenFileConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFileEntryOpenFileConstMeta =>
+      const TaskConstMeta(debugName: "open_file", argNames: ["path"]);
 
-        TaskConstMeta get kCrateApiFileEntryOpenFileConstMeta => const TaskConstMeta(
-            debugName: "open_file",
-            argNames: ["path"],
-        );
-        
-
-@override Future<void> crateApiSystemOpenInTerminal({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiSystemOpenInTerminal({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 30,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiSystemOpenInTerminalConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemOpenInTerminalConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemOpenInTerminalConstMeta =>
+      const TaskConstMeta(debugName: "open_in_terminal", argNames: ["path"]);
 
-        TaskConstMeta get kCrateApiSystemOpenInTerminalConstMeta => const TaskConstMeta(
-            debugName: "open_in_terminal",
-            argNames: ["path"],
-        );
-        
-
-@override Future<void> crateApiSystemOpenWith({required String path , required String desktopFile })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-sse_encode_String(desktopFile, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiSystemOpenWith({
+    required String path,
+    required String desktopFile,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          sse_encode_String(desktopFile, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 31,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiSystemOpenWithConstMeta,
-            argValues: [path, desktopFile],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSystemOpenWithConstMeta,
+        argValues: [path, desktopFile],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSystemOpenWithConstMeta => const TaskConstMeta(
+    debugName: "open_with",
+    argNames: ["path", "desktopFile"],
+  );
 
-        TaskConstMeta get kCrateApiSystemOpenWithConstMeta => const TaskConstMeta(
-            debugName: "open_with",
-            argNames: ["path", "desktopFile"],
-        );
-        
-
-@override Future<String> crateApiFileEntryRenameEntry({required String sourcePath , required String newName })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(sourcePath, serializer);
-sse_encode_String(newName, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiFileEntryRenameEntry({
+    required String sourcePath,
+    required String newName,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sourcePath, serializer);
+          sse_encode_String(newName, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 32,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiFileEntryRenameEntryConstMeta,
-            argValues: [sourcePath, newName],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFileEntryRenameEntryConstMeta,
+        argValues: [sourcePath, newName],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFileEntryRenameEntryConstMeta =>
+      const TaskConstMeta(
+        debugName: "rename_entry",
+        argNames: ["sourcePath", "newName"],
+      );
 
-        TaskConstMeta get kCrateApiFileEntryRenameEntryConstMeta => const TaskConstMeta(
-            debugName: "rename_entry",
-            argNames: ["sourcePath", "newName"],
-        );
-        
+  @override
+  Future<Uint8List> crateApiPdfRenderPdfPage({
+    required String path,
+    required int pageIndex,
+    required int width,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          sse_encode_i_32(pageIndex, serializer);
+          sse_encode_i_32(width, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 33,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiPdfRenderPdfPageConstMeta,
+        argValues: [path, pageIndex, width],
+        apiImpl: this,
+      ),
+    );
+  }
 
-@override Future<void> crateApiAppearanceSetAccentColor({required String name })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(name, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  TaskConstMeta get kCrateApiPdfRenderPdfPageConstMeta => const TaskConstMeta(
+    debugName: "render_pdf_page",
+    argNames: ["path", "pageIndex", "width"],
+  );
+
+  @override
+  Future<void> crateApiAppearanceSetAccentColor({required String name}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 34,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiAppearanceSetAccentColorConstMeta,
-            argValues: [name],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiAppearanceSetAccentColorConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiAppearanceSetAccentColorConstMeta =>
+      const TaskConstMeta(debugName: "set_accent_color", argNames: ["name"]);
 
-        TaskConstMeta get kCrateApiAppearanceSetAccentColorConstMeta => const TaskConstMeta(
-            debugName: "set_accent_color",
-            argNames: ["name"],
-        );
-        
-
-@override Future<void> crateApiAppearanceSetBaseTheme({required String name })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(name, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiAppearanceSetBaseTheme({required String name}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 35,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiAppearanceSetBaseThemeConstMeta,
-            argValues: [name],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiAppearanceSetBaseThemeConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiAppearanceSetBaseThemeConstMeta =>
+      const TaskConstMeta(debugName: "set_base_theme", argNames: ["name"]);
 
-        TaskConstMeta get kCrateApiAppearanceSetBaseThemeConstMeta => const TaskConstMeta(
-            debugName: "set_base_theme",
-            argNames: ["name"],
-        );
-        
-
-@override Future<void> crateApiFontSetFontFamily({required String name })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(name, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiFontSetFontFamily({required String name}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 36,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiFontSetFontFamilyConstMeta,
-            argValues: [name],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiFontSetFontFamilyConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiFontSetFontFamilyConstMeta =>
+      const TaskConstMeta(debugName: "set_font_family", argNames: ["name"]);
 
-        TaskConstMeta get kCrateApiFontSetFontFamilyConstMeta => const TaskConstMeta(
-            debugName: "set_font_family",
-            argNames: ["name"],
-        );
-        
-
-@override Future<void> crateApiIconThemeSetIconTheme({required String name })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(name, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiIconThemeSetIconTheme({required String name}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 37,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiIconThemeSetIconThemeConstMeta,
-            argValues: [name],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiIconThemeSetIconThemeConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiIconThemeSetIconThemeConstMeta =>
+      const TaskConstMeta(debugName: "set_icon_theme", argNames: ["name"]);
 
-        TaskConstMeta get kCrateApiIconThemeSetIconThemeConstMeta => const TaskConstMeta(
-            debugName: "set_icon_theme",
-            argNames: ["name"],
-        );
-        
-
-@override Future<void> crateApiAppearanceSetUiScale({required double scale })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_f_64(scale, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiAppearanceSetUiScale({required double scale}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_f_64(scale, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 38,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiAppearanceSetUiScaleConstMeta,
-            argValues: [scale],
-            apiImpl: this,
-        )); }
-
-
-        TaskConstMeta get kCrateApiAppearanceSetUiScaleConstMeta => const TaskConstMeta(
-            debugName: "set_ui_scale",
-            argNames: ["scale"],
-        );
-        
-
-
-
-                  @protected String dco_decode_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as String; }
-
-@protected bool dco_decode_bool(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as bool; }
-
-@protected DiskUsage dco_decode_disk_usage(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return DiskUsage(path: dco_decode_String(arr[0]),
-totalBytes: dco_decode_u_64(arr[1]),
-freeBytes: dco_decode_u_64(arr[2]),
-usedBytes: dco_decode_u_64(arr[3]),); }
-
-@protected EntryProperties dco_decode_entry_properties(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 12) throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
-                return EntryProperties(name: dco_decode_String(arr[0]),
-path: dco_decode_String(arr[1]),
-kind: dco_decode_String(arr[2]),
-linkTarget: dco_decode_opt_String(arr[3]),
-isDirectory: dco_decode_bool(arr[4]),
-sizeBytes: dco_decode_u_64(arr[5]),
-sizeOnDiskBytes: dco_decode_u_64(arr[6]),
-createdSeconds: dco_decode_i_64(arr[7]),
-modifiedSeconds: dco_decode_i_64(arr[8]),
-accessedSeconds: dco_decode_i_64(arr[9]),
-fileCount: dco_decode_u_64(arr[10]),
-folderCount: dco_decode_u_64(arr[11]),); }
-
-@protected double dco_decode_f_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as double; }
-
-@protected FileEntry dco_decode_file_entry(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return FileEntry(name: dco_decode_String(arr[0]),
-path: dco_decode_String(arr[1]),
-isDirectory: dco_decode_bool(arr[2]),
-isFile: dco_decode_bool(arr[3]),
-sizeBytes: dco_decode_u_64(arr[4]),
-modifiedSeconds: dco_decode_i_64(arr[5]),); }
-
-@protected FileOperationError dco_decode_file_operation_error(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-switch (raw[0]) {
-                case 0: return FileOperationError_Io(dco_decode_String(raw[1]),);
-case 1: return FileOperationError_InvalidName(dco_decode_String(raw[1]),);
-case 2: return FileOperationError_DestinationExists(dco_decode_String(raw[1]),);
-case 3: return FileOperationError_UnsupportedSymlink(dco_decode_String(raw[1]),);
-case 4: return FileOperationError_InvalidPath(dco_decode_String(raw[1]),);
-                default: throw Exception("unreachable");
-            } }
-
-@protected int dco_decode_i_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected PlatformInt64 dco_decode_i_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dcoDecodeI64(raw); }
-
-@protected IconThemeEntry dco_decode_icon_theme_entry(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return IconThemeEntry(name: dco_decode_String(arr[0]),
-path: dco_decode_String(arr[1]),); }
-
-@protected List<String> dco_decode_list_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_String).toList(); }
-
-@protected List<FileEntry> dco_decode_list_file_entry(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_file_entry).toList(); }
-
-@protected List<IconThemeEntry> dco_decode_list_icon_theme_entry(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_icon_theme_entry).toList(); }
-
-@protected List<OpenWithApp> dco_decode_list_open_with_app(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_open_with_app).toList(); }
-
-@protected List<Place> dco_decode_list_place(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_place).toList(); }
-
-@protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as Uint8List; }
-
-@protected OpenWithApp dco_decode_open_with_app(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-                return OpenWithApp(id: dco_decode_String(arr[0]),
-name: dco_decode_String(arr[1]),
-exec: dco_decode_String(arr[2]),
-comment: dco_decode_String(arr[3]),
-icon: dco_decode_String(arr[4]),); }
-
-@protected String? dco_decode_opt_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_String(raw); }
-
-@protected Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_list_prim_u_8_strict(raw); }
-
-@protected Place dco_decode_place(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return Place(label: dco_decode_String(arr[0]),
-path: dco_decode_String(arr[1]),
-kind: dco_decode_place_kind(arr[2]),); }
-
-@protected PlaceKind dco_decode_place_kind(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return PlaceKind.values[raw as int]; }
-
-@protected int dco_decode_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected BigInt dco_decode_u_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dcoDecodeU64(raw); }
-
-@protected int dco_decode_u_8(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected void dco_decode_unit(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return; }
-
-@protected String sse_decode_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_list_prim_u_8_strict(deserializer);
-        return utf8.decoder.convert(inner); }
-
-@protected bool sse_decode_bool(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint8() != 0; }
-
-@protected DiskUsage sse_decode_disk_usage(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_path = sse_decode_String(deserializer);
-var var_totalBytes = sse_decode_u_64(deserializer);
-var var_freeBytes = sse_decode_u_64(deserializer);
-var var_usedBytes = sse_decode_u_64(deserializer);
-return DiskUsage(path: var_path, totalBytes: var_totalBytes, freeBytes: var_freeBytes, usedBytes: var_usedBytes); }
-
-@protected EntryProperties sse_decode_entry_properties(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_name = sse_decode_String(deserializer);
-var var_path = sse_decode_String(deserializer);
-var var_kind = sse_decode_String(deserializer);
-var var_linkTarget = sse_decode_opt_String(deserializer);
-var var_isDirectory = sse_decode_bool(deserializer);
-var var_sizeBytes = sse_decode_u_64(deserializer);
-var var_sizeOnDiskBytes = sse_decode_u_64(deserializer);
-var var_createdSeconds = sse_decode_i_64(deserializer);
-var var_modifiedSeconds = sse_decode_i_64(deserializer);
-var var_accessedSeconds = sse_decode_i_64(deserializer);
-var var_fileCount = sse_decode_u_64(deserializer);
-var var_folderCount = sse_decode_u_64(deserializer);
-return EntryProperties(name: var_name, path: var_path, kind: var_kind, linkTarget: var_linkTarget, isDirectory: var_isDirectory, sizeBytes: var_sizeBytes, sizeOnDiskBytes: var_sizeOnDiskBytes, createdSeconds: var_createdSeconds, modifiedSeconds: var_modifiedSeconds, accessedSeconds: var_accessedSeconds, fileCount: var_fileCount, folderCount: var_folderCount); }
-
-@protected double sse_decode_f_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getFloat64(); }
-
-@protected FileEntry sse_decode_file_entry(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_name = sse_decode_String(deserializer);
-var var_path = sse_decode_String(deserializer);
-var var_isDirectory = sse_decode_bool(deserializer);
-var var_isFile = sse_decode_bool(deserializer);
-var var_sizeBytes = sse_decode_u_64(deserializer);
-var var_modifiedSeconds = sse_decode_i_64(deserializer);
-return FileEntry(name: var_name, path: var_path, isDirectory: var_isDirectory, isFile: var_isFile, sizeBytes: var_sizeBytes, modifiedSeconds: var_modifiedSeconds); }
-
-@protected FileOperationError sse_decode_file_operation_error(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            var tag_ = sse_decode_i_32(deserializer);
-            switch (tag_) { case 0: var var_field0 = sse_decode_String(deserializer);
-return FileOperationError_Io(var_field0);case 1: var var_field0 = sse_decode_String(deserializer);
-return FileOperationError_InvalidName(var_field0);case 2: var var_field0 = sse_decode_String(deserializer);
-return FileOperationError_DestinationExists(var_field0);case 3: var var_field0 = sse_decode_String(deserializer);
-return FileOperationError_UnsupportedSymlink(var_field0);case 4: var var_field0 = sse_decode_String(deserializer);
-return FileOperationError_InvalidPath(var_field0); default: throw UnimplementedError(''); }
-             }
-
-@protected int sse_decode_i_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getInt32(); }
-
-@protected PlatformInt64 sse_decode_i_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getPlatformInt64(); }
-
-@protected IconThemeEntry sse_decode_icon_theme_entry(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_name = sse_decode_String(deserializer);
-var var_path = sse_decode_String(deserializer);
-return IconThemeEntry(name: var_name, path: var_path); }
-
-@protected List<String> sse_decode_list_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <String>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_String(deserializer)); }
-        return ans_;
-         }
-
-@protected List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <FileEntry>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_file_entry(deserializer)); }
-        return ans_;
-         }
-
-@protected List<IconThemeEntry> sse_decode_list_icon_theme_entry(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <IconThemeEntry>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_icon_theme_entry(deserializer)); }
-        return ans_;
-         }
-
-@protected List<OpenWithApp> sse_decode_list_open_with_app(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <OpenWithApp>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_open_with_app(deserializer)); }
-        return ans_;
-         }
-
-@protected List<Place> sse_decode_list_place(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <Place>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_place(deserializer)); }
-        return ans_;
-         }
-
-@protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var len_ = sse_decode_i_32(deserializer);
-                return deserializer.buffer.getUint8List(len_); }
-
-@protected OpenWithApp sse_decode_open_with_app(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_id = sse_decode_String(deserializer);
-var var_name = sse_decode_String(deserializer);
-var var_exec = sse_decode_String(deserializer);
-var var_comment = sse_decode_String(deserializer);
-var var_icon = sse_decode_String(deserializer);
-return OpenWithApp(id: var_id, name: var_name, exec: var_exec, comment: var_comment, icon: var_icon); }
-
-@protected String? sse_decode_opt_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_String(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_list_prim_u_8_strict(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected Place sse_decode_place(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_label = sse_decode_String(deserializer);
-var var_path = sse_decode_String(deserializer);
-var var_kind = sse_decode_place_kind(deserializer);
-return Place(label: var_label, path: var_path, kind: var_kind); }
-
-@protected PlaceKind sse_decode_place_kind(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return PlaceKind.values[inner]; }
-
-@protected int sse_decode_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint32(); }
-
-@protected BigInt sse_decode_u_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getBigUint64(); }
-
-@protected int sse_decode_u_8(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint8(); }
-
-@protected void sse_decode_unit(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-
-@protected void sse_encode_String(String self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer); }
-
-@protected void sse_encode_bool(bool self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint8(self ? 1 : 0); }
-
-@protected void sse_encode_disk_usage(DiskUsage self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.path, serializer);
-sse_encode_u_64(self.totalBytes, serializer);
-sse_encode_u_64(self.freeBytes, serializer);
-sse_encode_u_64(self.usedBytes, serializer);
- }
-
-@protected void sse_encode_entry_properties(EntryProperties self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.name, serializer);
-sse_encode_String(self.path, serializer);
-sse_encode_String(self.kind, serializer);
-sse_encode_opt_String(self.linkTarget, serializer);
-sse_encode_bool(self.isDirectory, serializer);
-sse_encode_u_64(self.sizeBytes, serializer);
-sse_encode_u_64(self.sizeOnDiskBytes, serializer);
-sse_encode_i_64(self.createdSeconds, serializer);
-sse_encode_i_64(self.modifiedSeconds, serializer);
-sse_encode_i_64(self.accessedSeconds, serializer);
-sse_encode_u_64(self.fileCount, serializer);
-sse_encode_u_64(self.folderCount, serializer);
- }
-
-@protected void sse_encode_f_64(double self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putFloat64(self); }
-
-@protected void sse_encode_file_entry(FileEntry self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.name, serializer);
-sse_encode_String(self.path, serializer);
-sse_encode_bool(self.isDirectory, serializer);
-sse_encode_bool(self.isFile, serializer);
-sse_encode_u_64(self.sizeBytes, serializer);
-sse_encode_i_64(self.modifiedSeconds, serializer);
- }
-
-@protected void sse_encode_file_operation_error(FileOperationError self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-switch (self) { case FileOperationError_Io(field0: final field0): sse_encode_i_32(0, serializer); sse_encode_String(field0, serializer);
-case FileOperationError_InvalidName(field0: final field0): sse_encode_i_32(1, serializer); sse_encode_String(field0, serializer);
-case FileOperationError_DestinationExists(field0: final field0): sse_encode_i_32(2, serializer); sse_encode_String(field0, serializer);
-case FileOperationError_UnsupportedSymlink(field0: final field0): sse_encode_i_32(3, serializer); sse_encode_String(field0, serializer);
-case FileOperationError_InvalidPath(field0: final field0): sse_encode_i_32(4, serializer); sse_encode_String(field0, serializer);
-  } }
-
-@protected void sse_encode_i_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putInt32(self); }
-
-@protected void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putPlatformInt64(self); }
-
-@protected void sse_encode_icon_theme_entry(IconThemeEntry self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.name, serializer);
-sse_encode_String(self.path, serializer);
- }
-
-@protected void sse_encode_list_String(List<String> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_String(item, serializer); } }
-
-@protected void sse_encode_list_file_entry(List<FileEntry> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_file_entry(item, serializer); } }
-
-@protected void sse_encode_list_icon_theme_entry(List<IconThemeEntry> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_icon_theme_entry(item, serializer); } }
-
-@protected void sse_encode_list_open_with_app(List<OpenWithApp> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_open_with_app(item, serializer); } }
-
-@protected void sse_encode_list_place(List<Place> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_place(item, serializer); } }
-
-@protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-                    serializer.buffer.putUint8List(self); }
-
-@protected void sse_encode_open_with_app(OpenWithApp self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.id, serializer);
-sse_encode_String(self.name, serializer);
-sse_encode_String(self.exec, serializer);
-sse_encode_String(self.comment, serializer);
-sse_encode_String(self.icon, serializer);
- }
-
-@protected void sse_encode_opt_String(String? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_String(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_list_prim_u_8_strict(Uint8List? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_list_prim_u_8_strict(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_place(Place self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.label, serializer);
-sse_encode_String(self.path, serializer);
-sse_encode_place_kind(self.kind, serializer);
- }
-
-@protected void sse_encode_place_kind(PlaceKind self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_u_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint32(self); }
-
-@protected void sse_encode_u_64(BigInt self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putBigUint64(self); }
-
-@protected void sse_encode_u_8(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint8(self); }
-
-@protected void sse_encode_unit(void self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-                }
-                
+        ),
+        constMeta: kCrateApiAppearanceSetUiScaleConstMeta,
+        argValues: [scale],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppearanceSetUiScaleConstMeta =>
+      const TaskConstMeta(debugName: "set_ui_scale", argNames: ["scale"]);
+
+  @protected
+  String dco_decode_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as String;
+  }
+
+  @protected
+  bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  DiskUsage dco_decode_disk_usage(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return DiskUsage(
+      path: dco_decode_String(arr[0]),
+      totalBytes: dco_decode_u_64(arr[1]),
+      freeBytes: dco_decode_u_64(arr[2]),
+      usedBytes: dco_decode_u_64(arr[3]),
+    );
+  }
+
+  @protected
+  EntryProperties dco_decode_entry_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return EntryProperties(
+      name: dco_decode_String(arr[0]),
+      path: dco_decode_String(arr[1]),
+      kind: dco_decode_String(arr[2]),
+      linkTarget: dco_decode_opt_String(arr[3]),
+      isDirectory: dco_decode_bool(arr[4]),
+      sizeBytes: dco_decode_u_64(arr[5]),
+      sizeOnDiskBytes: dco_decode_u_64(arr[6]),
+      createdSeconds: dco_decode_i_64(arr[7]),
+      modifiedSeconds: dco_decode_i_64(arr[8]),
+      accessedSeconds: dco_decode_i_64(arr[9]),
+      fileCount: dco_decode_u_64(arr[10]),
+      folderCount: dco_decode_u_64(arr[11]),
+    );
+  }
+
+  @protected
+  double dco_decode_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  FileEntry dco_decode_file_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return FileEntry(
+      name: dco_decode_String(arr[0]),
+      path: dco_decode_String(arr[1]),
+      isDirectory: dco_decode_bool(arr[2]),
+      isFile: dco_decode_bool(arr[3]),
+      sizeBytes: dco_decode_u_64(arr[4]),
+      modifiedSeconds: dco_decode_i_64(arr[5]),
+    );
+  }
+
+  @protected
+  FileOperationError dco_decode_file_operation_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return FileOperationError_Io(dco_decode_String(raw[1]));
+      case 1:
+        return FileOperationError_InvalidName(dco_decode_String(raw[1]));
+      case 2:
+        return FileOperationError_DestinationExists(dco_decode_String(raw[1]));
+      case 3:
+        return FileOperationError_UnsupportedSymlink(dco_decode_String(raw[1]));
+      case 4:
+        return FileOperationError_InvalidPath(dco_decode_String(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
+  IconThemeEntry dco_decode_icon_theme_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return IconThemeEntry(
+      name: dco_decode_String(arr[0]),
+      path: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<FileEntry> dco_decode_list_file_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_file_entry).toList();
+  }
+
+  @protected
+  List<IconThemeEntry> dco_decode_list_icon_theme_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_icon_theme_entry).toList();
+  }
+
+  @protected
+  List<OpenWithApp> dco_decode_list_open_with_app(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_open_with_app).toList();
+  }
+
+  @protected
+  List<Place> dco_decode_list_place(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_place).toList();
+  }
+
+  @protected
+  Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Uint8List;
+  }
+
+  @protected
+  OpenWithApp dco_decode_open_with_app(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return OpenWithApp(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      exec: dco_decode_String(arr[2]),
+      comment: dco_decode_String(arr[3]),
+      icon: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_prim_u_8_strict(raw);
+  }
+
+  @protected
+  PdfPageInfo dco_decode_pdf_page_info(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return PdfPageInfo(
+      width: dco_decode_f_64(arr[0]),
+      height: dco_decode_f_64(arr[1]),
+    );
+  }
+
+  @protected
+  Place dco_decode_place(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return Place(
+      label: dco_decode_String(arr[0]),
+      path: dco_decode_String(arr[1]),
+      kind: dco_decode_place_kind(arr[2]),
+    );
+  }
+
+  @protected
+  PlaceKind dco_decode_place_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PlaceKind.values[raw as int];
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  int dco_decode_u_8(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  void dco_decode_unit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return;
+  }
+
+  @protected
+  String sse_decode_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_prim_u_8_strict(deserializer);
+    return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  DiskUsage sse_decode_disk_usage(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_path = sse_decode_String(deserializer);
+    var var_totalBytes = sse_decode_u_64(deserializer);
+    var var_freeBytes = sse_decode_u_64(deserializer);
+    var var_usedBytes = sse_decode_u_64(deserializer);
+    return DiskUsage(
+      path: var_path,
+      totalBytes: var_totalBytes,
+      freeBytes: var_freeBytes,
+      usedBytes: var_usedBytes,
+    );
+  }
+
+  @protected
+  EntryProperties sse_decode_entry_properties(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_linkTarget = sse_decode_opt_String(deserializer);
+    var var_isDirectory = sse_decode_bool(deserializer);
+    var var_sizeBytes = sse_decode_u_64(deserializer);
+    var var_sizeOnDiskBytes = sse_decode_u_64(deserializer);
+    var var_createdSeconds = sse_decode_i_64(deserializer);
+    var var_modifiedSeconds = sse_decode_i_64(deserializer);
+    var var_accessedSeconds = sse_decode_i_64(deserializer);
+    var var_fileCount = sse_decode_u_64(deserializer);
+    var var_folderCount = sse_decode_u_64(deserializer);
+    return EntryProperties(
+      name: var_name,
+      path: var_path,
+      kind: var_kind,
+      linkTarget: var_linkTarget,
+      isDirectory: var_isDirectory,
+      sizeBytes: var_sizeBytes,
+      sizeOnDiskBytes: var_sizeOnDiskBytes,
+      createdSeconds: var_createdSeconds,
+      modifiedSeconds: var_modifiedSeconds,
+      accessedSeconds: var_accessedSeconds,
+      fileCount: var_fileCount,
+      folderCount: var_folderCount,
+    );
+  }
+
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  FileEntry sse_decode_file_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_isDirectory = sse_decode_bool(deserializer);
+    var var_isFile = sse_decode_bool(deserializer);
+    var var_sizeBytes = sse_decode_u_64(deserializer);
+    var var_modifiedSeconds = sse_decode_i_64(deserializer);
+    return FileEntry(
+      name: var_name,
+      path: var_path,
+      isDirectory: var_isDirectory,
+      isFile: var_isFile,
+      sizeBytes: var_sizeBytes,
+      modifiedSeconds: var_modifiedSeconds,
+    );
+  }
+
+  @protected
+  FileOperationError sse_decode_file_operation_error(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_Io(var_field0);
+      case 1:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_InvalidName(var_field0);
+      case 2:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_DestinationExists(var_field0);
+      case 3:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_UnsupportedSymlink(var_field0);
+      case 4:
+        var var_field0 = sse_decode_String(deserializer);
+        return FileOperationError_InvalidPath(var_field0);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  IconThemeEntry sse_decode_icon_theme_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    return IconThemeEntry(name: var_name, path: var_path);
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FileEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_file_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<IconThemeEntry> sse_decode_list_icon_theme_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <IconThemeEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_icon_theme_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<OpenWithApp> sse_decode_list_open_with_app(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <OpenWithApp>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_open_with_app(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<Place> sse_decode_list_place(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <Place>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_place(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  OpenWithApp sse_decode_open_with_app(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_exec = sse_decode_String(deserializer);
+    var var_comment = sse_decode_String(deserializer);
+    var var_icon = sse_decode_String(deserializer);
+    return OpenWithApp(
+      id: var_id,
+      name: var_name,
+      exec: var_exec,
+      comment: var_comment,
+      icon: var_icon,
+    );
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_prim_u_8_strict(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PdfPageInfo sse_decode_pdf_page_info(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_width = sse_decode_f_64(deserializer);
+    var var_height = sse_decode_f_64(deserializer);
+    return PdfPageInfo(width: var_width, height: var_height);
+  }
+
+  @protected
+  Place sse_decode_place(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_label = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_kind = sse_decode_place_kind(deserializer);
+    return Place(label: var_label, path: var_path, kind: var_kind);
+  }
+
+  @protected
+  PlaceKind sse_decode_place_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return PlaceKind.values[inner];
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  int sse_decode_u_8(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8();
+  }
+
+  @protected
+  void sse_decode_unit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_String(String self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_disk_usage(DiskUsage self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.path, serializer);
+    sse_encode_u_64(self.totalBytes, serializer);
+    sse_encode_u_64(self.freeBytes, serializer);
+    sse_encode_u_64(self.usedBytes, serializer);
+  }
+
+  @protected
+  void sse_encode_entry_properties(
+    EntryProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_opt_String(self.linkTarget, serializer);
+    sse_encode_bool(self.isDirectory, serializer);
+    sse_encode_u_64(self.sizeBytes, serializer);
+    sse_encode_u_64(self.sizeOnDiskBytes, serializer);
+    sse_encode_i_64(self.createdSeconds, serializer);
+    sse_encode_i_64(self.modifiedSeconds, serializer);
+    sse_encode_i_64(self.accessedSeconds, serializer);
+    sse_encode_u_64(self.fileCount, serializer);
+    sse_encode_u_64(self.folderCount, serializer);
+  }
+
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_file_entry(FileEntry self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_bool(self.isDirectory, serializer);
+    sse_encode_bool(self.isFile, serializer);
+    sse_encode_u_64(self.sizeBytes, serializer);
+    sse_encode_i_64(self.modifiedSeconds, serializer);
+  }
+
+  @protected
+  void sse_encode_file_operation_error(
+    FileOperationError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case FileOperationError_Io(field0: final field0):
+        sse_encode_i_32(0, serializer);
+        sse_encode_String(field0, serializer);
+      case FileOperationError_InvalidName(field0: final field0):
+        sse_encode_i_32(1, serializer);
+        sse_encode_String(field0, serializer);
+      case FileOperationError_DestinationExists(field0: final field0):
+        sse_encode_i_32(2, serializer);
+        sse_encode_String(field0, serializer);
+      case FileOperationError_UnsupportedSymlink(field0: final field0):
+        sse_encode_i_32(3, serializer);
+        sse_encode_String(field0, serializer);
+      case FileOperationError_InvalidPath(field0: final field0):
+        sse_encode_i_32(4, serializer);
+        sse_encode_String(field0, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_icon_theme_entry(
+    IconThemeEntry self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.path, serializer);
+  }
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_file_entry(
+    List<FileEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_file_entry(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_icon_theme_entry(
+    List<IconThemeEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_icon_theme_entry(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_open_with_app(
+    List<OpenWithApp> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_open_with_app(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_place(List<Place> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_place(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_strict(
+    Uint8List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_open_with_app(OpenWithApp self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.exec, serializer);
+    sse_encode_String(self.comment, serializer);
+    sse_encode_String(self.icon, serializer);
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_list_prim_u_8_strict(
+    Uint8List? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_prim_u_8_strict(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_pdf_page_info(PdfPageInfo self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.width, serializer);
+    sse_encode_f_64(self.height, serializer);
+  }
+
+  @protected
+  void sse_encode_place(Place self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.label, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_place_kind(self.kind, serializer);
+  }
+
+  @protected
+  void sse_encode_place_kind(PlaceKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
+  }
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_u_8(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self);
+  }
+
+  @protected
+  void sse_encode_unit(void self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+}

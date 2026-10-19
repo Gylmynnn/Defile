@@ -1,4 +1,7 @@
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
+
+import '../utils/app_toast.dart';
+
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;
 import 'package:get/get.dart';
@@ -219,10 +222,9 @@ class FileExplorerController extends GetxController {
       case rust_system.PlaceKind.trash:
         await showTrash();
       case rust_system.PlaceKind.network:
-        Get.snackbar(
-          'Network',
-          'Network browsing is not supported yet.',
-          snackPosition: SnackPosition.BOTTOM,
+        showAppToast(
+          title: 'Network',
+          message: 'Network browsing is not supported yet.',
         );
     }
   }
@@ -266,10 +268,9 @@ class FileExplorerController extends GetxController {
     final String trashPath = trashPlace?.path ?? '';
 
     if (trashPath.isEmpty) {
-      Get.snackbar(
-        'Trash',
-        'Trash is not available on this platform.',
-        snackPosition: SnackPosition.BOTTOM,
+      showAppToast(
+        title: 'Trash',
+        message: 'Trash is not available on this platform.',
       );
       return;
     }
@@ -277,11 +278,7 @@ class FileExplorerController extends GetxController {
     try {
       await fileSystemService.listDirectory(trashPath);
     } catch (_) {
-      Get.snackbar(
-        'Trash',
-        'Trash folder is empty.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Trash', message: 'Trash folder is empty.');
       return;
     }
 
@@ -455,12 +452,11 @@ class FileExplorerController extends GetxController {
     clipboardEntries.assignAll(entries);
     clipboardIsCut.value = false;
 
-    Get.snackbar(
-      'Copied',
-      entries.length == 1
+    showAppToast(
+      title: 'Copied',
+      message: entries.length == 1
           ? '"${entries.first.name}" is ready to be copied to another folder.'
           : '${entries.length} items ready to be copied to another folder.',
-      snackPosition: SnackPosition.BOTTOM,
     );
   }
 
@@ -470,12 +466,11 @@ class FileExplorerController extends GetxController {
     clipboardEntries.assignAll(entries);
     clipboardIsCut.value = true;
 
-    Get.snackbar(
-      'Cut',
-      entries.length == 1
+    showAppToast(
+      title: 'Cut',
+      message: entries.length == 1
           ? '"${entries.first.name}" is ready to be moved to another folder.'
           : '${entries.length} items ready to be moved to another folder.',
-      snackPosition: SnackPosition.BOTTOM,
     );
   }
 
@@ -531,13 +526,16 @@ class FileExplorerController extends GetxController {
     final String label = move ? 'moved' : 'copied';
 
     if (succeeded == entries.length) {
-      Get.snackbar('Success', '${entries.length} item(s) $label.');
+      showAppToast(
+        title: 'Success',
+        message: '${entries.length} item(s) $label.',
+      );
     } else if (entries.length == 1 && lastError != null) {
-      Get.snackbar('Failed', lastError);
+      showAppToast(title: 'Failed', message: lastError);
     } else {
-      Get.snackbar(
-        'Partially completed',
-        '$succeeded of ${entries.length} items $label.',
+      showAppToast(
+        title: 'Partially completed',
+        message: '$succeeded of ${entries.length} items $label.',
       );
     }
   }
@@ -561,22 +559,16 @@ class FileExplorerController extends GetxController {
     await refreshDirectory();
 
     if (succeeded == entries.length) {
-      Get.snackbar(
-        'Trash',
-        '${entries.length} item(s) moved to Trash.',
-        snackPosition: SnackPosition.BOTTOM,
+      showAppToast(
+        title: 'Trash',
+        message: '${entries.length} item(s) moved to Trash.',
       );
     } else if (entries.length == 1 && lastError != null) {
-      Get.snackbar(
-        'Failed to move to Trash',
-        lastError,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Failed to move to Trash', message: lastError);
     } else {
-      Get.snackbar(
-        'Partially failed',
-        '$succeeded of ${entries.length} items moved to Trash.',
-        snackPosition: SnackPosition.BOTTOM,
+      showAppToast(
+        title: 'Partially failed',
+        message: '$succeeded of ${entries.length} items moved to Trash.',
       );
     }
   }
@@ -607,22 +599,16 @@ class FileExplorerController extends GetxController {
     await refreshDirectory();
 
     if (succeeded == entries.length) {
-      Get.snackbar(
-        'Deleted',
-        '${entries.length} item(s) permanently deleted.',
-        snackPosition: SnackPosition.BOTTOM,
+      showAppToast(
+        title: 'Deleted',
+        message: '${entries.length} item(s) permanently deleted.',
       );
     } else if (entries.length == 1 && lastError != null) {
-      Get.snackbar(
-        'Failed to delete',
-        lastError,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Failed to delete', message: lastError);
     } else {
-      Get.snackbar(
-        'Partially failed',
-        '$succeeded of ${entries.length} items deleted.',
-        snackPosition: SnackPosition.BOTTOM,
+      showAppToast(
+        title: 'Partially failed',
+        message: '$succeeded of ${entries.length} items deleted.',
       );
     }
   }
@@ -632,17 +618,12 @@ class FileExplorerController extends GetxController {
       final int removed = await fileSystemService.emptyTrash();
       await refreshDirectory();
 
-      Get.snackbar(
-        'Trash emptied',
-        '$removed item(s) permanently deleted.',
-        snackPosition: SnackPosition.BOTTOM,
+      showAppToast(
+        title: 'Trash emptied',
+        message: '$removed item(s) permanently deleted.',
       );
     } catch (error) {
-      Get.snackbar(
-        'Failed to empty Trash',
-        error.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Failed to empty Trash', message: error.toString());
     }
   }
 
@@ -650,11 +631,7 @@ class FileExplorerController extends GetxController {
     try {
       await rust_system.openInTerminal(path: path);
     } catch (error) {
-      Get.snackbar(
-        'Terminal',
-        error.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Terminal', message: error.toString());
     }
   }
 
@@ -711,11 +688,7 @@ class FileExplorerController extends GetxController {
   Future<void> renameEntry(rust.FileEntry entry, String newName) async {
     final String trimmedName = newName.trim();
     if (trimmedName.isEmpty) {
-      Get.snackbar(
-        'Empty name',
-        'Enter a new name first.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Empty name', message: 'Enter a new name first.');
       return;
     }
 
@@ -723,27 +696,18 @@ class FileExplorerController extends GetxController {
       await fileSystemService.renameEntry(entry.path, trimmedName);
       await refreshDirectory();
 
-      Get.snackbar(
-        'Success',
-        '"${entry.name}" was renamed.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Success', message: '"${entry.name}" was renamed.');
     } catch (error) {
-      Get.snackbar(
-        'Rename failed',
-        error.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Rename failed', message: error.toString());
     }
   }
 
   Future<void> createDirectory(String name) async {
     final String trimmedName = name.trim();
     if (trimmedName.isEmpty) {
-      Get.snackbar(
-        'Empty folder name',
-        'Enter a folder name first',
-        snackPosition: SnackPosition.BOTTOM,
+      showAppToast(
+        title: 'Empty folder name',
+        message: 'Enter a folder name first',
       );
       return;
     }
@@ -752,17 +716,9 @@ class FileExplorerController extends GetxController {
       await fileSystemService.createDirectory(currentPath.value, trimmedName);
       await refreshDirectory();
 
-      Get.snackbar(
-        'Success',
-        'Folder "$trimmedName" created',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Success', message: 'Folder "$trimmedName" created');
     } catch (error) {
-      Get.snackbar(
-        'Failed to create folder',
-        error.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Failed to create folder', message: error.toString());
     }
   }
 
@@ -780,11 +736,7 @@ class FileExplorerController extends GetxController {
     try {
       await fileSystemService.openFile(entry.path);
     } catch (error) {
-      Get.snackbar(
-        'Failed to open file',
-        error.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Failed to open file', message: error.toString());
     }
   }
 
@@ -799,11 +751,7 @@ class FileExplorerController extends GetxController {
     try {
       await fileSystemService.openWith(entry.path, app.id);
     } catch (error) {
-      Get.snackbar(
-        'Failed to open file',
-        error.toString(),
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      showAppToast(title: 'Failed to open file', message: error.toString());
     }
   }
 }

@@ -12,6 +12,7 @@ import '../../../theme/app_theme.dart';
 import '../controllers/file_explorer_controller.dart';
 import '../services/theme_service.dart';
 import '../utils/app_dialog_route.dart';
+import '../utils/app_toast.dart';
 import 'widgets/app_dialog.dart';
 import 'widgets/app_sidebar.dart';
 import 'widgets/context_menu.dart';
@@ -130,7 +131,9 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
                                     onPointerCancel: _handleBandUp,
                                     child: IgnorePointer(
                                       child: CustomPaint(
-                                        painter: _SelectionBandPainter(_bandRect),
+                                        painter: _SelectionBandPainter(
+                                          _bandRect,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -694,12 +697,11 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     final String value = entries.map((entry) => entry.path).join('\n');
     await Clipboard.setData(ClipboardData(text: value));
 
-    Get.snackbar(
-      'Path copied',
-      entries.length == 1
+    showAppToast(
+      title: 'Path copied',
+      message: entries.length == 1
           ? entries.first.path
           : '${entries.length} paths copied.',
-      snackPosition: SnackPosition.BOTTOM,
     );
   }
 

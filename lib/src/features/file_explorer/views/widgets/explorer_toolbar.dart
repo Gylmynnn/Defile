@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
+import '../../services/theme_service.dart';
 import '../../utils/app_dialog_route.dart';
 import 'settings_dialog.dart';
 
@@ -37,6 +38,18 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
+          Obx(
+            () => _ToolbarIconButton(
+              icon: controller.showSidebar.value
+                  ? Icons.view_sidebar
+                  : Icons.view_sidebar_outlined,
+              tooltip: controller.showSidebar.value
+                  ? 'Hide sidebar'
+                  : 'Show sidebar',
+              active: controller.showSidebar.value,
+              onTap: controller.toggleSidebar,
+            ),
+          ),
           Obx(
             () => _ToolbarIconButton(
               icon: Icons.chevron_left,
@@ -95,18 +108,6 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           const SizedBox(width: 6),
           Obx(
             () => _ToolbarIconButton(
-              icon: controller.showSidebar.value
-                  ? Icons.view_sidebar
-                  : Icons.view_sidebar_outlined,
-              tooltip: controller.showSidebar.value
-                  ? 'Hide sidebar'
-                  : 'Show sidebar',
-              active: controller.showSidebar.value,
-              onTap: controller.toggleSidebar,
-            ),
-          ),
-          Obx(
-            () => _ToolbarIconButton(
               icon: Icons.terminal,
               tooltip: 'Open terminal in this folder',
               onTap: controller.location.value == ExplorerLocation.directory
@@ -114,6 +115,19 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
                   : null,
             ),
           ),
+          Obx(() {
+            final themeService = Get.find<ThemeService>();
+            return _ToolbarIconButton(
+              icon: themeService.previewEnabled.value
+                  ? Icons.visibility
+                  : Icons.visibility_outlined,
+              tooltip: themeService.previewEnabled.value
+                  ? 'Hide preview'
+                  : 'Show preview',
+              active: themeService.previewEnabled.value,
+              onTap: () => themeService.previewEnabled.value = !themeService.previewEnabled.value,
+            );
+          }),
           _ToolbarIconButton(
             icon: Icons.settings_outlined,
             tooltip: 'Settings',

@@ -7,197 +7,301 @@ import 'api/appearance.dart';
 import 'api/file_entry.dart';
 import 'api/font.dart';
 import 'api/icon_theme.dart';
+import 'api/pdf.dart';
 import 'api/properties.dart';
 import 'api/simple.dart';
 import 'api/system.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
+
 import 'frb_generated.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
+abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
+  RustLibApiImplPlatform({
+    required super.handler,
+    required super.wire,
+    required super.generalizedFrbRustBinding,
+    required super.portManager,
+  });
 
+  @protected
+  String dco_decode_String(dynamic raw);
 
+  @protected
+  bool dco_decode_bool(dynamic raw);
 
-                abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
-                  RustLibApiImplPlatform({
-                    required super.handler,
-                    required super.wire,
-                    required super.generalizedFrbRustBinding,
-                    required super.portManager,
-                  });
+  @protected
+  DiskUsage dco_decode_disk_usage(dynamic raw);
 
-                  
+  @protected
+  EntryProperties dco_decode_entry_properties(dynamic raw);
 
-                  @protected String dco_decode_String(dynamic raw);
+  @protected
+  double dco_decode_f_64(dynamic raw);
 
-@protected bool dco_decode_bool(dynamic raw);
+  @protected
+  FileEntry dco_decode_file_entry(dynamic raw);
 
-@protected DiskUsage dco_decode_disk_usage(dynamic raw);
+  @protected
+  FileOperationError dco_decode_file_operation_error(dynamic raw);
 
-@protected EntryProperties dco_decode_entry_properties(dynamic raw);
+  @protected
+  int dco_decode_i_32(dynamic raw);
 
-@protected double dco_decode_f_64(dynamic raw);
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
 
-@protected FileEntry dco_decode_file_entry(dynamic raw);
+  @protected
+  IconThemeEntry dco_decode_icon_theme_entry(dynamic raw);
 
-@protected FileOperationError dco_decode_file_operation_error(dynamic raw);
+  @protected
+  List<String> dco_decode_list_String(dynamic raw);
 
-@protected int dco_decode_i_32(dynamic raw);
+  @protected
+  List<FileEntry> dco_decode_list_file_entry(dynamic raw);
 
-@protected PlatformInt64 dco_decode_i_64(dynamic raw);
+  @protected
+  List<IconThemeEntry> dco_decode_list_icon_theme_entry(dynamic raw);
 
-@protected IconThemeEntry dco_decode_icon_theme_entry(dynamic raw);
+  @protected
+  List<OpenWithApp> dco_decode_list_open_with_app(dynamic raw);
 
-@protected List<String> dco_decode_list_String(dynamic raw);
+  @protected
+  List<Place> dco_decode_list_place(dynamic raw);
 
-@protected List<FileEntry> dco_decode_list_file_entry(dynamic raw);
+  @protected
+  Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
-@protected List<IconThemeEntry> dco_decode_list_icon_theme_entry(dynamic raw);
+  @protected
+  OpenWithApp dco_decode_open_with_app(dynamic raw);
 
-@protected List<OpenWithApp> dco_decode_list_open_with_app(dynamic raw);
+  @protected
+  String? dco_decode_opt_String(dynamic raw);
 
-@protected List<Place> dco_decode_list_place(dynamic raw);
+  @protected
+  Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
 
-@protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+  @protected
+  PdfPageInfo dco_decode_pdf_page_info(dynamic raw);
 
-@protected OpenWithApp dco_decode_open_with_app(dynamic raw);
+  @protected
+  Place dco_decode_place(dynamic raw);
 
-@protected String? dco_decode_opt_String(dynamic raw);
+  @protected
+  PlaceKind dco_decode_place_kind(dynamic raw);
 
-@protected Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw);
+  @protected
+  int dco_decode_u_32(dynamic raw);
 
-@protected Place dco_decode_place(dynamic raw);
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
 
-@protected PlaceKind dco_decode_place_kind(dynamic raw);
+  @protected
+  int dco_decode_u_8(dynamic raw);
 
-@protected int dco_decode_u_32(dynamic raw);
+  @protected
+  void dco_decode_unit(dynamic raw);
 
-@protected BigInt dco_decode_u_64(dynamic raw);
+  @protected
+  String sse_decode_String(SseDeserializer deserializer);
 
-@protected int dco_decode_u_8(dynamic raw);
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
 
-@protected void dco_decode_unit(dynamic raw);
+  @protected
+  DiskUsage sse_decode_disk_usage(SseDeserializer deserializer);
 
-@protected String sse_decode_String(SseDeserializer deserializer);
+  @protected
+  EntryProperties sse_decode_entry_properties(SseDeserializer deserializer);
 
-@protected bool sse_decode_bool(SseDeserializer deserializer);
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer);
 
-@protected DiskUsage sse_decode_disk_usage(SseDeserializer deserializer);
+  @protected
+  FileEntry sse_decode_file_entry(SseDeserializer deserializer);
 
-@protected EntryProperties sse_decode_entry_properties(SseDeserializer deserializer);
+  @protected
+  FileOperationError sse_decode_file_operation_error(
+    SseDeserializer deserializer,
+  );
 
-@protected double sse_decode_f_64(SseDeserializer deserializer);
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
 
-@protected FileEntry sse_decode_file_entry(SseDeserializer deserializer);
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
-@protected FileOperationError sse_decode_file_operation_error(SseDeserializer deserializer);
+  @protected
+  IconThemeEntry sse_decode_icon_theme_entry(SseDeserializer deserializer);
 
-@protected int sse_decode_i_32(SseDeserializer deserializer);
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
 
-@protected PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+  @protected
+  List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer);
 
-@protected IconThemeEntry sse_decode_icon_theme_entry(SseDeserializer deserializer);
+  @protected
+  List<IconThemeEntry> sse_decode_list_icon_theme_entry(
+    SseDeserializer deserializer,
+  );
 
-@protected List<String> sse_decode_list_String(SseDeserializer deserializer);
+  @protected
+  List<OpenWithApp> sse_decode_list_open_with_app(SseDeserializer deserializer);
 
-@protected List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer);
+  @protected
+  List<Place> sse_decode_list_place(SseDeserializer deserializer);
 
-@protected List<IconThemeEntry> sse_decode_list_icon_theme_entry(SseDeserializer deserializer);
+  @protected
+  Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
-@protected List<OpenWithApp> sse_decode_list_open_with_app(SseDeserializer deserializer);
+  @protected
+  OpenWithApp sse_decode_open_with_app(SseDeserializer deserializer);
 
-@protected List<Place> sse_decode_list_place(SseDeserializer deserializer);
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
 
-@protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+  @protected
+  Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
 
-@protected OpenWithApp sse_decode_open_with_app(SseDeserializer deserializer);
+  @protected
+  PdfPageInfo sse_decode_pdf_page_info(SseDeserializer deserializer);
 
-@protected String? sse_decode_opt_String(SseDeserializer deserializer);
+  @protected
+  Place sse_decode_place(SseDeserializer deserializer);
 
-@protected Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer);
+  @protected
+  PlaceKind sse_decode_place_kind(SseDeserializer deserializer);
 
-@protected Place sse_decode_place(SseDeserializer deserializer);
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
 
-@protected PlaceKind sse_decode_place_kind(SseDeserializer deserializer);
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
 
-@protected int sse_decode_u_32(SseDeserializer deserializer);
+  @protected
+  int sse_decode_u_8(SseDeserializer deserializer);
 
-@protected BigInt sse_decode_u_64(SseDeserializer deserializer);
+  @protected
+  void sse_decode_unit(SseDeserializer deserializer);
 
-@protected int sse_decode_u_8(SseDeserializer deserializer);
+  @protected
+  void sse_encode_String(String self, SseSerializer serializer);
 
-@protected void sse_decode_unit(SseDeserializer deserializer);
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
 
-@protected void sse_encode_String(String self, SseSerializer serializer);
+  @protected
+  void sse_encode_disk_usage(DiskUsage self, SseSerializer serializer);
 
-@protected void sse_encode_bool(bool self, SseSerializer serializer);
+  @protected
+  void sse_encode_entry_properties(
+    EntryProperties self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_disk_usage(DiskUsage self, SseSerializer serializer);
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer);
 
-@protected void sse_encode_entry_properties(EntryProperties self, SseSerializer serializer);
+  @protected
+  void sse_encode_file_entry(FileEntry self, SseSerializer serializer);
 
-@protected void sse_encode_f_64(double self, SseSerializer serializer);
+  @protected
+  void sse_encode_file_operation_error(
+    FileOperationError self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_file_entry(FileEntry self, SseSerializer serializer);
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
 
-@protected void sse_encode_file_operation_error(FileOperationError self, SseSerializer serializer);
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
-@protected void sse_encode_i_32(int self, SseSerializer serializer);
+  @protected
+  void sse_encode_icon_theme_entry(
+    IconThemeEntry self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
-@protected void sse_encode_icon_theme_entry(IconThemeEntry self, SseSerializer serializer);
+  @protected
+  void sse_encode_list_file_entry(
+    List<FileEntry> self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_list_String(List<String> self, SseSerializer serializer);
+  @protected
+  void sse_encode_list_icon_theme_entry(
+    List<IconThemeEntry> self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_list_file_entry(List<FileEntry> self, SseSerializer serializer);
+  @protected
+  void sse_encode_list_open_with_app(
+    List<OpenWithApp> self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_list_icon_theme_entry(List<IconThemeEntry> self, SseSerializer serializer);
+  @protected
+  void sse_encode_list_place(List<Place> self, SseSerializer serializer);
 
-@protected void sse_encode_list_open_with_app(List<OpenWithApp> self, SseSerializer serializer);
+  @protected
+  void sse_encode_list_prim_u_8_strict(
+    Uint8List self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_list_place(List<Place> self, SseSerializer serializer);
+  @protected
+  void sse_encode_open_with_app(OpenWithApp self, SseSerializer serializer);
 
-@protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer);
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
 
-@protected void sse_encode_open_with_app(OpenWithApp self, SseSerializer serializer);
+  @protected
+  void sse_encode_opt_list_prim_u_8_strict(
+    Uint8List? self,
+    SseSerializer serializer,
+  );
 
-@protected void sse_encode_opt_String(String? self, SseSerializer serializer);
+  @protected
+  void sse_encode_pdf_page_info(PdfPageInfo self, SseSerializer serializer);
 
-@protected void sse_encode_opt_list_prim_u_8_strict(Uint8List? self, SseSerializer serializer);
+  @protected
+  void sse_encode_place(Place self, SseSerializer serializer);
 
-@protected void sse_encode_place(Place self, SseSerializer serializer);
+  @protected
+  void sse_encode_place_kind(PlaceKind self, SseSerializer serializer);
 
-@protected void sse_encode_place_kind(PlaceKind self, SseSerializer serializer);
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
 
-@protected void sse_encode_u_32(int self, SseSerializer serializer);
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
 
-@protected void sse_encode_u_64(BigInt self, SseSerializer serializer);
+  @protected
+  void sse_encode_u_8(int self, SseSerializer serializer);
 
-@protected void sse_encode_u_8(int self, SseSerializer serializer);
-
-@protected void sse_encode_unit(void self, SseSerializer serializer);
-                }
-                
-
+  @protected
+  void sse_encode_unit(void self, SseSerializer serializer);
+}
 
 // Section: wire_class
 
+class RustLibWire implements BaseWire {
+  factory RustLibWire.fromExternalLibrary(ExternalLibrary lib) =>
+      RustLibWire(lib.ffiDynamicLibrary);
 
-        class RustLibWire implements BaseWire {
+  /// Holds the symbol lookup function.
+  final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName)
+  _lookup;
 
-            factory RustLibWire.fromExternalLibrary(ExternalLibrary lib) =>
-              RustLibWire(lib.ffiDynamicLibrary);
-        
-            /// Holds the symbol lookup function.
-            final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName)
-                _lookup;
-  
-            /// The symbols are looked up in [dynamicLibrary].
-            RustLibWire(ffi.DynamicLibrary dynamicLibrary)
-                : _lookup = dynamicLibrary.lookup;
-
-            
-        }
-        
+  /// The symbols are looked up in [dynamicLibrary].
+  RustLibWire(ffi.DynamicLibrary dynamicLibrary)
+    : _lookup = dynamicLibrary.lookup;
+}

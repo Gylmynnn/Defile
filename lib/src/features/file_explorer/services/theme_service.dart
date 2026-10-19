@@ -16,6 +16,7 @@ class ThemeService extends GetxService {
   // needs to survive restarts.
   final RxBool animationsEnabled = true.obs;
   final RxBool previewEnabled = false.obs;
+  final RxDouble previewWidth = 320.0.obs;
 
   Duration get animationDuration => animationsEnabled.value
       ? const Duration(milliseconds: 200)

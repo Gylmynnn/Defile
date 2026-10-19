@@ -4,23 +4,25 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `config_file`, `read_setting`, `write_setting`
 
-            // These functions are ignored because they are not marked as `pub`: `config_file`, `read_setting`, `write_setting`
+Future<String> getBaseTheme() =>
+    RustLib.instance.api.crateApiAppearanceGetBaseTheme();
 
+Future<void> setBaseTheme({required String name}) =>
+    RustLib.instance.api.crateApiAppearanceSetBaseTheme(name: name);
 
-            Future<String>  getBaseTheme() => RustLib.instance.api.crateApiAppearanceGetBaseTheme();
+Future<String> getAccentColor() =>
+    RustLib.instance.api.crateApiAppearanceGetAccentColor();
 
-Future<void>  setBaseTheme({required String name }) => RustLib.instance.api.crateApiAppearanceSetBaseTheme(name: name);
+Future<void> setAccentColor({required String name}) =>
+    RustLib.instance.api.crateApiAppearanceSetAccentColor(name: name);
 
-Future<String>  getAccentColor() => RustLib.instance.api.crateApiAppearanceGetAccentColor();
+Future<double> getUiScale() =>
+    RustLib.instance.api.crateApiAppearanceGetUiScale();
 
-Future<void>  setAccentColor({required String name }) => RustLib.instance.api.crateApiAppearanceSetAccentColor(name: name);
-
-Future<double>  getUiScale() => RustLib.instance.api.crateApiAppearanceGetUiScale();
-
-Future<void>  setUiScale({required double scale }) => RustLib.instance.api.crateApiAppearanceSetUiScale(scale: scale);
-
-            
-            
+Future<void> setUiScale({required double scale}) =>
+    RustLib.instance.api.crateApiAppearanceSetUiScale(scale: scale);
