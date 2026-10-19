@@ -12,7 +12,7 @@ import 'entry_glyphs.dart';
 import 'themed_icon.dart';
 
 /// Sections available in the settings popup.
-enum SettingsSection { general, appearance, interface, filesAndLinks, hotkeys }
+enum SettingsSection { appearance, interface, filesAndLinks, hotkeys, about }
 
 class _SidebarItemDef {
   const _SidebarItemDef({
@@ -32,23 +32,6 @@ class _SidebarItemDef {
 
 const List<_SidebarItemDef> _allSidebarItems = [
   // Options
-  _SidebarItemDef(
-    section: SettingsSection.general,
-    label: 'General',
-    icon: Icons.account_circle_outlined,
-    category: 'Options',
-    keywords: [
-      'general',
-      'version',
-      'update',
-      'language',
-      'account',
-      'license',
-      'advanced',
-      'startup',
-      'help',
-    ],
-  ),
   _SidebarItemDef(
     section: SettingsSection.appearance,
     label: 'Appearance',
@@ -102,6 +85,23 @@ const List<_SidebarItemDef> _allSidebarItems = [
     category: 'Options',
     keywords: ['hotkeys', 'shortcuts', 'keyboard', 'bindings', 'keys'],
   ),
+  _SidebarItemDef(
+    section: SettingsSection.about,
+    label: 'About',
+    icon: Icons.account_circle_outlined,
+    category: 'Options',
+    keywords: [
+      'general',
+      'version',
+      'update',
+      'language',
+      'account',
+      'license',
+      'advanced',
+      'startup',
+      'help',
+    ],
+  ),
 ];
 
 class SettingsDialog extends StatefulWidget {
@@ -116,16 +116,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
   final TextEditingController _themeSearchController = TextEditingController();
   final TextEditingController _fontSearchController = TextEditingController();
 
-  SettingsSection _activeSection = SettingsSection.general;
+  SettingsSection _activeSection = SettingsSection.about;
   String _searchQuery = '';
   String _themeQuery = '';
   String _fontQuery = '';
 
   // Setting states
-  bool _automaticUpdates = false;
-  String _selectedLanguage = 'English';
-  bool _notifyStartup = false;
-  bool _hardwareAcceleration = true;
   bool _confirmTrash = true;
   String _terminalChoice = 'System default';
 
@@ -140,12 +136,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
   @override
   void initState() {
     super.initState();
-    if (_iconService.themes.isEmpty) {
-      _iconService.refreshThemes();
-    }
-    if (Get.isRegistered<FontService>() && _fontService.fonts.isEmpty) {
-      _fontService.refreshFonts();
-    }
+    // Services already warm these up at startup. Only refresh when empty, and
+    // never block the first frame: the dialog should open instantly.
+    Future.microtask(() {
+      if (_iconService.themes.isEmpty) _iconService.refreshThemes();
+      if (Get.isRegistered<FontService>() && _fontService.fonts.isEmpty) {
+        _fontService.refreshFonts();
+      }
+    });
   }
 
   @override
@@ -393,11 +391,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             switch (_activeSection) {
-              SettingsSection.general => _buildGeneralSection(),
               SettingsSection.appearance => _buildAppearanceSection(),
               SettingsSection.interface => _buildInterfaceSection(),
               SettingsSection.filesAndLinks => _buildFilesAndLinksSection(),
               SettingsSection.hotkeys => _buildHotkeysSection(),
+              SettingsSection.about => _buildAboutSection(),
             },
           ],
         ),
@@ -405,27 +403,28 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  // ==========================================
-  // General Section (Exact Match to Screenshot)
-  // ==========================================
-  Widget _buildGeneralSection() {
+  Widget _buildAboutSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Top Card
-        _ObsidianSectionCard(
+
+        const SizedBox(height: 22),
+        _buildSectionTitle('About'),
+        const SizedBox(height: 8),
+        _CustomSectionCard(
           children: [
-            _ObsidianSettingRow(
-              title: 'Version 1.14.4',
-              subtitle: 'Installer version: 1.14.4',
+            _CustomSettingRow(
+              title: 'Version 0.5.0',
+              subtitle: 'Installer version: 0.5.0',
               linkText: 'Read the changelog.',
               onLinkTap: () {
                 _showInfoMessage(
                   'Changelog',
-                  'Defile 1.14.4 introduces custom themes, obsidian styling, and lightning-fast file navigation.',
+                  'Defile 0.5.0 introduces custom themes, and lightning-fast file navigation.',
                 );
               },
-              control: _ObsidianButton(
+              control: _CustomButton(
                 label: 'Check for updates',
                 onTap: () {
                   _showInfoMessage(
@@ -435,160 +434,30 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 },
               ),
             ),
-            _ObsidianDivider(),
-            _ObsidianSettingRow(
-              title: 'Automatic updates',
-              subtitle:
-                  'Turn this off to prevent the app from checking for updates.',
-              control: _ObsidianSwitch(
-                value: _automaticUpdates,
-                onChanged: (val) => setState(() => _automaticUpdates = val),
-              ),
-            ),
-            _ObsidianDivider(),
-            _ObsidianSettingRow(
-              title: 'Language',
-              subtitle: 'Change the display language.\nLearn how to add a new language to Obsidian.',
-              control: _ObsidianDropdown<String>(
-                value: _selectedLanguage,
-                items: const [
-                  DropdownMenuItem(value: 'English', child: Text('English')),
-                  DropdownMenuItem(
-                    value: 'Bahasa Indonesia',
-                    child: Text('Bahasa Indonesia'),
-                  ),
-                  DropdownMenuItem(value: '日本語', child: Text('日本語')),
-                  DropdownMenuItem(value: 'Deutsch', child: Text('Deutsch')),
-                  DropdownMenuItem(value: 'Français', child: Text('Français')),
-                ],
-                onChanged: (val) {
-                  if (val != null) setState(() => _selectedLanguage = val);
-                },
-              ),
-            ),
-            _ObsidianDivider(),
-            _ObsidianSettingRow(
-              title: 'Help',
-              subtitle:
-                  'Learn how to use Obsidian and get help from the community.',
-              control: _ObsidianButton(
-                label: 'Open',
-                onTap: () {
-                  _showInfoMessage(
-                    'Help & Support',
-                    'Visit docs at https://github.com/Gylmynnn/defile',
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
 
-        const SizedBox(height: 22),
-        _buildSectionTitle('Account'),
-        const SizedBox(height: 8),
+            // NOTE: i think not made langage switch feature for now
 
-        // Account Card
-        _ObsidianSectionCard(
-          children: [
-            _ObsidianSettingRow(
-              title: 'Your account',
-              subtitle: "You're not logged in right now. An account is only needed for Obsidian Sync,\nObsidian Publish, and early access versions.",
-              control: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _ObsidianButton(
-                    label: 'Log in',
-                    onTap: () =>
-                        _showInfoMessage('Account', 'Log in feature ready.'),
-                  ),
-                  const SizedBox(width: 8),
-                  _ObsidianButton(
-                    label: 'Sign up',
-                    onTap: () =>
-                        _showInfoMessage('Account', 'Sign up feature ready.'),
-                  ),
-                ],
-              ),
-            ),
-            _ObsidianDivider(),
-            _ObsidianSettingRow(
-              title: 'Commercial license',
-              subtitle: 'Help keep Obsidian 100% user-supported.',
-              linkText: 'Learn more',
-              onLinkTap: () => _showInfoMessage(
-                'License',
-                'Defile is open-source under MIT/Apache licenses.',
-              ),
-              control: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _ObsidianButton(
-                    label: 'Activate',
-                    onTap: () =>
-                        _showInfoMessage('License', 'Activate commercial key.'),
-                  ),
-                  const SizedBox(width: 8),
-                  _ObsidianButton(
-                    label: 'Purchase',
-                    onTap: () => _showInfoMessage(
-                      'License',
-                      'Redirecting to purchase portal.',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 22),
-        _buildSectionTitle('Advanced'),
-        const SizedBox(height: 8),
-
-        // Advanced Card
-        _ObsidianSectionCard(
-          children: [
-            _ObsidianSettingRow(
-              title: 'Notify if startup takes longer than expected',
-              subtitle: 'Diagnose issues with your app by seeing what is causing the app to load slowly.',
-              control: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.timer_outlined,
-                    size: 16,
-                    color: AppColors.textFaint,
-                  ),
-                  const SizedBox(width: 8),
-                  _ObsidianSwitch(
-                    value: _notifyStartup,
-                    onChanged: (val) => setState(() => _notifyStartup = val),
-                  ),
-                ],
-              ),
-            ),
-            _ObsidianDivider(),
-            _ObsidianSettingRow(
-              title: 'Hardware acceleration',
-              subtitle: 'Use GPU acceleration for smoother file rendering and animations.',
-              control: _ObsidianSwitch(
-                value: _hardwareAcceleration,
-                onChanged: (val) => setState(() => _hardwareAcceleration = val),
-              ),
-            ),
-            _ObsidianDivider(),
-            _ObsidianSettingRow(
-              title: 'Command line interface',
-              subtitle: 'Install defile launcher to open folders and files directly from shell.',
-              control: _ObsidianButton(
-                label: 'Install',
-                onTap: () => _showInfoMessage(
-                  'CLI',
-                  'Defile CLI installed to /usr/local/bin/defile',
-                ),
-              ),
-            ),
+            // _CustomDivider(),
+            // _CustomSettingRow(
+            //   title: 'Language',
+            //   subtitle: 'Change the display language.\nLearn how to add a new language to Obsidian.',
+            //   control: _CustomDropdown<String>(
+            //     value: _selectedLanguage,
+            //     items: const [
+            //       DropdownMenuItem(value: 'English', child: Text('English')),
+            //       DropdownMenuItem(
+            //         value: 'Bahasa Indonesia',
+            //         child: Text('Bahasa Indonesia'),
+            //       ),
+            //       DropdownMenuItem(value: '日本語', child: Text('日本語')),
+            //       DropdownMenuItem(value: 'Deutsch', child: Text('Deutsch')),
+            //       DropdownMenuItem(value: 'Français', child: Text('Français')),
+            //     ],
+            //     onChanged: (val) {
+            //       if (val != null) setState(() => _selectedLanguage = val);
+            //     },
+            //   ),
+            // ),
           ],
         ),
       ],
@@ -606,7 +475,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         const SizedBox(height: 8),
 
         // Icon Theme Card
-        _ObsidianSectionCard(
+        _CustomSectionCard(
           children: [
             Obx(() {
               final String currentTheme = _iconService.themeName.value;
@@ -614,7 +483,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ? 'Application default'
                   : currentTheme;
 
-              return _ObsidianSettingRow(
+              return _CustomSettingRow(
                 title: 'Icon theme',
                 subtitle: 'Icons are loaded from themes installed on this system. Applies across all files and folders.',
                 control: Row(
@@ -640,7 +509,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _ObsidianButton(
+                    _CustomButton(
                       label: 'Scan themes',
                       onTap: _iconService.refreshThemes,
                     ),
@@ -648,14 +517,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               );
             }),
-            _ObsidianDivider(),
+            _CustomDivider(),
             Padding(
               padding: const EdgeInsets.all(12),
               child: _buildThemeSearchField(),
             ),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 200),
-              child: Obx(() => _buildObsidianThemeList()),
+              child: Obx(() => _buildCustomThemeList()),
             ),
           ],
         ),
@@ -665,7 +534,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         const SizedBox(height: 8),
 
         // Display Font Card
-        _ObsidianSectionCard(
+        _CustomSectionCard(
           children: [
             Obx(() {
               final String currentFont = _fontService.fontFamily.value;
@@ -673,7 +542,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ? 'Application default'
                   : currentFont;
 
-              return _ObsidianSettingRow(
+              return _CustomSettingRow(
                 title: 'Display font',
                 subtitle: 'Select a font installed on your system. Defile will immediately render with the chosen typeface.',
                 control: Row(
@@ -699,7 +568,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _ObsidianButton(
+                    _CustomButton(
                       label: 'Scan fonts',
                       onTap: _fontService.refreshFonts,
                     ),
@@ -707,14 +576,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               );
             }),
-            _ObsidianDivider(),
+            _CustomDivider(),
             Padding(
               padding: const EdgeInsets.all(12),
               child: _buildFontSearchField(),
             ),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 200),
-              child: Obx(() => _buildObsidianFontList()),
+              child: Obx(() => _buildCustomFontList()),
             ),
           ],
         ),
@@ -723,16 +592,16 @@ class _SettingsDialogState extends State<SettingsDialog> {
         _buildSectionTitle('Colors & Accents'),
         const SizedBox(height: 8),
 
-        _ObsidianSectionCard(
+        _CustomSectionCard(
           children: [
             Obx(() {
               final String currentTheme = _themeService.baseThemeId.value;
 
-              return _ObsidianSettingRow(
+              return _CustomSettingRow(
                 title: 'Base color theme',
                 subtitle:
                     'Select the base dark scheme for the whole interface.',
-                control: _ObsidianDropdown<String>(
+                control: _CustomDropdown<String>(
                   value: AppPalettes.byId(currentTheme).id,
                   items: [
                     for (final palette in AppPalettes.all)
@@ -747,11 +616,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               );
             }),
-            _ObsidianDivider(),
+            _CustomDivider(),
             Obx(() {
               final String currentAccent = _themeService.accentId.value;
 
-              return _ObsidianSettingRow(
+              return _CustomSettingRow(
                 title: 'Accent color',
                 subtitle:
                     'Color highlight for selections, badges, and focus rings.',
@@ -775,12 +644,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
         _buildSectionTitle('Display'),
         const SizedBox(height: 8),
 
-        _ObsidianSectionCard(
+        _CustomSectionCard(
           children: [
             Obx(() {
               final double scale = _themeService.uiScale.value;
 
-              return _ObsidianSettingRow(
+              return _CustomSettingRow(
                 title: 'Interface scale',
                 subtitle: 'Enlarge or shrink the whole interface, similar to display scaling on your monitor.',
                 control: Row(
@@ -828,7 +697,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _ObsidianButton(
+                    _CustomButton(
                       label: 'Reset',
                       onTap: () => _themeService.setUiScale(1.0),
                     ),
@@ -836,15 +705,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               );
             }),
-            _ObsidianDivider(),
+            _CustomDivider(),
             Obx(() {
               final bool enabled = _themeService.animationsEnabled.value;
 
-              return _ObsidianSettingRow(
+              return _CustomSettingRow(
                 title: 'Smooth animations',
                 subtitle:
                     'Animate the sidebar and popups when they open and close.',
-                control: _ObsidianSwitch(
+                control: _CustomSwitch(
                   value: enabled,
                   onChanged: (val) =>
                       _themeService.animationsEnabled.value = val,
@@ -869,16 +738,16 @@ class _SettingsDialogState extends State<SettingsDialog> {
         _buildSectionTitle('Explorer View'),
         const SizedBox(height: 8),
 
-        _ObsidianSectionCard(
+        _CustomSectionCard(
           children: [
             if (controller != null)
               Obx(() {
                 final mode = controller.viewMode.value;
 
-                return _ObsidianSettingRow(
+                return _CustomSettingRow(
                   title: 'Default layout mode',
                   subtitle: 'Choose how folder items and entries are laid out.',
-                  control: _ObsidianDropdown<ExplorerViewMode>(
+                  control: _CustomDropdown<ExplorerViewMode>(
                     value: mode,
                     items: const [
                       DropdownMenuItem(
@@ -900,30 +769,30 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ),
                 );
               }),
-            _ObsidianDivider(),
+            _CustomDivider(),
             if (controller != null)
               Obx(() {
-                return _ObsidianSettingRow(
+                return _CustomSettingRow(
                   title: 'Show sidebar',
                   subtitle: 'Show quick access folders, places, and disk drives on the left.',
-                  control: _ObsidianSwitch(
+                  control: _CustomSwitch(
                     value: controller.showSidebar.value,
                     onChanged: (_) => controller.toggleSidebar(),
                   ),
                 );
               }),
-            _ObsidianDivider(),
-            _ObsidianSettingRow(
+            _CustomDivider(),
+            _CustomSettingRow(
               title: 'Show storage usage bar',
               subtitle: 'Display total and available capacity bars underneath mounted drives.',
-              control: _ObsidianSwitch(value: true, onChanged: (_) {}),
+              control: _CustomSwitch(value: true, onChanged: (_) {}),
             ),
-            _ObsidianDivider(),
+            _CustomDivider(),
             Obx(() {
-              return _ObsidianSettingRow(
+              return _CustomSettingRow(
                 title: 'Show preview panel',
                 subtitle: 'Display file preview in right sidebar when selecting files.',
-                control: _ObsidianSwitch(
+                control: _CustomSwitch(
                   value: _themeService.previewEnabled.value,
                   onChanged: (val) => _themeService.previewEnabled.value = val,
                 ),
@@ -947,21 +816,21 @@ class _SettingsDialogState extends State<SettingsDialog> {
         _buildSectionTitle('File Operations'),
         const SizedBox(height: 8),
 
-        _ObsidianSectionCard(
+        _CustomSectionCard(
           children: [
-            _ObsidianSettingRow(
+            _CustomSettingRow(
               title: 'Confirm before moving to trash',
               subtitle: 'Show a confirmation alert before moving selected files to trash.',
-              control: _ObsidianSwitch(
+              control: _CustomSwitch(
                 value: _confirmTrash,
                 onChanged: (val) => setState(() => _confirmTrash = val),
               ),
             ),
-            _ObsidianDivider(),
-            _ObsidianSettingRow(
+            _CustomDivider(),
+            _CustomSettingRow(
               title: 'Default terminal application',
               subtitle: 'Terminal emulator launched when pressing F4 or clicking terminal icon.',
-              control: _ObsidianDropdown<String>(
+              control: _CustomDropdown<String>(
                 value: _terminalChoice,
                 items: const [
                   DropdownMenuItem(
@@ -987,12 +856,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
               ),
             ),
             if (controller != null) ...[
-              _ObsidianDivider(),
+              _CustomDivider(),
               Obx(
-                () => _ObsidianSettingRow(
+                () => _CustomSettingRow(
                   title: 'Home directory',
                   subtitle: controller.homePath.value,
-                  control: _ObsidianButton(
+                  control: _CustomButton(
                     label: 'Open',
                     onTap: () {
                       controller.navigateTo(controller.homePath.value);
@@ -1034,11 +903,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
         _buildSectionTitle('Keyboard Shortcuts'),
         const SizedBox(height: 8),
 
-        _ObsidianSectionCard(
+        _CustomSectionCard(
           children: [
             for (int i = 0; i < shortcuts.length; i++) ...[
-              if (i > 0) _ObsidianDivider(),
-              _ObsidianSettingRow(
+              if (i > 0) _CustomDivider(),
+              _CustomSettingRow(
                 title: shortcuts[i].$1,
                 control: _buildHotkeyBadge(shortcuts[i].$2),
               ),
@@ -1086,9 +955,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  // ==========================================
-  // Theme & Font Lists in Obsidian Style
-  // ==========================================
   Widget _buildThemeSearchField() {
     return Container(
       height: 28,
@@ -1137,7 +1003,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  Widget _buildObsidianThemeList() {
+  Widget _buildCustomThemeList() {
     final String selected = _iconService.themeName.value;
     final List<_ThemeChoice> choices = [
       _ThemeChoice(name: '', path: null),
@@ -1164,7 +1030,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
       itemCount: choices.length,
       itemBuilder: (context, index) {
         final choice = choices[index];
-        return _ObsidianThemeRow(
+        return _CustomThemeRow(
           choice: choice,
           selected: choice.name == selected,
           onTap: () => _iconService.setTheme(choice.name),
@@ -1221,7 +1087,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  Widget _buildObsidianFontList() {
+  Widget _buildCustomFontList() {
     final String selected = _fontService.fontFamily.value;
     final List<String> filtered = [
       '',
@@ -1230,15 +1096,26 @@ class _SettingsDialogState extends State<SettingsDialog> {
     ];
 
     if (_fontService.isLoading.value && _fontService.fonts.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+      return ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        children: [
+          _CustomFontRow(
+            fontName: '',
+            isDefault: true,
+            selected: selected.isEmpty,
+            onTap: () => _fontService.setFont(''),
           ),
-        ),
+          const Padding(
+            padding: EdgeInsets.all(10),
+            child: Center(
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -1250,7 +1127,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         final bool isDefault = fontName.isEmpty;
         final bool isSelected = fontName == selected;
 
-        return _ObsidianFontRow(
+        return _CustomFontRow(
           fontName: fontName,
           isDefault: isDefault,
           selected: isSelected,
@@ -1278,10 +1155,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
     showAppToast(title: title, message: message);
   }
 }
-
-// =====================================================================
-// Obsidian UI Design System Components
-// =====================================================================
 
 class _SidebarItemWidget extends StatefulWidget {
   const _SidebarItemWidget({
@@ -1353,8 +1226,8 @@ class _SidebarItemWidgetState extends State<_SidebarItemWidget> {
   }
 }
 
-class _ObsidianSectionCard extends StatelessWidget {
-  const _ObsidianSectionCard({required this.children});
+class _CustomSectionCard extends StatelessWidget {
+  const new({required this.children});
 
   final List<Widget> children;
 
@@ -1374,8 +1247,8 @@ class _ObsidianSectionCard extends StatelessWidget {
   }
 }
 
-class _ObsidianDivider extends StatelessWidget {
-  const _ObsidianDivider();
+class _CustomDivider extends StatelessWidget {
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -1383,8 +1256,8 @@ class _ObsidianDivider extends StatelessWidget {
   }
 }
 
-class _ObsidianSettingRow extends StatelessWidget {
-  const _ObsidianSettingRow({
+class _CustomSettingRow extends StatelessWidget {
+  const new({
     required this.title,
     this.subtitle,
     this.linkText,
@@ -1457,17 +1330,17 @@ class _ObsidianSettingRow extends StatelessWidget {
   }
 }
 
-class _ObsidianButton extends StatefulWidget {
-  const _ObsidianButton({required this.label, required this.onTap});
+class _CustomButton extends StatefulWidget {
+  const new({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback onTap;
 
   @override
-  State<_ObsidianButton> createState() => _ObsidianButtonState();
+  State<_CustomButton> createState() => _CustomButtonState();
 }
 
-class _ObsidianButtonState extends State<_ObsidianButton> {
+class _CustomButtonState extends State<_CustomButton> {
   bool _hovered = false;
   bool _pressed = false;
 
@@ -1519,8 +1392,8 @@ class _ObsidianButtonState extends State<_ObsidianButton> {
   }
 }
 
-class _ObsidianSwitch extends StatelessWidget {
-  const _ObsidianSwitch({required this.value, required this.onChanged});
+class _CustomSwitch extends StatelessWidget {
+  const new({required this.value, required this.onChanged});
 
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -1567,8 +1440,8 @@ class _ObsidianSwitch extends StatelessWidget {
   }
 }
 
-class _ObsidianDropdown<T> extends StatelessWidget {
-  const _ObsidianDropdown({
+class _CustomDropdown<T> extends StatelessWidget {
+  const new({
     required this.value,
     required this.items,
     required this.onChanged,
@@ -1695,8 +1568,8 @@ class _ThemeChoice {
   final String? path;
 }
 
-class _ObsidianThemeRow extends StatefulWidget {
-  const _ObsidianThemeRow({
+class _CustomThemeRow extends StatefulWidget {
+  const new({
     required this.choice,
     required this.selected,
     required this.onTap,
@@ -1707,10 +1580,10 @@ class _ObsidianThemeRow extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_ObsidianThemeRow> createState() => _ObsidianThemeRowState();
+  State<_CustomThemeRow> createState() => _CustomThemeRowState();
 }
 
-class _ObsidianThemeRowState extends State<_ObsidianThemeRow> {
+class _CustomThemeRowState extends State<_CustomThemeRow> {
   bool _hovered = false;
 
   @override
@@ -1774,8 +1647,8 @@ class _ObsidianThemeRowState extends State<_ObsidianThemeRow> {
   }
 }
 
-class _ObsidianFontRow extends StatefulWidget {
-  const _ObsidianFontRow({
+class _CustomFontRow extends StatefulWidget {
+  const new({
     required this.fontName,
     required this.isDefault,
     required this.selected,
@@ -1788,18 +1661,32 @@ class _ObsidianFontRow extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_ObsidianFontRow> createState() => _ObsidianFontRowState();
+  State<_CustomFontRow> createState() => _CustomFontRowState();
 }
 
-class _ObsidianFontRowState extends State<_ObsidianFontRow> {
+class _CustomFontRowState extends State<_CustomFontRow> {
   bool _hovered = false;
+  bool _previewReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Paint the row immediately with the default font, then swap in the
+    // preview typeface next frame. Avoids a visible stall on first open while
+    // the engine loads each font.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _previewReady = true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final String label = widget.isDefault
         ? 'Application default'
         : widget.fontName;
-    final String? previewFamily = widget.isDefault ? null : widget.fontName;
+    final String? previewFamily = widget.isDefault || !_previewReady
+        ? null
+        : widget.fontName;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,

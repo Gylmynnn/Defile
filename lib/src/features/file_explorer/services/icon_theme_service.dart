@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:defile/src/rust/api/icon_theme.dart' as rust;
@@ -20,12 +21,24 @@ class IconThemeService extends GetxService {
     }
   }
 
+  /// Preload the folder previews shown in Settings > Appearance so the theme
+  /// list paints instantly on first open instead of popping in.
+  void _warmPreviews() {
+    const List<String> names = ['folder', 'inode-directory'];
+    for (final theme in themes.take(16)) {
+      for (final size in const [18, 36]) {
+        unawaited(iconPng(names, size, theme: theme.name));
+      }
+    }
+  }
+
   Future<void> refreshThemes() async {
     try {
       themes.assignAll(await rust.listIconThemes());
     } catch (_) {
       themes.clear();
     }
+    _warmPreviews();
   }
 
   Future<void> setTheme(String name) async {

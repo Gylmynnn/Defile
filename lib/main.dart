@@ -89,20 +89,13 @@ class _UiScaler extends StatelessWidget {
 
     return MediaQuery(
       data: mediaQuery.copyWith(size: logicalSize),
-      child: Transform.scale(
-        scale: scale,
+      child: FittedBox(
+        fit: BoxFit.fill,
         alignment: Alignment.topLeft,
-        child: OverflowBox(
-          alignment: Alignment.topLeft,
-          minWidth: 0,
-          maxWidth: double.infinity,
-          minHeight: 0,
-          maxHeight: double.infinity,
-          child: SizedBox(
-            width: logicalSize.width,
-            height: logicalSize.height,
-            child: child,
-          ),
+        child: SizedBox(
+          width: logicalSize.width,
+          height: logicalSize.height,
+          child: child,
         ),
       ),
     );
