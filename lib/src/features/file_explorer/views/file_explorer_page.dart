@@ -100,53 +100,59 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
               }),
               VerticalDivider(width: 1, thickness: 1, color: AppColors.divider),
               Expanded(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          ExplorerToolbar(),
-                          Expanded(
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.translucent,
-                                    onTap: _handleBackgroundTap,
-                                    onSecondaryTapUp: (details) =>
-                                        _showBackgroundMenu(
-                                          context,
-                                          details.globalPosition,
-                                        ),
-                                    child: Obx(() => _buildContent(context)),
-                                  ),
-                                ),
-                                Positioned.fill(
-                                  child: Listener(
-                                    key: _selectionLayerKey,
-                                    behavior: HitTestBehavior.translucent,
-                                    onPointerDown: _handleBandDown,
-                                    onPointerMove: _handleBandMove,
-                                    onPointerUp: _handleBandUp,
-                                    onPointerCancel: _handleBandUp,
-                                    child: IgnorePointer(
-                                      child: CustomPaint(
-                                        painter: _SelectionBandPainter(
-                                          _bandRect,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              ExplorerToolbar(),
+                              Expanded(
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.translucent,
+                                        onTap: _handleBackgroundTap,
+                                        onSecondaryTapUp: (details) =>
+                                            _showBackgroundMenu(
+                                              context,
+                                              details.globalPosition,
+                                            ),
+                                        child: Obx(
+                                          () => _buildContent(context),
                                         ),
                                       ),
                                     ),
-                                  ),
+                                    Positioned.fill(
+                                      child: Listener(
+                                        key: _selectionLayerKey,
+                                        behavior: HitTestBehavior.translucent,
+                                        onPointerDown: _handleBandDown,
+                                        onPointerMove: _handleBandMove,
+                                        onPointerUp: _handleBandUp,
+                                        onPointerCancel: _handleBandUp,
+                                        child: IgnorePointer(
+                                          child: CustomPaint(
+                                            painter: _SelectionBandPainter(
+                                              _bandRect,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              ExplorerStatusBar(),
+                            ],
                           ),
-                          ExplorerStatusBar(),
-                        ],
-                      ),
-                    ),
-                    PreviewPanel(),
-                  ],
+                        ),
+                        PreviewPanel(availableWidth: constraints.maxWidth),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,7 +7,8 @@ import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/pdf.dart' as pdf;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
@@ -14,7 +16,15 @@ import '../../services/font_service.dart';
 import '../../services/theme_service.dart';
 
 class PreviewPanel extends StatelessWidget {
-  const PreviewPanel({super.key});
+  const PreviewPanel({super.key, required this.availableWidth});
+
+  final double availableWidth;
+
+  static const double _minMainWidth = 360;
+  static const double _minMainWidthSearching = 520;
+  static const double _minPreviewWidth = 200;
+  static const double _maxPreviewWidth = 800;
+  static const double _resizeHandleWidth = 4;
 
   @override
   Widget build(BuildContext context) {
@@ -24,10 +34,25 @@ class PreviewPanel extends StatelessWidget {
     return Obx(() {
       if (!themeService.previewEnabled.value) return const SizedBox.shrink();
 
+      final double minMainWidth = controller.isSearching.value
+          ? _minMainWidthSearching
+          : _minMainWidth;
+      final double maxWidth =
+          (availableWidth - minMainWidth - _resizeHandleWidth).clamp(
+            140.0,
+            _maxPreviewWidth,
+          );
+      final double minWidth = maxWidth < _minPreviewWidth
+          ? maxWidth
+          : _minPreviewWidth;
+      final double width = themeService.previewWidth.value.clamp(
+        minWidth,
+        maxWidth,
+      );
       final rust.FileEntry? file = controller.previewFile.value;
       if (file == null) {
         return Container(
-          width: themeService.previewWidth.value,
+          width: width,
           decoration: BoxDecoration(
             color: AppColors.surface,
             border: Border(left: BorderSide(color: AppColors.divider)),
@@ -46,10 +71,15 @@ class PreviewPanel extends StatelessWidget {
           MouseRegion(
             cursor: SystemMouseCursors.resizeColumn,
             child: GestureDetector(
+              onHorizontalDragStart: (_) {
+                themeService.previewWidth.value = width;
+              },
               onHorizontalDragUpdate: (details) {
-                final newWidth =
-                    themeService.previewWidth.value - details.delta.dx;
-                themeService.previewWidth.value = newWidth.clamp(280.0, 800.0);
+                final newWidth = width - details.delta.dx;
+                themeService.previewWidth.value = newWidth.clamp(
+                  minWidth,
+                  maxWidth,
+                );
               },
               child: Container(
                 width: 4,
@@ -61,7 +91,7 @@ class PreviewPanel extends StatelessWidget {
             ),
           ),
           Container(
-            width: themeService.previewWidth.value,
+            width: width,
             decoration: BoxDecoration(color: AppColors.surface),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -300,70 +330,73 @@ class _VideoPreview extends StatefulWidget {
 }
 
 class _VideoPreviewState extends State<_VideoPreview> {
-  VideoPlayerController? _controller;
+  Player? _player;
+  VideoController? _videoController;
+  StreamSubscription<String>? _errorSubscription;
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _load();
+
+    try {
+      MediaKit.ensureInitialized();
+      final player = Player();
+      _player = player;
+      _videoController = VideoController(player);
+      _errorSubscription = player.stream.error.listen((_) {
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          _error = 'Failed to load video';
+        });
+      });
+      _load();
+    } catch (_) {
+      _loading = false;
+      _error = 'Video preview requires mpv (install mpv)';
+    }
   }
 
   @override
   void didUpdateWidget(_VideoPreview old) {
     super.didUpdateWidget(old);
     if (old.file.path != widget.file.path) {
-      _controller?.dispose();
       _load();
     }
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _errorSubscription?.cancel();
+    _player?.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
+    final player = _player;
+    if (player == null) return;
+
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      final controller = VideoPlayerController.file(File(widget.file.path));
-      await controller.initialize();
-
-      if (!mounted) {
-        controller.dispose();
-        return;
-      }
-
-      setState(() {
-        _controller = controller;
-        _loading = false;
-      });
-    } catch (e) {
+      await player.open(
+        Media(Uri.file(widget.file.path).toString()),
+        play: false,
+      );
+      if (!mounted) return;
+      setState(() => _loading = false);
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Failed to load video';
       });
     }
-  }
-
-  void _togglePlayPause() {
-    final controller = _controller;
-    if (controller == null) return;
-
-    setState(() {
-      if (controller.value.isPlaying) {
-        controller.pause();
-      } else {
-        controller.play();
-      }
-    });
   }
 
   @override
@@ -394,61 +427,152 @@ class _VideoPreviewState extends State<_VideoPreview> {
       );
     }
 
-    final controller = _controller;
-    if (controller == null || !controller.value.isInitialized) {
+    final player = _player;
+    final videoController = _videoController;
+    if (player == null || videoController == null) {
       return const SizedBox.shrink();
     }
 
     return Column(
       children: [
         Expanded(
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: controller.value.aspectRatio,
-              child: VideoPlayer(controller),
-            ),
+          child: Video(
+            controller: videoController,
+            controls: NoVideoControls,
+            fit: BoxFit.contain,
           ),
         ),
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(10, 8, 14, 10),
           decoration: BoxDecoration(
+            color: AppColors.surface,
             border: Border(top: BorderSide(color: AppColors.divider)),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IconButton(
-                icon: Icon(
-                  controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                ),
-                iconSize: 24,
-                onPressed: _togglePlayPause,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ValueListenableBuilder(
-                  valueListenable: controller,
-                  builder: (context, value, child) {
-                    final position = value.position.inSeconds;
-                    final duration = value.duration.inSeconds;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        LinearProgressIndicator(
-                          value: duration > 0 ? position / duration : 0,
-                          backgroundColor: AppColors.elevated,
-                          color: AppColors.accent,
+              StreamBuilder<bool>(
+                stream: player.stream.playing,
+                builder: (context, snapshot) {
+                  final playing = snapshot.data == true;
+
+                  return Tooltip(
+                    message: playing ? 'Pause' : 'Play',
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.accent.withValues(alpha: 0.28),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${_formatDuration(value.position)} / ${_formatDuration(value.duration)}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          playing
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                        ),
+                        iconSize: 21,
+                        color: AppColors.accent,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 38,
+                          height: 38,
+                        ),
+                        style: IconButton.styleFrom(
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(9)),
                           ),
                         ),
-                      ],
+                        onPressed: player.playOrPause,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: StreamBuilder<Duration>(
+                  stream: player.stream.position,
+                  builder: (context, positionSnapshot) {
+                    final position = positionSnapshot.data ?? Duration.zero;
+
+                    return StreamBuilder<Duration>(
+                      stream: player.stream.duration,
+                      builder: (context, durationSnapshot) {
+                        final duration = durationSnapshot.data ?? Duration.zero;
+                        final maxMs = duration.inMilliseconds > 0
+                            ? duration.inMilliseconds
+                            : 1;
+                        final value = position.inMilliseconds
+                            .clamp(0, maxMs)
+                            .toDouble();
+
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(
+                              height: 22,
+                              child: SliderTheme(
+                                data: SliderThemeData(
+                                  trackHeight: 3,
+                                  activeTrackColor: AppColors.accent,
+                                  inactiveTrackColor: AppColors.elevated,
+                                  thumbColor: AppColors.textStrong,
+                                  overlayColor: AppColors.accent.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 5,
+                                    elevation: 0,
+                                    pressedElevation: 0,
+                                  ),
+                                  overlayShape: const RoundSliderOverlayShape(
+                                    overlayRadius: 11,
+                                  ),
+                                  trackShape:
+                                      const RoundedRectSliderTrackShape(),
+                                  tickMarkShape: SliderTickMarkShape.noTickMark,
+                                  showValueIndicator: ShowValueIndicator.never,
+                                ),
+                                child: Slider(
+                                  value: value,
+                                  max: maxMs.toDouble(),
+                                  padding: EdgeInsets.zero,
+                                  onChanged: (next) => player.seek(
+                                    Duration(milliseconds: next.round()),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    _formatDuration(position),
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatDuration(duration),
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      color: AppColors.textFaint,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
                 ),
