@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:defile/src/rust/api/document.dart' as document;
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/pdf.dart' as pdf;
 import 'package:flutter/material.dart';
@@ -46,26 +47,22 @@ class PreviewPanel extends StatelessWidget {
             cursor: SystemMouseCursors.resizeColumn,
             child: GestureDetector(
               onHorizontalDragUpdate: (details) {
-                final newWidth = themeService.previewWidth.value - details.delta.dx;
+                final newWidth =
+                    themeService.previewWidth.value - details.delta.dx;
                 themeService.previewWidth.value = newWidth.clamp(280.0, 800.0);
               },
               child: Container(
                 width: 4,
                 color: Colors.transparent,
                 child: Center(
-                  child: Container(
-                    width: 1,
-                    color: AppColors.divider,
-                  ),
+                  child: Container(width: 1, color: AppColors.divider),
                 ),
               ),
             ),
           ),
           Container(
             width: themeService.previewWidth.value,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-            ),
+            decoration: BoxDecoration(color: AppColors.surface),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -167,6 +164,10 @@ class _PreviewContent extends StatelessWidget {
       return _PdfPreview(file: file);
     }
 
+    if (_isDocument(ext)) {
+      return _DocumentPreview(file: file);
+    }
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -193,8 +194,21 @@ class _PreviewContent extends StatelessWidget {
     return ext == 'pdf';
   }
 
+  bool _isDocument(String ext) {
+    return ['doc', 'docx', 'odt', 'rtf'].contains(ext);
+  }
+
   bool _isVideo(String ext) {
-    return ['mp4', 'webm', 'mkv', 'avi', 'mov', 'flv', 'wmv', 'm4v'].contains(ext);
+    return [
+      'mp4',
+      'webm',
+      'mkv',
+      'avi',
+      'mov',
+      'flv',
+      'wmv',
+      'm4v',
+    ].contains(ext);
   }
 
   bool _isText(String ext) {
@@ -253,11 +267,18 @@ class _ImagePreview extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.broken_image, size: 48, color: AppColors.textFaint),
+                  Icon(
+                    Icons.broken_image,
+                    size: 48,
+                    color: AppColors.textFaint,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'Failed to load image',
-                    style: TextStyle(fontSize: 12.5, color: AppColors.textFaint),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textFaint,
+                    ),
                   ),
                 ],
               ),
@@ -446,10 +467,113 @@ class _VideoPreviewState extends State<_VideoPreview> {
   }
 }
 
-class _PdfPreview extends StatefulWidget {
-  const _PdfPreview({required this.file});
+class _DocumentPreview extends StatefulWidget {
+  const _DocumentPreview({required this.file});
 
   final rust.FileEntry file;
+
+  @override
+  State<_DocumentPreview> createState() => _DocumentPreviewState();
+}
+
+class _DocumentPreviewState extends State<_DocumentPreview> {
+  String? _pdfPath;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_DocumentPreview old) {
+    super.didUpdateWidget(old);
+    if (old.file.path != widget.file.path) {
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _pdfPath = null;
+      _error = null;
+    });
+
+    try {
+      final bytes = await document.documentToPdf(path: widget.file.path);
+      final stat = await File(widget.file.path).stat();
+      final cacheDir = Directory(
+        '${Directory.systemTemp.path}/defile_previews',
+      );
+      await cacheDir.create(recursive: true);
+
+      final target = File(
+        '${cacheDir.path}/${widget.file.path.hashCode}_${stat.modified.millisecondsSinceEpoch}.pdf',
+      );
+      await target.writeAsBytes(bytes, flush: true);
+
+      if (!mounted) return;
+      setState(() {
+        _pdfPath = target.path;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Failed to load document';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (_pdfPath != null) {
+      return _PdfPreview(
+        key: ValueKey(_pdfPath),
+        file: widget.file,
+        resolvedPath: _pdfPath!,
+      );
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.description, size: 48, color: AppColors.textFaint),
+            const SizedBox(height: 12),
+            Text(
+              _error ?? 'Failed to load document',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12.5, color: AppColors.textFaint),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PdfPreview extends StatefulWidget {
+  const _PdfPreview({super.key, required this.file, this.resolvedPath});
+
+  final rust.FileEntry file;
+  final String? resolvedPath;
 
   @override
   State<_PdfPreview> createState() => _PdfPreviewState();
@@ -469,10 +593,13 @@ class _PdfPreviewState extends State<_PdfPreview> {
     _load();
   }
 
+  String get _path => widget.resolvedPath ?? widget.file.path;
+
   @override
   void didUpdateWidget(_PdfPreview old) {
     super.didUpdateWidget(old);
-    if (old.file.path != widget.file.path) {
+    if (old.file.path != widget.file.path ||
+        old.resolvedPath != widget.resolvedPath) {
       _currentPage = 0;
       _load();
     }
@@ -485,11 +612,11 @@ class _PdfPreviewState extends State<_PdfPreview> {
     });
 
     try {
-      final count = await pdf.getPdfPageCount(path: widget.file.path);
-      
+      final count = await pdf.getPdfPageCount(path: _path);
+
       if (!mounted) return;
       setState(() => _pageCount = count);
-      
+
       await _renderPage(0);
     } catch (e) {
       if (!mounted) return;
@@ -502,14 +629,14 @@ class _PdfPreviewState extends State<_PdfPreview> {
 
   Future<void> _renderPage(int pageIndex) async {
     setState(() => _loadingPage = true);
-    
+
     try {
       final imageBytes = await pdf.renderPdfPage(
-        path: widget.file.path,
+        path: _path,
         pageIndex: pageIndex,
         width: 1200, // ponytail: increase width for better quality/fill
       );
-      
+
       if (!mounted) return;
 
       setState(() {
@@ -569,10 +696,7 @@ class _PdfPreviewState extends State<_PdfPreview> {
             children: [
               SizedBox.expand(
                 child: _pageImage != null
-                    ? Image.memory(
-                        _pageImage!,
-                        fit: BoxFit.contain,
-                      )
+                    ? Image.memory(_pageImage!, fit: BoxFit.contain)
                     : const SizedBox.shrink(),
               ),
               if (_loadingPage)
@@ -609,7 +733,10 @@ class _PdfPreviewState extends State<_PdfPreview> {
                     const SizedBox(width: 8),
                     Text(
                       '${_currentPage + 1} / $_pageCount',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     IconButton(
@@ -623,7 +750,8 @@ class _PdfPreviewState extends State<_PdfPreview> {
                     ),
                   ],
                 ),
-              if (_pageCount != null && _pageCount! > 1) const SizedBox(height: 8),
+              if (_pageCount != null && _pageCount! > 1)
+                const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -761,15 +889,36 @@ class _TextPreviewState extends State<_TextPreview> {
       padding: const EdgeInsets.all(16),
       child: Obx(() {
         final String font = fontService.fontFamily.value;
+        final String content = _content ?? '';
+        final int lineCount = content.split('\n').length;
+        final String lineNumbers = List.generate(
+          lineCount,
+          (index) => '${index + 1}',
+        ).join('\n');
+        final TextStyle textStyle = TextStyle(
+          fontSize: 11.5,
+          color: AppColors.textPrimary,
+          fontFamily: font.isEmpty ? 'monospace' : font,
+          height: 1.4,
+        );
 
-        return SelectableText(
-          _content ?? '',
-          style: TextStyle(
-            fontSize: 11.5,
-            color: AppColors.textPrimary,
-            fontFamily: font.isEmpty ? 'monospace' : font,
-            height: 1.4,
-          ),
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(
+                border: Border(right: BorderSide(color: AppColors.divider)),
+              ),
+              child: Text(
+                lineNumbers,
+                textAlign: TextAlign.right,
+                style: textStyle.copyWith(color: AppColors.textFaint),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: SelectableText(content, style: textStyle)),
+          ],
         );
       }),
     );

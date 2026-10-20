@@ -11,6 +11,8 @@ flutter_rust_bridge = "=2.13.0"
 fs2 = "0.4.3"
 resvg = "0.48.1"
 lopdf = "0.34"
+zavora-docx = "0.1.4"
+office_oxide = "0.1.15"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

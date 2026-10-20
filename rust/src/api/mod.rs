@@ -1,4 +1,5 @@
 pub mod appearance;
+pub mod document;
 pub mod file_entry;
 pub mod font;
 pub mod icon_theme;

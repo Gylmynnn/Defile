@@ -618,7 +618,7 @@ pub fn list_open_with_apps(path: std::string::String) -> Vec<OpenWithApp> {
                 continue;
             };
 
-            if entry.no_display || entry.hidden || entry.app_type != "Application" {
+            if entry.hidden || entry.app_type != "Application" {
                 continue;
             }
 
@@ -677,7 +677,6 @@ struct DesktopEntryInfo {
     comment: std::string::String,
     icon: std::string::String,
     mime_types: Vec<std::string::String>,
-    no_display: bool,
     hidden: bool,
     app_type: std::string::String,
 }
@@ -712,7 +711,6 @@ fn parse_desktop_entry(content: &str) -> Option<DesktopEntryInfo> {
     let mut comment = std::string::String::new();
     let mut icon = std::string::String::new();
     let mut mime_types: Vec<std::string::String> = Vec::new();
-    let mut no_display = false;
     let mut hidden = false;
     let mut app_type = std::string::String::new();
 
@@ -747,7 +745,6 @@ fn parse_desktop_entry(content: &str) -> Option<DesktopEntryInfo> {
                     .map(|item| item.to_string())
                     .collect();
             }
-            "NoDisplay" => no_display = value.eq_ignore_ascii_case("true"),
             "Hidden" => hidden = value.eq_ignore_ascii_case("true"),
             "Type" => app_type = value.to_string(),
             _ => {}
@@ -760,7 +757,6 @@ fn parse_desktop_entry(content: &str) -> Option<DesktopEntryInfo> {
         comment,
         icon,
         mime_types,
-        no_display,
         hidden,
         app_type,
     })
