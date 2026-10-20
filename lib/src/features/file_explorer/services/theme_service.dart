@@ -8,7 +8,7 @@ import 'font_service.dart';
 /// Owns the selected base color theme and accent color, persists them, and
 /// applies the resulting [AppColors] + [ThemeData] to the running app.
 class ThemeService extends GetxService {
-  final RxString baseThemeId = AppPalettes.obsidianDark.id.obs;
+  final RxString baseThemeId = AppPalettes.defile.id.obs;
   final RxString accentId = AppAccents.amber.id.obs;
   final RxDouble uiScale = 1.0.obs;
 

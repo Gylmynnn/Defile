@@ -15,16 +15,23 @@ import '../../controllers/file_explorer_controller.dart';
 import '../../services/font_service.dart';
 import '../../services/theme_service.dart';
 
-class PreviewPanel extends StatelessWidget {
+class PreviewPanel extends StatefulWidget {
   const PreviewPanel({super.key, required this.availableWidth});
 
   final double availableWidth;
 
+  @override
+  State<PreviewPanel> createState() => _PreviewPanelState();
+}
+
+class _PreviewPanelState extends State<PreviewPanel> {
   static const double _minMainWidth = 360;
   static const double _minMainWidthSearching = 520;
   static const double _minPreviewWidth = 200;
   static const double _maxPreviewWidth = 800;
   static const double _resizeHandleWidth = 4;
+
+  bool _resizing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +39,12 @@ class PreviewPanel extends StatelessWidget {
     final themeService = Get.find<ThemeService>();
 
     return Obx(() {
-      if (!themeService.previewEnabled.value) return const SizedBox.shrink();
-
+      final bool enabled = themeService.previewEnabled.value;
       final double minMainWidth = controller.isSearching.value
           ? _minMainWidthSearching
           : _minMainWidth;
       final double maxWidth =
-          (availableWidth - minMainWidth - _resizeHandleWidth).clamp(
+          (widget.availableWidth - minMainWidth - _resizeHandleWidth).clamp(
             140.0,
             _maxPreviewWidth,
           );
@@ -50,58 +56,81 @@ class PreviewPanel extends StatelessWidget {
         maxWidth,
       );
       final rust.FileEntry? file = controller.previewFile.value;
-      if (file == null) {
-        return Container(
-          width: width,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            border: Border(left: BorderSide(color: AppColors.divider)),
-          ),
-          child: Center(
-            child: Text(
-              'No file selected',
-              style: TextStyle(fontSize: 12.5, color: AppColors.textFaint),
-            ),
-          ),
-        );
-      }
+      final double panelWidth = file == null
+          ? width
+          : width + _resizeHandleWidth;
 
-      return Row(
-        children: [
-          MouseRegion(
-            cursor: SystemMouseCursors.resizeColumn,
-            child: GestureDetector(
-              onHorizontalDragStart: (_) {
-                themeService.previewWidth.value = width;
-              },
-              onHorizontalDragUpdate: (details) {
-                final newWidth = width - details.delta.dx;
-                themeService.previewWidth.value = newWidth.clamp(
-                  minWidth,
-                  maxWidth,
-                );
-              },
-              child: Container(
-                width: 4,
-                color: Colors.transparent,
-                child: Center(
-                  child: Container(width: 1, color: AppColors.divider),
+      final Widget content = file == null
+          ? Container(
+              width: width,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                border: Border(left: BorderSide(color: AppColors.divider)),
+              ),
+              child: Center(
+                child: Text(
+                  'No file selected',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.textFaint),
                 ),
               ),
-            ),
-          ),
-          Container(
-            width: width,
-            decoration: BoxDecoration(color: AppColors.surface),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            )
+          : Row(
               children: [
-                _PreviewHeader(file: file),
-                Expanded(child: _PreviewContent(file: file)),
+                MouseRegion(
+                  cursor: SystemMouseCursors.resizeColumn,
+                  child: GestureDetector(
+                    onHorizontalDragStart: (_) {
+                      setState(() => _resizing = true);
+                      themeService.previewWidth.value = width;
+                    },
+                    onHorizontalDragUpdate: (details) {
+                      final newWidth = width - details.delta.dx;
+                      themeService.previewWidth.value = newWidth.clamp(
+                        minWidth,
+                        maxWidth,
+                      );
+                    },
+                    onHorizontalDragEnd: (_) {
+                      setState(() => _resizing = false);
+                    },
+                    onHorizontalDragCancel: () {
+                      setState(() => _resizing = false);
+                    },
+                    child: Container(
+                      width: _resizeHandleWidth,
+                      color: Colors.transparent,
+                      child: Center(
+                        child: Container(width: 1, color: AppColors.divider),
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  width: width,
+                  decoration: BoxDecoration(color: AppColors.surface),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _PreviewHeader(file: file),
+                      Expanded(child: _PreviewContent(file: file)),
+                    ],
+                  ),
+                ),
               ],
-            ),
+            );
+
+      return AnimatedContainer(
+        duration: _resizing ? Duration.zero : themeService.animationDuration,
+        curve: Curves.easeOutCubic,
+        width: enabled ? panelWidth : 0,
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.centerLeft,
+            minWidth: panelWidth,
+            maxWidth: panelWidth,
+            child: IgnorePointer(ignoring: !enabled, child: content),
           ),
-        ],
+        ),
       );
     });
   }
@@ -182,8 +211,20 @@ class _PreviewContent extends StatelessWidget {
       return _ImagePreview(file: file);
     }
 
+    if (_isAudio(ext)) {
+      return _MediaPreview(
+        key: const ValueKey('audio-preview'),
+        file: file,
+        showVideo: false,
+      );
+    }
+
     if (_isVideo(ext)) {
-      return _VideoPreview(file: file);
+      return _MediaPreview(
+        key: const ValueKey('video-preview'),
+        file: file,
+        showVideo: true,
+      );
     }
 
     if (_isText(ext)) {
@@ -238,6 +279,25 @@ class _PreviewContent extends StatelessWidget {
       'flv',
       'wmv',
       'm4v',
+    ].contains(ext);
+  }
+
+  bool _isAudio(String ext) {
+    return [
+      'mp3',
+      'flac',
+      'wav',
+      'ogg',
+      'oga',
+      'm4a',
+      'm4b',
+      'aac',
+      'opus',
+      'wma',
+      'aiff',
+      'alac',
+      'mid',
+      'midi',
     ].contains(ext);
   }
 
@@ -320,16 +380,17 @@ class _ImagePreview extends StatelessWidget {
   }
 }
 
-class _VideoPreview extends StatefulWidget {
-  const _VideoPreview({required this.file});
+class _MediaPreview extends StatefulWidget {
+  const _MediaPreview({super.key, required this.file, required this.showVideo});
 
   final rust.FileEntry file;
+  final bool showVideo;
 
   @override
-  State<_VideoPreview> createState() => _VideoPreviewState();
+  State<_MediaPreview> createState() => _MediaPreviewState();
 }
 
-class _VideoPreviewState extends State<_VideoPreview> {
+class _MediaPreviewState extends State<_MediaPreview> {
   Player? _player;
   VideoController? _videoController;
   StreamSubscription<String>? _errorSubscription;
@@ -344,23 +405,27 @@ class _VideoPreviewState extends State<_VideoPreview> {
       MediaKit.ensureInitialized();
       final player = Player();
       _player = player;
-      _videoController = VideoController(player);
+      if (widget.showVideo) {
+        _videoController = VideoController(player);
+      }
       _errorSubscription = player.stream.error.listen((_) {
         if (!mounted) return;
         setState(() {
           _loading = false;
-          _error = 'Failed to load video';
+          _error = widget.showVideo
+              ? 'Failed to load video'
+              : 'Failed to load audio';
         });
       });
       _load();
     } catch (_) {
       _loading = false;
-      _error = 'Video preview requires mpv (install mpv)';
+      _error = 'Media preview requires mpv (install mpv)';
     }
   }
 
   @override
-  void didUpdateWidget(_VideoPreview old) {
+  void didUpdateWidget(_MediaPreview old) {
     super.didUpdateWidget(old);
     if (old.file.path != widget.file.path) {
       _load();
@@ -394,7 +459,9 @@ class _VideoPreviewState extends State<_VideoPreview> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Failed to load video';
+        _error = widget.showVideo
+            ? 'Failed to load video'
+            : 'Failed to load audio';
       });
     }
   }
@@ -416,7 +483,11 @@ class _VideoPreviewState extends State<_VideoPreview> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.videocam_off, size: 48, color: AppColors.textFaint),
+            Icon(
+              widget.showVideo ? Icons.videocam_off : Icons.audio_file_outlined,
+              size: 48,
+              color: AppColors.textFaint,
+            ),
             const SizedBox(height: 12),
             Text(
               _error!,
@@ -428,19 +499,59 @@ class _VideoPreviewState extends State<_VideoPreview> {
     }
 
     final player = _player;
+    if (player == null) {
+      return const SizedBox.shrink();
+    }
+
     final videoController = _videoController;
-    if (player == null || videoController == null) {
+    if (widget.showVideo && videoController == null) {
       return const SizedBox.shrink();
     }
 
     return Column(
       children: [
         Expanded(
-          child: Video(
-            controller: videoController,
-            controls: NoVideoControls,
-            fit: BoxFit.contain,
-          ),
+          child: widget.showVideo
+              ? Video(
+                  controller: videoController!,
+                  controls: NoVideoControls,
+                  fit: BoxFit.contain,
+                )
+              : Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 108,
+                        height: 108,
+                        decoration: BoxDecoration(
+                          color: AppColors.elevated,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.elevatedBorder),
+                        ),
+                        child: Icon(
+                          Icons.graphic_eq_rounded,
+                          size: 46,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Text(
+                          widget.file.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
         ),
         Container(
           padding: const EdgeInsets.fromLTRB(10, 8, 14, 10),

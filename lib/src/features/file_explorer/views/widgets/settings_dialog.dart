@@ -440,7 +440,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             // _CustomDivider(),
             // _CustomSettingRow(
             //   title: 'Language',
-            //   subtitle: 'Change the display language.\nLearn how to add a new language to Obsidian.',
+            //   subtitle: 'Change the display language.\nLearn how to add a new language to Defile.',
             //   control: _CustomDropdown<String>(
             //     value: _selectedLanguage,
             //     items: const [
@@ -1440,8 +1440,8 @@ class _CustomSwitch extends StatelessWidget {
   }
 }
 
-class _CustomDropdown<T> extends StatelessWidget {
-  const new({
+class _CustomDropdown<T> extends StatefulWidget {
+  const _CustomDropdown({
     required this.value,
     required this.items,
     required this.onChanged,
@@ -1452,35 +1452,136 @@ class _CustomDropdown<T> extends StatelessWidget {
   final ValueChanged<T?> onChanged;
 
   @override
+  State<_CustomDropdown<T>> createState() => _CustomDropdownState<T>();
+}
+
+class _CustomDropdownState<T> extends State<_CustomDropdown<T>> {
+  final MenuController _menuController = MenuController();
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppColors.elevated,
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: AppColors.elevatedBorder, width: 1),
+    final DropdownMenuItem<T> selectedItem = widget.items.firstWhere(
+      (item) => item.value == widget.value,
+      orElse: () => widget.items.first,
+    );
+
+    return MenuAnchor(
+      controller: _menuController,
+      alignmentOffset: const Offset(0, 4),
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(AppColors.menu),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        shadowColor: WidgetStatePropertyAll(
+          Colors.black.withValues(alpha: 0.5),
+        ),
+        elevation: const WidgetStatePropertyAll(10),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        ),
+        minimumSize: const WidgetStatePropertyAll(Size(248, 0)),
+        maximumSize: const WidgetStatePropertyAll(Size(248, 360)),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        side: WidgetStatePropertyAll(BorderSide(color: AppColors.menuBorder)),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          items: items,
-          onChanged: onChanged,
-          icon: Padding(
-            padding: EdgeInsets.only(left: 6),
-            child: Icon(
-              Icons.unfold_more,
-              size: 14,
-              color: AppColors.textFaint,
+      menuChildren: [
+        for (final item in widget.items)
+          MenuItemButton(
+            onPressed: item.enabled
+                ? () {
+                    _menuController.close();
+                    widget.onChanged(item.value);
+                  }
+                : null,
+            style: ButtonStyle(
+              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+              minimumSize: const WidgetStatePropertyAll(Size(0, 30)),
+              maximumSize: const WidgetStatePropertyAll(
+                Size(double.infinity, 30),
+              ),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.focused)) {
+                  return AppColors.surfaceHigh;
+                }
+                return Colors.transparent;
+              }),
+              shape: WidgetStatePropertyAll(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    child: item.value == widget.value
+                        ? Icon(
+                            Icons.check_rounded,
+                            size: 14,
+                            color: AppColors.accent,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DefaultTextStyle.merge(
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: item.enabled
+                            ? AppColors.menuLabel
+                            : AppColors.textFaint.withValues(alpha: 0.5),
+                      ),
+                      child: item.child,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          dropdownColor: AppColors.rowHover,
-          style: TextStyle(fontSize: 12, color: AppColors.textLabel),
-          isDense: true,
-          elevation: 4,
-          borderRadius: BorderRadius.circular(6),
-        ),
-      ),
+      ],
+      builder: (context, controller, child) {
+        return GestureDetector(
+          onTap: () {
+            if (controller.isOpen) {
+              controller.close();
+            } else {
+              controller.open();
+            }
+          },
+          child: Container(
+            height: 30,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: AppColors.elevated,
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(color: AppColors.elevatedBorder, width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DefaultTextStyle.merge(
+                  style: TextStyle(fontSize: 12, color: AppColors.textLabel),
+                  child: selectedItem.child,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Icon(
+                    Icons.unfold_more,
+                    size: 14,
+                    color: AppColors.textFaint,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

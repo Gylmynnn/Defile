@@ -6,7 +6,7 @@ import 'theme_palette.dart';
 /// the selected [ThemePalette] and [AccentPreset] so that switching themes
 /// updates every widget that reads these getters.
 abstract final class AppColors {
-  static ThemePalette _palette = AppPalettes.obsidianDark;
+  static ThemePalette _palette = AppPalettes.defile;
   static AccentPreset _accent = AppAccents.amber;
 
   static ThemePalette get palette => _palette;

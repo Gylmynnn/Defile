@@ -20,7 +20,7 @@ void main() {
   tearDown(Get.reset);
 
   testWidgets(
-    'SettingsDialog Obsidian layout renders matching sections and items',
+    'SettingsDialog Defile layout renders matching sections and items',
     (tester) async {
       Get.put(IconThemeService());
       Get.put(FontService());

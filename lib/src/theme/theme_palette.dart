@@ -121,9 +121,9 @@ class AccentPreset {
 }
 
 abstract final class AppPalettes {
-  static const ThemePalette obsidianDark = ThemePalette(
-    id: 'obsidian-dark',
-    label: 'Obsidian Dark',
+  static const ThemePalette defile = ThemePalette(
+    id: 'defile',
+    label: 'Defile',
     window: Color(0xFF191B1C),
     windowDeep: Color(0xFF16181A),
     panel: Color(0xFF17191B),
@@ -265,13 +265,112 @@ abstract final class AppPalettes {
     scrollbar: Color(0xFF504945),
   );
 
-  static const List<ThemePalette> all = [obsidianDark, everblush, gruvbox];
+  static const ThemePalette catppuccinMocha = ThemePalette(
+    id: 'catppuccin-mocha',
+    label: 'Catppuccin Mocha',
+    window: Color(0xFF1E1E2E),
+    windowDeep: Color(0xFF11111B),
+    panel: Color(0xFF181825),
+    sidebar: Color(0xFF181825),
+    sidebarDeep: Color(0xFF11111B),
+    surface: Color(0xFF313244),
+    surfaceHigh: Color(0xFF45475A),
+    card: Color(0xFF181825),
+    cardBorder: Color(0xFF313244),
+    hover: Color(0xFF313244),
+    border: Color(0xFF45475A),
+    divider: Color(0xFF313244),
+    elevated: Color(0xFF45475A),
+    elevatedBorder: Color(0xFF585B70),
+    elevatedBorderHover: Color(0xFF6C7086),
+    elevatedHover: Color(0xFF585B70),
+    elevatedPressed: Color(0xFF313244),
+    chip: Color(0xFF313244),
+    chipBorder: Color(0xFF45475A),
+    input: Color(0xFF181825),
+    inputBorder: Color(0xFF45475A),
+    rowHover: Color(0xFF313244),
+    rowSelected: Color(0xFF45475A),
+    switchTrack: Color(0xFF45475A),
+    textPrimary: Color(0xFFCDD6F4),
+    textStrong: Color(0xFFF5E0DC),
+    textLabel: Color(0xFFBAC2DE),
+    textSecondary: Color(0xFFA6ADC8),
+    textFaint: Color(0xFF7F849C),
+    folder: Color(0xFF89B4FA),
+    folderDark: Color(0xFF74C7EC),
+    folderTab: Color(0xFF94E2D5),
+    danger: Color(0xFFF38BA8),
+    dangerBright: Color(0xFFEBA0AC),
+    warning: Color(0xFFF9E2AF),
+    success: Color(0xFFA6E3A1),
+    menu: Color(0xFF181825),
+    menuBorder: Color(0xFF313244),
+    menuLabel: Color(0xFFCDD6F4),
+    menuIcon: Color(0xFFBAC2DE),
+    menuShortcut: Color(0xFF7F849C),
+    fileDefault: Color(0xFFA6ADC8),
+    scrollbar: Color(0xFF585B70),
+  );
+
+  static const ThemePalette tokyoNight = ThemePalette(
+    id: 'tokyonight',
+    label: 'Tokyo Night',
+    window: Color(0xFF1A1B26),
+    windowDeep: Color(0xFF16161E),
+    panel: Color(0xFF16161E),
+    sidebar: Color(0xFF16161E),
+    sidebarDeep: Color(0xFF0C0E14),
+    surface: Color(0xFF24283B),
+    surfaceHigh: Color(0xFF292E42),
+    card: Color(0xFF1F2335),
+    cardBorder: Color(0xFF3B4261),
+    hover: Color(0xFF292E42),
+    border: Color(0xFF3B4261),
+    divider: Color(0xFF292E42),
+    elevated: Color(0xFF292E42),
+    elevatedBorder: Color(0xFF3B4261),
+    elevatedBorderHover: Color(0xFF545C7E),
+    elevatedHover: Color(0xFF343B58),
+    elevatedPressed: Color(0xFF1F2335),
+    chip: Color(0xFF292E42),
+    chipBorder: Color(0xFF414868),
+    input: Color(0xFF16161E),
+    inputBorder: Color(0xFF292E42),
+    rowHover: Color(0xFF24283B),
+    rowSelected: Color(0xFF292E42),
+    switchTrack: Color(0xFF414868),
+    textPrimary: Color(0xFFC0CAF5),
+    textStrong: Color(0xFFD5DEFB),
+    textLabel: Color(0xFFA9B1D6),
+    textSecondary: Color(0xFF9AA5CE),
+    textFaint: Color(0xFF565F89),
+    folder: Color(0xFF7AA2F7),
+    folderDark: Color(0xFF3D59A1),
+    folderTab: Color(0xFF2AC3DE),
+    danger: Color(0xFFF7768E),
+    dangerBright: Color(0xFFFF7A93),
+    warning: Color(0xFFE0AF68),
+    success: Color(0xFF9ECE6A),
+    menu: Color(0xFF16161E),
+    menuBorder: Color(0xFF292E42),
+    menuLabel: Color(0xFFC0CAF5),
+    menuIcon: Color(0xFFA9B1D6),
+    menuShortcut: Color(0xFF565F89),
+    fileDefault: Color(0xFF9AA5CE),
+    scrollbar: Color(0xFF3B4261),
+  );
+
+  static const List<ThemePalette> all = [
+    defile,
+    everblush,
+    gruvbox,
+    catppuccinMocha,
+    tokyoNight,
+  ];
 
   static ThemePalette byId(String id) {
-    return all.firstWhere(
-      (palette) => palette.id == id,
-      orElse: () => obsidianDark,
-    );
+    return all.firstWhere((palette) => palette.id == id, orElse: () => defile);
   }
 }
 

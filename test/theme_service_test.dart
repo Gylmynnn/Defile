@@ -46,11 +46,9 @@ void main() {
     expect(AppColors.accent, AppAccents.blue.color);
 
     // Reset back to the default settings.
-    await tester.runAsync(
-      () => service.setBaseTheme(AppPalettes.obsidianDark.id),
-    );
+    await tester.runAsync(() => service.setBaseTheme(AppPalettes.defile.id));
     await tester.runAsync(() => service.setAccent(AppAccents.amber.id));
-    expect(AppColors.window, AppPalettes.obsidianDark.window);
+    expect(AppColors.window, AppPalettes.defile.window);
     expect(AppColors.accent, AppAccents.amber.color);
 
     service.setUiScale(1.25);
