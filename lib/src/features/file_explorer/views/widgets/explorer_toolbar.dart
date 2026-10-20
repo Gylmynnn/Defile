@@ -125,7 +125,8 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
                   ? 'Hide preview'
                   : 'Show preview',
               active: themeService.previewEnabled.value,
-              onTap: () => themeService.previewEnabled.value = !themeService.previewEnabled.value,
+              onTap: () => themeService.previewEnabled.value =
+                  !themeService.previewEnabled.value,
             );
           }),
           _ToolbarIconButton(
@@ -346,7 +347,7 @@ class _ViewModeSwitch extends StatelessWidget {
             child: Icon(
               icon,
               size: 14,
-              color: active ? AppColors.windowDeep : AppColors.textSecondary,
+              color: active ? AppColors.accentContent : AppColors.textSecondary,
             ),
           ),
         ),

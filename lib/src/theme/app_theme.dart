@@ -60,6 +60,8 @@ abstract final class AppColors {
   static Color get textFaint => _palette.textFaint;
 
   static Color get accent => _accent.color;
+  static Color get accentContent =>
+      _palette.isLight ? _palette.textStrong : _palette.windowDeep;
   static Color _selection = Color.lerp(_palette.window, _accent.color, 0.24)!;
   static Color _selectionBorder = Color.lerp(
     _palette.window,
@@ -95,7 +97,9 @@ abstract final class AppTheme {
         ? fontFamily.trim()
         : null;
 
-    final ThemeData base = ThemeData.dark(useMaterial3: true);
+    final ThemeData base = AppColors.palette.isLight
+        ? ThemeData.light(useMaterial3: true)
+        : ThemeData.dark(useMaterial3: true);
     final ColorScheme scheme = base.colorScheme.copyWith(
       primary: AppColors.accent,
       secondary: AppColors.accent,

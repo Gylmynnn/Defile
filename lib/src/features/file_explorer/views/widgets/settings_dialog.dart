@@ -600,7 +600,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               return _CustomSettingRow(
                 title: 'Base color theme',
                 subtitle:
-                    'Select the base dark scheme for the whole interface.',
+                    'Select the base color scheme for the whole interface.',
                 control: _CustomDropdown<String>(
                   value: AppPalettes.byId(currentTheme).id,
                   items: [
@@ -611,7 +611,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       ),
                   ],
                   onChanged: (val) {
-                    if (val != null) _themeService.setBaseTheme(val);
+                    if (val != null) _selectBaseTheme(val);
                   },
                 ),
               );
@@ -631,7 +631,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       _ColorDot(
                         color: accent.color,
                         isSelected: accent.id == currentAccent,
-                        onTap: () => _themeService.setAccent(accent.id),
+                        onTap: () => _selectAccent(accent.id),
                       ),
                   ],
                 ),
@@ -1033,7 +1033,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         return _CustomThemeRow(
           choice: choice,
           selected: choice.name == selected,
-          onTap: () => _iconService.setTheme(choice.name),
+          onTap: () => _selectIconTheme(choice.name),
         );
       },
     );
@@ -1103,7 +1103,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             fontName: '',
             isDefault: true,
             selected: selected.isEmpty,
-            onTap: () => _fontService.setFont(''),
+            onTap: () => _selectFont(''),
           ),
           const Padding(
             padding: EdgeInsets.all(10),
@@ -1131,7 +1131,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
           fontName: fontName,
           isDefault: isDefault,
           selected: isSelected,
-          onTap: () => _fontService.setFont(fontName),
+          onTap: () => _selectFont(fontName),
         );
       },
     );
@@ -1153,6 +1153,50 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   void _showInfoMessage(String title, String message) {
     showAppToast(title: title, message: message);
+  }
+
+  Future<void> _selectIconTheme(String name) async {
+    await _iconService.setTheme(name);
+    if (!mounted) return;
+
+    showAppToast(
+      title: 'Icon theme changed',
+      message: name.isEmpty ? 'Application default' : name,
+      variant: AppToastVariant.success,
+    );
+  }
+
+  Future<void> _selectFont(String fontName) async {
+    await _fontService.setFont(fontName);
+    if (!mounted) return;
+
+    showAppToast(
+      title: 'Font changed',
+      message: fontName.isEmpty ? 'Application default' : fontName,
+      variant: AppToastVariant.success,
+    );
+  }
+
+  Future<void> _selectBaseTheme(String id) async {
+    await _themeService.setBaseTheme(id);
+    if (!mounted) return;
+
+    showAppToast(
+      title: 'Theme changed',
+      message: AppPalettes.byId(id).label,
+      variant: AppToastVariant.success,
+    );
+  }
+
+  Future<void> _selectAccent(String id) async {
+    await _themeService.setAccent(id);
+    if (!mounted) return;
+
+    showAppToast(
+      title: 'Accent changed',
+      message: AppAccents.byId(id).label,
+      variant: AppToastVariant.success,
+    );
   }
 }
 
@@ -1183,7 +1227,7 @@ class _SidebarItemWidgetState extends State<_SidebarItemWidget> {
         : (_hovered ? AppColors.rowHover : Colors.transparent);
 
     final Color contentColor = widget.active
-        ? Colors.white
+        ? AppColors.textStrong
         : (_hovered ? AppColors.textLabel : AppColors.textSecondary);
 
     return MouseRegion(
@@ -1356,7 +1400,9 @@ class _CustomButtonState extends State<_CustomButton> {
         ? AppColors.elevatedBorderHover
         : AppColors.elevatedBorder;
 
-    final Color textColor = _hovered ? Colors.white : AppColors.textLabel;
+    final Color textColor = _hovered
+        ? AppColors.textStrong
+        : AppColors.textLabel;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -1616,7 +1662,7 @@ class _CloseButtonState extends State<_CloseButton> {
           child: Icon(
             Icons.close,
             size: 15,
-            color: _hovered ? Colors.white : AppColors.textFaint,
+            color: _hovered ? AppColors.textStrong : AppColors.textFaint,
           ),
         ),
       ),
@@ -1648,7 +1694,7 @@ class _ColorDot extends StatelessWidget {
             color: color,
             shape: BoxShape.circle,
             border: Border.all(
-              color: isSelected ? Colors.white : Colors.transparent,
+              color: isSelected ? AppColors.textStrong : Colors.transparent,
               width: 2,
             ),
           ),
@@ -1723,7 +1769,9 @@ class _CustomThemeRowState extends State<_CustomThemeRow> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12,
-                color: widget.selected ? Colors.white : AppColors.textLabel,
+                color: widget.selected
+                    ? AppColors.textStrong
+                    : AppColors.textLabel,
                 fontWeight: widget.selected ? FontWeight.w500 : FontWeight.w400,
               ),
             ),
@@ -1838,7 +1886,9 @@ class _CustomFontRowState extends State<_CustomFontRow> {
                   style: TextStyle(
                     fontFamily: previewFamily,
                     fontSize: 12,
-                    color: widget.selected ? Colors.white : AppColors.textLabel,
+                    color: widget.selected
+                        ? AppColors.textStrong
+                        : AppColors.textLabel,
                     fontWeight: widget.selected
                         ? FontWeight.w500
                         : FontWeight.w400,

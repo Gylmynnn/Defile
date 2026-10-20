@@ -164,7 +164,7 @@ class _AppDialogButtonState extends State<AppDialogButton> {
       borderColor = _hovered
           ? AppColors.elevatedBorderHover
           : AppColors.elevatedBorder;
-      textColor = _hovered ? Colors.white : AppColors.textLabel;
+      textColor = _hovered ? AppColors.textStrong : AppColors.textLabel;
     }
 
     return MouseRegion(
@@ -231,7 +231,7 @@ class _AppDialogCloseButtonState extends State<AppDialogCloseButton> {
           child: Icon(
             Icons.close,
             size: 15,
-            color: _hovered ? Colors.white : AppColors.textFaint,
+            color: _hovered ? AppColors.textStrong : AppColors.textFaint,
           ),
         ),
       ),
