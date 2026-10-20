@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../services/theme_service.dart';
 import '../../utils/formatters.dart';
 import 'entry_glyphs.dart';
 import 'image_thumbnail.dart';
@@ -22,6 +23,15 @@ final Map<String, GlobalKey> _entryKeys = <String, GlobalKey>{};
 // the live entry set if enormous unique trees get visited.
 GlobalKey entryTileKey(String path) =>
     _entryKeys.putIfAbsent(path, GlobalKey.new);
+
+Duration get _selectionAnimationDuration {
+  if (!Get.isRegistered<ThemeService>()) {
+    return const Duration(milliseconds: 120);
+  }
+  return Get.find<ThemeService>().animationsEnabled.value
+      ? const Duration(milliseconds: 120)
+      : Duration.zero;
+}
 
 class EntryGridView extends StatelessWidget {
   const EntryGridView({
@@ -114,7 +124,9 @@ class _GridTileState extends State<_GridTile> {
           onSecondaryTapDown: (details) =>
               widget.onMenu(details.globalPosition),
           onLongPressStart: (details) => widget.onMenu(details.globalPosition),
-          child: Container(
+          child: AnimatedContainer(
+            duration: _selectionAnimationDuration,
+            curve: Curves.easeOut,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
             decoration: BoxDecoration(
               color: selected
@@ -276,7 +288,9 @@ class _ListRowState extends State<_ListRow> {
           onDoubleTap: widget.onOpen,
           onSecondaryTapDown: (details) =>
               widget.onMenu(details.globalPosition),
-          child: Container(
+          child: AnimatedContainer(
+            duration: _selectionAnimationDuration,
+            curve: Curves.easeOut,
             height: 29,
             margin: const EdgeInsets.symmetric(horizontal: 8),
             padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -456,7 +470,9 @@ class _CompactRowState extends State<_CompactRow> {
           onDoubleTap: widget.onOpen,
           onSecondaryTapDown: (details) =>
               widget.onMenu(details.globalPosition),
-          child: Container(
+          child: AnimatedContainer(
+            duration: _selectionAnimationDuration,
+            curve: Curves.easeOut,
             height: 22,
             margin: const EdgeInsets.symmetric(horizontal: 8),
             padding: const EdgeInsets.symmetric(horizontal: 10),
