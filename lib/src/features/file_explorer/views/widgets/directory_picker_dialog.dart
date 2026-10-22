@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../../../theme/app_theme.dart';
 import '../../controllers/directory_picker_controller.dart';
 import 'app_dialog.dart';
+import 'hover_region.dart';
 
 class DirectoryPickerDialog extends StatefulWidget {
   const DirectoryPickerDialog({super.key, required this.initialPath});
@@ -57,9 +58,9 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
               height: 32,
               padding: const EdgeInsets.only(left: 4, right: 4),
               decoration: BoxDecoration(
-                color: AppColors.window,
+                color: context.colors.window,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: context.colors.border),
               ),
               child: Obx(
                 () => Row(
@@ -84,7 +85,7 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textPrimary,
+                          color: context.colors.textPrimary,
                         ),
                       ),
                     ),
@@ -107,9 +108,9 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.window,
+                  color: context.colors.window,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: context.colors.border),
                 ),
                 child: Obx(() {
                   if (pickerController.isLoading.value) {
@@ -132,7 +133,7 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppColors.textSecondary,
+                            color: context.colors.textSecondary,
                           ),
                         ),
                       ),
@@ -145,7 +146,7 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
                         'No subfolders',
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textFaint,
+                          color: context.colors.textFaint,
                         ),
                       ),
                     );
@@ -177,7 +178,7 @@ class _DirectoryPickerDialogState extends State<DirectoryPickerDialog> {
   }
 }
 
-class _FolderRow extends StatefulWidget {
+class _FolderRow extends StatelessWidget {
   const _FolderRow({
     required this.name,
     required this.onTap,
@@ -189,49 +190,45 @@ class _FolderRow extends StatefulWidget {
   final VoidCallback onSelect;
 
   @override
-  State<_FolderRow> createState() => _FolderRowState();
-}
-
-class _FolderRowState extends State<_FolderRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        onDoubleTap: widget.onSelect,
-        child: Container(
-          height: 28,
-          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: _hovered ? AppColors.hover : Colors.transparent,
-            borderRadius: BorderRadius.circular(5),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.folder, size: 15, color: AppColors.folder),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Text(
-                  widget.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.textPrimary,
+    return HoverRegion(
+      builder: (context, hovered) {
+        return GestureDetector(
+          onTap: onTap,
+          onDoubleTap: onSelect,
+          child: Container(
+            height: 28,
+            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: hovered ? context.colors.hover : Colors.transparent,
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.folder, size: 15, color: context.colors.folder),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: context.colors.textPrimary,
+                    ),
                   ),
                 ),
-              ),
-              Icon(Icons.chevron_right, size: 15, color: AppColors.textFaint),
-            ],
+                Icon(
+                  Icons.chevron_right,
+                  size: 15,
+                  color: context.colors.textFaint,
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

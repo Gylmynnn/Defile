@@ -5,7 +5,8 @@ use std::{
     process::Command,
 };
 
-use crate::api::system::home_dir;
+use crate::api::paths::home_dir;
+use crate::api::settings::{read_setting, write_setting};
 
 #[flutter_rust_bridge::frb]
 pub fn list_system_fonts() -> Vec<std::string::String> {
@@ -190,9 +191,10 @@ fn parse_font_family_from_bytes(data: &[u8]) -> Option<std::string::String> {
         if name_id == 1 && str_offset + length <= data.len() {
             let bytes = &data[str_offset..str_offset + length];
             if platform_id == 3 || platform_id == 0 {
-                let u16_chars: Vec<u16> = bytes
-                    .chunks_exact(2)
-                    .map(|c| u16::from_be_bytes([c[0], c[1]]))
+                let (chunks, _) = bytes.as_chunks::<2>();
+                let u16_chars: Vec<u16> = chunks
+                    .iter()
+                    .map(|chunk| u16::from_be_bytes(*chunk))
                     .collect();
                 if let Ok(name) = String::from_utf16(&u16_chars) {
                     let trimmed = name.trim().to_string();
@@ -212,38 +214,14 @@ fn parse_font_family_from_bytes(data: &[u8]) -> Option<std::string::String> {
     None
 }
 
-fn settings_file() -> PathBuf {
-    let base = match env::var("XDG_CONFIG_HOME") {
-        Ok(value) if !value.is_empty() => PathBuf::from(value),
-        _ => home_dir().join(".config"),
-    };
-
-    base.join("defile").join("font-family")
-}
-
 #[flutter_rust_bridge::frb]
 pub fn get_font_family() -> std::string::String {
-    match fs::read_to_string(settings_file()) {
-        Ok(value) => value.trim().to_string(),
-        Err(_) => std::string::String::new(),
-    }
+    read_setting("font-family")
 }
 
 #[flutter_rust_bridge::frb]
 pub fn set_font_family(name: std::string::String) -> Result<(), std::string::String> {
-    let file = settings_file();
-
-    if name.trim().is_empty() {
-        let _ = fs::remove_file(file);
-        return Ok(());
-    }
-
-    if let Some(parent) = file.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("Failed to prepare settings folder: {error}"))?;
-    }
-
-    fs::write(&file, name.trim()).map_err(|error| format!("Failed to save font settings: {error}"))
+    write_setting("font-family", &name)
 }
 
 #[cfg(test)]
@@ -252,12 +230,13 @@ mod tests {
 
     #[test]
     fn get_and_set_font_family() {
-        let test_name = format!("TestFont_{}", std::process::id());
-        set_font_family(test_name.clone()).unwrap();
-        assert_eq!(get_font_family(), test_name);
+        crate::api::settings::with_temp_config(|| {
+            set_font_family("TestFont".to_string()).unwrap();
+            assert_eq!(get_font_family(), "TestFont");
 
-        set_font_family("".to_string()).unwrap();
-        assert_eq!(get_font_family(), "");
+            set_font_family("".to_string()).unwrap();
+            assert_eq!(get_font_family(), "");
+        });
     }
 
     #[test]

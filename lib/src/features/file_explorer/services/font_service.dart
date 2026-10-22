@@ -1,5 +1,4 @@
 import 'package:defile/src/rust/api/font.dart' as rust;
-import 'package:defile/src/theme/app_theme.dart';
 import 'package:get/get.dart';
 
 class FontService extends GetxService {
@@ -35,8 +34,5 @@ class FontService extends GetxService {
     try {
       await rust.setFontFamily(name: name);
     } catch (_) {}
-
-    final String? resolved = name.trim().isEmpty ? null : name.trim();
-    Get.changeTheme(AppTheme.dark(fontFamily: resolved));
   }
 }

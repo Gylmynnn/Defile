@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -5,6 +6,7 @@ import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../services/theme_service.dart';
 import '../../utils/app_dialog_route.dart';
+import 'hover_region.dart';
 import 'settings_dialog.dart';
 
 class ExplorerToolbar extends StatefulWidget {
@@ -16,14 +18,12 @@ class ExplorerToolbar extends StatefulWidget {
 
 class _ExplorerToolbarState extends State<ExplorerToolbar> {
   final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
 
   FileExplorerController get controller => Get.find<FileExplorerController>();
 
   @override
   void dispose() {
     _searchController.dispose();
-    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -32,8 +32,8 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
     return Container(
       height: 40,
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.divider)),
+        color: context.colors.surface,
+        border: Border(bottom: BorderSide(color: context.colors.divider)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
@@ -41,8 +41,8 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           Obx(
             () => _ToolbarIconButton(
               icon: controller.showSidebar.value
-                  ? Icons.view_sidebar
-                  : Icons.view_sidebar_outlined,
+                  ? CupertinoIcons.sidebar_right
+                  : CupertinoIcons.sidebar_left,
               tooltip: controller.showSidebar.value
                   ? 'Hide sidebar'
                   : 'Show sidebar',
@@ -52,15 +52,15 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           ),
           Obx(
             () => _ToolbarIconButton(
-              icon: Icons.chevron_left,
+              icon: CupertinoIcons.arrow_left,
               tooltip: 'Back',
               onTap: controller.pathHistory.isEmpty ? null : controller.goBack,
             ),
           ),
           Obx(
             () => _ToolbarIconButton(
-              icon: Icons.chevron_right,
-              tooltip: 'Maju',
+              icon: CupertinoIcons.arrow_right,
+              tooltip: 'Forward',
               onTap: controller.forwardHistory.isEmpty
                   ? null
                   : controller.goForward,
@@ -68,7 +68,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           ),
           Obx(
             () => _ToolbarIconButton(
-              icon: Icons.keyboard_arrow_up,
+              icon: CupertinoIcons.arrow_turn_left_up,
               tooltip: 'Parent folder',
               onTap: controller.canGoToParent ? controller.goToParent : null,
             ),
@@ -86,18 +86,18 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           Obx(() {
             if (!controller.isSearching.value) {
               return _ToolbarIconButton(
-                icon: Icons.search,
+                icon: CupertinoIcons.search,
                 tooltip: 'Search',
                 onTap: () {
                   controller.startSearch();
-                  _searchFocus.requestFocus();
+                  controller.searchFocusNode.requestFocus();
                 },
               );
             }
 
             return _SearchField(
               controller: _searchController,
-              focusNode: _searchFocus,
+              focusNode: controller.searchFocusNode,
               onChanged: controller.updateSearch,
               onClose: () {
                 _searchController.clear();
@@ -105,22 +105,22 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
               },
             );
           }),
-          const SizedBox(width: 6),
-          Obx(
-            () => _ToolbarIconButton(
-              icon: Icons.terminal,
-              tooltip: 'Open terminal in this folder',
-              onTap: controller.location.value == ExplorerLocation.directory
-                  ? controller.openTerminal
-                  : null,
-            ),
-          ),
+          // const SizedBox(width: 6),
+          // Obx(
+          //   () => _ToolbarIconButton(
+          //     icon: Icons.terminal,
+          //     tooltip: 'Open terminal in this folder',
+          //     onTap: controller.location.value == ExplorerLocation.directory
+          //         ? controller.openTerminal
+          //         : null,
+          //   ),
+          // ),
           Obx(() {
             final themeService = Get.find<ThemeService>();
             return _ToolbarIconButton(
               icon: themeService.previewEnabled.value
-                  ? Icons.visibility
-                  : Icons.visibility_outlined,
+                  ? CupertinoIcons.eye_solid
+                  : CupertinoIcons.eye,
               tooltip: themeService.previewEnabled.value
                   ? 'Hide preview'
                   : 'Show preview',
@@ -132,7 +132,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           _ToolbarIconButton(
             icon: Icons.settings_outlined,
             tooltip: 'Settings',
-            onTap: () => showAppDialog(builder: (_) => const SettingsDialog()),
+            onTap: () => showAppDialog(builder: (BuildContext _) => const SettingsDialog()),
           ),
         ],
       ),
@@ -150,14 +150,14 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
             Icon(
               recent ? Icons.schedule : Icons.delete_outline,
               size: 14,
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
             ),
             const SizedBox(width: 8),
             Text(
               recent ? 'Recents' : 'Trash',
               style: TextStyle(
                 fontSize: 12.5,
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -207,9 +207,9 @@ class _Breadcrumb extends StatelessWidget {
           Padding(
             padding: EdgeInsets.only(right: 6),
             child: Icon(
-              Icons.home_outlined,
+              CupertinoIcons.home,
               size: 14,
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
             ),
           ),
         MouseRegion(
@@ -220,7 +220,9 @@ class _Breadcrumb extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 12.5,
-                color: isLast ? AppColors.textPrimary : AppColors.textSecondary,
+                color: isLast
+                    ? context.colors.textPrimary
+                    : context.colors.textSecondary,
               ),
             ),
           ),
@@ -230,7 +232,7 @@ class _Breadcrumb extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 7),
             child: Text(
               '/',
-              style: TextStyle(fontSize: 12, color: AppColors.textFaint),
+              style: TextStyle(fontSize: 12, color: context.colors.textFaint),
             ),
           ),
       ],
@@ -258,13 +260,13 @@ class _SearchField extends StatelessWidget {
       height: 26,
       padding: const EdgeInsets.only(left: 8, right: 4),
       decoration: BoxDecoration(
-        color: AppColors.window,
+        color: context.colors.window,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.selectionBorder),
+        border: Border.all(color: context.colors.selectionBorder),
       ),
       child: Row(
         children: [
-          Icon(Icons.search, size: 13, color: AppColors.textFaint),
+          Icon(Icons.search, size: 13, color: context.colors.textFaint),
           const SizedBox(width: 6),
           Expanded(
             child: TextField(
@@ -273,7 +275,7 @@ class _SearchField extends StatelessWidget {
               autofocus: true,
               onChanged: onChanged,
               cursorHeight: 13,
-              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+              style: TextStyle(fontSize: 12, color: context.colors.textPrimary),
               decoration: InputDecoration(
                 isDense: true,
                 filled: false,
@@ -282,7 +284,10 @@ class _SearchField extends StatelessWidget {
                 focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 hintText: 'Search items...',
-                hintStyle: TextStyle(fontSize: 12, color: AppColors.textFaint),
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: context.colors.textFaint,
+                ),
               ),
             ),
           ),
@@ -294,7 +299,7 @@ class _SearchField extends StatelessWidget {
               child: Icon(
                 Icons.close,
                 size: 13,
-                color: AppColors.textSecondary,
+                color: context.colors.textSecondary,
               ),
             ),
           ),
@@ -315,20 +320,40 @@ class _ViewModeSwitch extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.colors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _segment(ExplorerViewMode.grid, Icons.grid_view_rounded, 'Grid'),
-          _segment(ExplorerViewMode.list, Icons.view_list_rounded, 'List'),
-          _segment(ExplorerViewMode.compact, Icons.view_headline, 'Compact'),
+          _segment(
+            context,
+            ExplorerViewMode.grid,
+            CupertinoIcons.rectangle_grid_3x2_fill,
+            'Grid',
+          ),
+          _segment(
+            context,
+            ExplorerViewMode.list,
+            CupertinoIcons.list_number,
+            'List',
+          ),
+          _segment(
+            context,
+            ExplorerViewMode.compact,
+            CupertinoIcons.rectangle_grid_1x2_fill,
+            'Compact',
+          ),
         ],
       ),
     );
   }
 
-  Widget _segment(ExplorerViewMode value, IconData icon, String tooltip) {
+  Widget _segment(
+    BuildContext context,
+    ExplorerViewMode value,
+    IconData icon,
+    String tooltip,
+  ) {
     final bool active = mode == value;
 
     return Tooltip(
@@ -341,13 +366,15 @@ class _ViewModeSwitch extends StatelessWidget {
             width: 27,
             height: 23,
             decoration: BoxDecoration(
-              color: active ? AppColors.accent : Colors.transparent,
+              color: active ? context.colors.accent : Colors.transparent,
               borderRadius: BorderRadius.circular(5),
             ),
             child: Icon(
               icon,
               size: 14,
-              color: active ? AppColors.accentContent : AppColors.textSecondary,
+              color: active
+                  ? context.colors.accentContent
+                  : context.colors.textSecondary,
             ),
           ),
         ),
@@ -356,7 +383,7 @@ class _ViewModeSwitch extends StatelessWidget {
   }
 }
 
-class _ToolbarIconButton extends StatefulWidget {
+class _ToolbarIconButton extends StatelessWidget {
   const _ToolbarIconButton({
     required this.icon,
     required this.tooltip,
@@ -370,49 +397,42 @@ class _ToolbarIconButton extends StatefulWidget {
   final bool active;
 
   @override
-  State<_ToolbarIconButton> createState() => _ToolbarIconButtonState();
-}
-
-class _ToolbarIconButtonState extends State<_ToolbarIconButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final bool enabled = widget.onTap != null;
-
-    final Color background = widget.active
-        ? AppColors.selection
-        : _hovered && enabled
-        ? AppColors.hover
-        : Colors.transparent;
+    final bool enabled = onTap != null;
 
     return Tooltip(
-      message: widget.tooltip,
-      child: MouseRegion(
+      message: tooltip,
+      child: HoverRegion(
         cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: Container(
-            width: 27,
-            height: 26,
-            margin: const EdgeInsets.symmetric(horizontal: 1),
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(5),
+        builder: (context, hovered) {
+          final Color background = active
+              ? context.colors.selection
+              : hovered && enabled
+              ? context.colors.hover
+              : Colors.transparent;
+
+          return GestureDetector(
+            onTap: onTap,
+            child: Container(
+              width: 27,
+              height: 26,
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Icon(
+                icon,
+                size: 17,
+                color: !enabled
+                    ? context.colors.textFaint.withValues(alpha: 0.45)
+                    : active
+                    ? context.colors.textPrimary
+                    : context.colors.textSecondary,
+              ),
             ),
-            child: Icon(
-              widget.icon,
-              size: 17,
-              color: !enabled
-                  ? AppColors.textFaint.withValues(alpha: 0.45)
-                  : widget.active
-                  ? AppColors.textPrimary
-                  : AppColors.textSecondary,
-            ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

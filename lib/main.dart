@@ -45,26 +45,25 @@ class RootApp extends StatelessWidget {
 
     return Obx(() {
       final String font = fontService.fontFamily.value;
-
-      AppColors.usePalette(themeService.palette);
-      AppColors.useAccent(themeService.accent);
+      final palette = themeService.palette;
+      final accent = themeService.accent;
 
       return GetMaterialApp(
         title: 'Defile',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.dark(fontFamily: font.isEmpty ? null : font),
+        theme: AppTheme.dark(
+          palette: palette,
+          accentPreset: accent,
+          fontFamily: font.isEmpty ? null : font,
+        ),
         initialBinding: FileExplorerBinding(),
-        builder: (context, child) => Obx(
+        builder: (BuildContext context, Widget? child) => Obx(
           () => _UiScaler(
             scale: themeService.uiScale.value,
             child: child ?? const SizedBox.shrink(),
           ),
         ),
-        home: Obx(() {
-          themeService.baseThemeId.value;
-          themeService.accentId.value;
-          return FileExplorerPage();
-        }),
+        home: const FileExplorerPage(),
       );
     });
   }

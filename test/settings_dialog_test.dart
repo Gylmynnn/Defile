@@ -40,30 +40,15 @@ void main() {
       expect(find.text('Options'), findsOneWidget);
 
       // Sidebar items
-      expect(find.text('General'), findsOneWidget);
       expect(find.text('Appearance'), findsOneWidget);
       expect(find.text('Interface'), findsOneWidget);
       expect(find.text('Files and links'), findsOneWidget);
       expect(find.text('Hotkeys'), findsOneWidget);
-      // Right Content default is General
-      expect(find.text('Version 1.14.4'), findsOneWidget);
+      expect(find.text('About'), findsWidgets);
+      // Right Content default is About
+      expect(find.text('Version 0.5.0'), findsOneWidget);
       expect(find.text('Check for updates'), findsOneWidget);
-      expect(find.text('Automatic updates'), findsOneWidget);
-      expect(find.text('Language'), findsOneWidget);
-      expect(find.text('English'), findsOneWidget);
-      expect(find.text('Help'), findsOneWidget);
-      expect(find.text('Account'), findsOneWidget);
-      expect(find.text('Your account'), findsOneWidget);
-      expect(find.text('Log in'), findsOneWidget);
-      expect(find.text('Sign up'), findsOneWidget);
-      expect(find.text('Commercial license'), findsOneWidget);
-      expect(find.text('Activate'), findsOneWidget);
-      expect(find.text('Purchase'), findsOneWidget);
-      expect(find.text('Advanced'), findsOneWidget);
-      expect(
-        find.text('Notify if startup takes longer than expected'),
-        findsOneWidget,
-      );
+      expect(find.text('Read the changelog.'), findsOneWidget);
 
       // Switch to Hotkeys
       await tester.tap(find.text('Hotkeys'));
@@ -79,13 +64,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Files and links'), findsOneWidget);
-      expect(find.text('General'), findsNothing);
+      expect(find.text('About'), findsNothing);
 
       // Reset search
       await tester.enterText(find.byType(TextField).first, '');
       await tester.pumpAndSettle();
 
-      expect(find.text('General'), findsOneWidget);
+      expect(find.text('About'), findsWidgets);
 
       // Close button works
       await tester.tap(find.byIcon(Icons.close));

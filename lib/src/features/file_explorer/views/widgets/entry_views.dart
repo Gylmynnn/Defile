@@ -5,8 +5,10 @@ import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../services/theme_service.dart';
+import '../../utils/file_types.dart';
 import '../../utils/formatters.dart';
 import 'entry_glyphs.dart';
+import 'hover_region.dart';
 import 'image_thumbnail.dart';
 import 'themed_icon.dart';
 
@@ -80,7 +82,7 @@ class EntryGridView extends StatelessWidget {
   }
 }
 
-class _GridTile extends StatefulWidget {
+class _GridTile extends StatelessWidget {
   const _GridTile({
     required this.entry,
     required this.selected,
@@ -98,75 +100,63 @@ class _GridTile extends StatefulWidget {
   final ValueChanged<Offset> onMenu;
 
   @override
-  State<_GridTile> createState() => _GridTileState();
-}
-
-class _GridTileState extends State<_GridTile> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final entry = widget.entry;
-    final bool selected = widget.selected;
-
-    return MouseRegion(
+    return HoverRegion(
       key: entryTileKey(entry.path),
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Listener(
-        onPointerDown: (event) {
-          if (event.buttons == kPrimaryButton) widget.onPress();
-        },
-        child: GestureDetector(
-          onTap: widget.onTap,
-          onDoubleTap: widget.onOpen,
-          onSecondaryTapDown: (details) =>
-              widget.onMenu(details.globalPosition),
-          onLongPressStart: (details) => widget.onMenu(details.globalPosition),
-          child: AnimatedContainer(
-            duration: _selectionAnimationDuration,
-            curve: Curves.easeOut,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected
-                  ? AppColors.selection
-                  : _hovered
-                  ? AppColors.hover
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(7),
-              border: Border.all(
+      builder: (context, hovered) {
+        return Listener(
+          onPointerDown: (event) {
+            if (event.buttons == kPrimaryButton) onPress();
+          },
+          child: GestureDetector(
+            onTap: onTap,
+            onDoubleTap: onOpen,
+            onSecondaryTapDown: (details) => onMenu(details.globalPosition),
+            onLongPressStart: (details) => onMenu(details.globalPosition),
+            child: AnimatedContainer(
+              duration: _selectionAnimationDuration,
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+              decoration: BoxDecoration(
                 color: selected
-                    ? AppColors.selectionBorder
-                    : _hovered
-                    ? AppColors.border
+                    ? context.colors.selection
+                    : hovered
+                    ? context.colors.hover
                     : Colors.transparent,
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(
+                  color: selected
+                      ? context.colors.selectionBorder
+                      : hovered
+                      ? context.colors.border
+                      : Colors.transparent,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 62,
+                    child: Center(child: _EntryGlyph(entry: entry)),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    entry.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: context.colors.textPrimary,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  height: 62,
-                  child: Center(child: _EntryGlyph(entry: entry)),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  entry.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.textPrimary,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -198,18 +188,24 @@ class EntryListView extends StatelessWidget {
           height: 28,
           padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.divider)),
+            border: Border(bottom: BorderSide(color: context.colors.divider)),
           ),
           child: Row(
             children: [
               SizedBox(width: 24),
-              Expanded(child: Text('Name', style: _headerStyle)),
-              SizedBox(width: 92, child: Text('Size', style: _headerStyle)),
+              Expanded(child: Text('Name', style: _headerStyle(context))),
+              SizedBox(
+                width: 92,
+                child: Text('Size', style: _headerStyle(context)),
+              ),
               SizedBox(
                 width: 158,
-                child: Text('Modified', style: _headerStyle),
+                child: Text('Modified', style: _headerStyle(context)),
               ),
-              SizedBox(width: 64, child: Text('Type', style: _headerStyle)),
+              SizedBox(
+                width: 64,
+                child: Text('Type', style: _headerStyle(context)),
+              ),
               SizedBox(width: 30),
             ],
           ),
@@ -239,13 +235,13 @@ class EntryListView extends StatelessWidget {
   }
 }
 
-TextStyle get _headerStyle => TextStyle(
+TextStyle _headerStyle(BuildContext context) => TextStyle(
   fontSize: 11.5,
   fontWeight: FontWeight.w600,
-  color: AppColors.textFaint,
+  color: context.colors.textFaint,
 );
 
-class _ListRow extends StatefulWidget {
+class _ListRow extends StatelessWidget {
   const _ListRow({
     required this.entry,
     required this.selected,
@@ -263,125 +259,115 @@ class _ListRow extends StatefulWidget {
   final ValueChanged<Offset> onMenu;
 
   @override
-  State<_ListRow> createState() => _ListRowState();
-}
-
-class _ListRowState extends State<_ListRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final entry = widget.entry;
-    final bool selected = widget.selected;
-
-    return MouseRegion(
+    return HoverRegion(
       key: entryTileKey(entry.path),
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Listener(
-        onPointerDown: (event) {
-          if (event.buttons == kPrimaryButton) widget.onPress();
-        },
-        child: GestureDetector(
-          onTap: widget.onTap,
-          onDoubleTap: widget.onOpen,
-          onSecondaryTapDown: (details) =>
-              widget.onMenu(details.globalPosition),
-          child: AnimatedContainer(
-            duration: _selectionAnimationDuration,
-            curve: Curves.easeOut,
-            height: 29,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: selected
-                  ? AppColors.selection
-                  : _hovered
-                  ? AppColors.hover
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(
+      builder: (context, hovered) {
+        return Listener(
+          onPointerDown: (event) {
+            if (event.buttons == kPrimaryButton) onPress();
+          },
+          child: GestureDetector(
+            onTap: onTap,
+            onDoubleTap: onOpen,
+            onSecondaryTapDown: (details) => onMenu(details.globalPosition),
+            child: AnimatedContainer(
+              duration: _selectionAnimationDuration,
+              curve: Curves.easeOut,
+              height: 29,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
                 color: selected
-                    ? AppColors.selectionBorder
+                    ? context.colors.selection
+                    : hovered
+                    ? context.colors.hover
                     : Colors.transparent,
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(
+                  color: selected
+                      ? context.colors.selectionBorder
+                      : Colors.transparent,
+                ),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(width: 24, child: _EntryMiniIcon(entry: entry)),
+                  Expanded(
+                    child: Text(
+                      entry.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 92,
+                    child: Text(
+                      entry.isFile ? formatBytes(entry.sizeBytes) : '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: context.colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 158,
+                    child: Text(
+                      formatDate(entry.modifiedSeconds.toInt()),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: context.colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      entry.isDirectory
+                          ? 'Folder'
+                          : fileTypeShortLabel(entry.name),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: context.colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 26,
+                    child: hovered
+                        ? InkWell(
+                            onTap: () {
+                              final RenderBox box =
+                                  context.findRenderObject()! as RenderBox;
+                              onMenu(
+                                box.localToGlobal(box.size.center(Offset.zero)),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(4),
+                            child: Icon(
+                              Icons.more_horiz,
+                              size: 16,
+                              color: context.colors.textSecondary,
+                            ),
+                          )
+                        : null,
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                SizedBox(width: 24, child: _EntryMiniIcon(entry: entry)),
-                Expanded(
-                  child: Text(
-                    entry.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 92,
-                  child: Text(
-                    entry.isFile ? formatBytes(entry.sizeBytes) : '—',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 158,
-                  child: Text(
-                    formatDate(entry.modifiedSeconds.toInt()),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 64,
-                  child: Text(
-                    entry.isDirectory ? 'Folder' : _typeLabel(entry.name),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 26,
-                  child: _hovered
-                      ? InkWell(
-                          onTap: () {
-                            final RenderBox box =
-                                context.findRenderObject()! as RenderBox;
-                            widget.onMenu(
-                              box.localToGlobal(box.size.center(Offset.zero)),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(4),
-                          child: Icon(
-                            Icons.more_horiz,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          ),
-                        )
-                      : null,
-                ),
-              ],
-            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -427,7 +413,7 @@ class EntryCompactView extends StatelessWidget {
   }
 }
 
-class _CompactRow extends StatefulWidget {
+class _CompactRow extends StatelessWidget {
   const _CompactRow({
     required this.entry,
     required this.selected,
@@ -445,70 +431,58 @@ class _CompactRow extends StatefulWidget {
   final ValueChanged<Offset> onMenu;
 
   @override
-  State<_CompactRow> createState() => _CompactRowState();
-}
-
-class _CompactRowState extends State<_CompactRow> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    final entry = widget.entry;
-    final bool selected = widget.selected;
-
-    return MouseRegion(
+    return HoverRegion(
       key: entryTileKey(entry.path),
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Listener(
-        onPointerDown: (event) {
-          if (event.buttons == kPrimaryButton) widget.onPress();
-        },
-        child: GestureDetector(
-          onTap: widget.onTap,
-          onDoubleTap: widget.onOpen,
-          onSecondaryTapDown: (details) =>
-              widget.onMenu(details.globalPosition),
-          child: AnimatedContainer(
-            duration: _selectionAnimationDuration,
-            curve: Curves.easeOut,
-            height: 22,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: selected
-                  ? AppColors.selection
-                  : _hovered
-                  ? AppColors.hover
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(
+      builder: (context, hovered) {
+        return Listener(
+          onPointerDown: (event) {
+            if (event.buttons == kPrimaryButton) onPress();
+          },
+          child: GestureDetector(
+            onTap: onTap,
+            onDoubleTap: onOpen,
+            onSecondaryTapDown: (details) => onMenu(details.globalPosition),
+            child: AnimatedContainer(
+              duration: _selectionAnimationDuration,
+              curve: Curves.easeOut,
+              height: 22,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
                 color: selected
-                    ? AppColors.selectionBorder
+                    ? context.colors.selection
+                    : hovered
+                    ? context.colors.hover
                     : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: selected
+                      ? context.colors.selectionBorder
+                      : Colors.transparent,
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                SizedBox(width: 20, child: _EntryMiniIcon(entry: widget.entry)),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    widget.entry.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textPrimary,
+              child: Row(
+                children: [
+                  SizedBox(width: 20, child: _EntryMiniIcon(entry: entry)),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      entry.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.colors.textPrimary,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -520,7 +494,7 @@ class _EntryGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (entry.isFile && isImageFile(entry.name)) {
+    if (entry.isFile && isRasterImageFile(entry.name)) {
       return ImageThumbnail(
         path: entry.path,
         width: 58,
@@ -558,14 +532,14 @@ class _EntryMiniIcon extends StatelessWidget {
         child: ThemedIcon(
           iconNames: themedIconNamesFor(name: entry.name, isDirectory: true),
           size: 15,
-          fallback: Icon(Icons.folder, size: 15, color: AppColors.folder),
+          fallback: Icon(Icons.folder, size: 15, color: context.colors.folder),
         ),
       );
     }
 
-    final Color color = fileColorFor(entry.name);
+    final Color color = fileColorFor(entry.name, context.colors);
 
-    if (isImageFile(entry.name)) {
+    if (isRasterImageFile(entry.name)) {
       return Align(
         alignment: Alignment.centerLeft,
         child: ImageThumbnail(
@@ -586,10 +560,4 @@ class _EntryMiniIcon extends StatelessWidget {
       ),
     );
   }
-}
-
-String _typeLabel(String name) {
-  final int dot = name.lastIndexOf('.');
-  if (dot == -1 || dot == name.length - 1) return 'File';
-  return name.substring(dot + 1).toUpperCase();
 }

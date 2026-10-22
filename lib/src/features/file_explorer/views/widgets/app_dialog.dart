@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
+import 'app_button.dart';
+import 'hover_region.dart';
 
 /// Shared shell so every popup (settings, properties, pickers, prompts) uses
 /// the same framing: deep window background, subtle border, titled header with
@@ -40,7 +42,7 @@ class AppDialog extends StatelessWidget {
           constraints: constraints,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: AppColors.windowDeep,
+            color: context.colors.windowDeep,
             borderRadius: BorderRadius.circular(10),
             boxShadow: const [
               BoxShadow(
@@ -52,17 +54,17 @@ class AppDialog extends StatelessWidget {
           ),
           foregroundDecoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.cardBorder, width: 1),
+            border: Border.all(color: context.colors.cardBorder, width: 1),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildHeader(context),
-              Container(height: 1, color: AppColors.divider),
+              Container(height: 1, color: context.colors.divider),
               if (maxHeight != null) Flexible(child: content) else content,
               if (actions.isNotEmpty) ...[
-                Container(height: 1, color: AppColors.divider),
+                Container(height: 1, color: context.colors.divider),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
                   child: Row(
@@ -89,7 +91,7 @@ class AppDialog extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
               ),
             ),
           ),
@@ -111,7 +113,7 @@ class AppDialog extends StatelessWidget {
   }
 }
 
-class AppDialogButton extends StatefulWidget {
+class AppDialogButton extends StatelessWidget {
   const AppDialogButton({
     super.key,
     required this.label,
@@ -126,115 +128,46 @@ class AppDialogButton extends StatefulWidget {
   final bool danger;
 
   @override
-  State<AppDialogButton> createState() => _AppDialogButtonState();
-}
-
-class _AppDialogButtonState extends State<AppDialogButton> {
-  bool _hovered = false;
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final Color bgColor;
-    final Color borderColor;
-    final Color textColor;
-
-    if (widget.danger) {
-      bgColor = _pressed
-          ? AppColors.dangerBright
-          : _hovered
-          ? AppColors.dangerBright
-          : AppColors.danger;
-      borderColor = AppColors.dangerBright;
-      textColor = Colors.white;
-    } else if (widget.primary) {
-      bgColor = _pressed
-          ? AppColors.selection
-          : _hovered
-          ? AppColors.selectionBorder
-          : AppColors.selection;
-      borderColor = AppColors.selectionBorder;
-      textColor = AppColors.textPrimary;
-    } else {
-      bgColor = _pressed
-          ? AppColors.rowHover
-          : _hovered
-          ? AppColors.elevatedHover
-          : AppColors.elevated;
-      borderColor = _hovered
-          ? AppColors.elevatedBorderHover
-          : AppColors.elevatedBorder;
-      textColor = _hovered ? AppColors.textStrong : AppColors.textLabel;
-    }
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() {
-        _hovered = false;
-        _pressed = false;
-      }),
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) => setState(() => _pressed = false),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: borderColor, width: 1),
-          ),
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: textColor,
-            ),
-          ),
-        ),
-      ),
+    return AppButton(
+      label: label,
+      onTap: onTap,
+      primary: primary,
+      danger: danger,
     );
   }
 }
 
-class AppDialogCloseButton extends StatefulWidget {
+class AppDialogCloseButton extends StatelessWidget {
   const AppDialogCloseButton({super.key, required this.onTap});
 
   final VoidCallback onTap;
 
   @override
-  State<AppDialogCloseButton> createState() => _AppDialogCloseButtonState();
-}
-
-class _AppDialogCloseButtonState extends State<AppDialogCloseButton> {
-  bool _hovered = false;
-
-  @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: _hovered ? AppColors.elevatedHover : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+    return HoverRegion(
+      builder: (context, hovered) {
+        return GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: hovered
+                  ? context.colors.elevatedHover
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(
+              Icons.close,
+              size: 15,
+              color: hovered
+                  ? context.colors.textStrong
+                  : context.colors.textFaint,
+            ),
           ),
-          child: Icon(
-            Icons.close,
-            size: 15,
-            color: _hovered ? AppColors.textStrong : AppColors.textFaint,
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

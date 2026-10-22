@@ -15,7 +15,7 @@ OverlayEntry? _currentToast;
 void showAppToast({
   required String title,
   required String message,
-  AppToastVariant? variant,
+  AppToastVariant variant = AppToastVariant.info,
   Duration duration = const Duration(seconds: 3),
 }) {
   final NavigatorState? navigator = Get.key.currentState;
@@ -34,7 +34,7 @@ void showAppToast({
     builder: (_) => _ToastHost(
       title: title,
       message: message,
-      variant: variant ?? _inferVariant(title),
+      variant: variant,
       duration: duration,
       animate: animate,
       onDismissed: () {
@@ -46,26 +46,6 @@ void showAppToast({
 
   _currentToast = entry;
   overlay.insert(entry);
-}
-
-AppToastVariant _inferVariant(String title) {
-  final String lower = title.toLowerCase();
-  if (lower.contains('fail') ||
-      lower.contains('error') ||
-      lower.contains('empty') ||
-      lower.contains('partial')) {
-    return AppToastVariant.error;
-  }
-  if (lower.contains('success') ||
-      lower.contains('copied') ||
-      lower.contains('cut') ||
-      lower.contains('deleted') ||
-      lower.contains('renamed') ||
-      lower.contains('created') ||
-      lower.contains('trash emptied')) {
-    return AppToastVariant.success;
-  }
-  return AppToastVariant.info;
 }
 
 class _ToastHost extends StatefulWidget {
@@ -132,13 +112,11 @@ class _ToastHostState extends State<_ToastHost>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final (IconData icon, Color color) = switch (widget.variant) {
-      AppToastVariant.success => (
-        Icons.check_circle_outline,
-        AppColors.success,
-      ),
-      AppToastVariant.error => (Icons.error_outline, AppColors.danger),
-      AppToastVariant.info => (Icons.info_outline, AppColors.accent),
+      AppToastVariant.success => (Icons.check_circle_outline, colors.success),
+      AppToastVariant.error => (Icons.error_outline, colors.danger),
+      AppToastVariant.info => (Icons.info_outline, colors.accent),
     };
 
     return Positioned(
@@ -156,9 +134,9 @@ class _ToastHostState extends State<_ToastHost>
                 width: 320,
                 padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
                 decoration: BoxDecoration(
-                  color: AppColors.menu,
+                  color: colors.menu,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.menuBorder),
+                  border: Border.all(color: colors.menuBorder),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0xA6000000),
@@ -181,7 +159,7 @@ class _ToastHostState extends State<_ToastHost>
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
+                              color: colors.textPrimary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -190,7 +168,7 @@ class _ToastHostState extends State<_ToastHost>
                             style: TextStyle(
                               fontSize: 11.5,
                               height: 1.35,
-                              color: AppColors.textSecondary,
+                              color: colors.textSecondary,
                             ),
                           ),
                         ],
@@ -205,7 +183,7 @@ class _ToastHostState extends State<_ToastHost>
                         child: Icon(
                           Icons.close,
                           size: 13,
-                          color: AppColors.textFaint,
+                          color: colors.textFaint,
                         ),
                       ),
                     ),

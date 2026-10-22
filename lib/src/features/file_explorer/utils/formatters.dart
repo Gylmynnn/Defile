@@ -1,30 +1,15 @@
-String formatBytes(BigInt bytes) {
+String formatBytes(BigInt bytes) =>
+    _formatBytes(bytes, const ['KB', 'MB', 'GB', 'TB', 'PB']);
+
+String formatBytesIec(BigInt bytes) =>
+    _formatBytes(bytes, const ['KiB', 'MiB', 'GiB', 'TiB', 'PiB']);
+
+String _formatBytes(BigInt bytes, List<String> units) {
   final int value = bytes.toInt();
   if (value < 1024) return '$value B';
 
-  const List<String> units = ['KB', 'MB', 'GB', 'TB', 'PB'];
   double size = value / 1024;
   int unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  final String formatted = size >= 100
-      ? size.toStringAsFixed(0)
-      : size.toStringAsFixed(1);
-
-  return '$formatted ${units[unitIndex]}';
-}
-
-String formatBytesIec(BigInt bytes) {
-  final int value = bytes.toInt();
-  if (value < 1024) return '$value B';
-
-  const List<String> units = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
-  double size = value.toDouble();
-  int unitIndex = -1;
 
   while (size >= 1024 && unitIndex < units.length - 1) {
     size /= 1024;

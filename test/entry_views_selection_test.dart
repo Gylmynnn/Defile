@@ -52,12 +52,12 @@ void main() {
     expect(tileColor(), Colors.transparent);
 
     selected.add(entry.path);
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(tileColor(), isNot(Colors.transparent));
 
     selected.clear();
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(tileColor(), Colors.transparent);
   });

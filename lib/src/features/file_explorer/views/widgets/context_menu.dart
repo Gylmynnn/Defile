@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../services/theme_service.dart';
+import 'hover_region.dart';
 
 class ContextMenuAction {
   ContextMenuAction({
@@ -223,19 +224,17 @@ class _ContextMenuOverlayState extends State<_ContextMenuOverlay>
     if (flyoutLeft + flyoutWidth + edgePadding > screenSize.width) {
       flyoutLeft = widget.left - flyoutWidth - 4;
     }
-    flyoutLeft = flyoutLeft.clamp(
-      edgePadding,
-      screenSize.width - flyoutWidth - edgePadding,
-    ).clamp(0, screenSize.width);
+    flyoutLeft = flyoutLeft
+        .clamp(edgePadding, screenSize.width - flyoutWidth - edgePadding)
+        .clamp(0, screenSize.width);
 
     double flyoutTop = widget.top + _submenuOffset;
     if (flyoutTop + flyoutHeight + edgePadding > screenSize.height) {
       flyoutTop = screenSize.height - flyoutHeight - edgePadding;
     }
-    flyoutTop = flyoutTop.clamp(
-      edgePadding,
-      screenSize.height - flyoutHeight - edgePadding,
-    ).clamp(0, screenSize.height);
+    flyoutTop = flyoutTop
+        .clamp(edgePadding, screenSize.height - flyoutHeight - edgePadding)
+        .clamp(0, screenSize.height);
 
     final Animation<double> curved = CurvedAnimation(
       parent: _controller,
@@ -307,9 +306,9 @@ class _SubmenuPanel extends StatelessWidget {
       color: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.menu,
+          color: context.colors.menu,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.menuBorder),
+          border: Border.all(color: context.colors.menuBorder),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.5),
@@ -373,9 +372,9 @@ class _ContextMenuPanel extends StatelessWidget {
         width: 248,
         padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.menu,
+          color: context.colors.menu,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.menuBorder),
+          border: Border.all(color: context.colors.menuBorder),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.5),
@@ -401,12 +400,12 @@ class _MenuSeparator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Container(height: 1, color: AppColors.menuBorder),
+      child: Container(height: 1, color: context.colors.menuBorder),
     );
   }
 }
 
-class _MenuRow extends StatefulWidget {
+class _MenuRow extends StatelessWidget {
   const _MenuRow({
     required this.action,
     required this.onTap,
@@ -418,87 +417,75 @@ class _MenuRow extends StatefulWidget {
   final ValueChanged<bool> onHoverChanged;
 
   @override
-  State<_MenuRow> createState() => _MenuRowState();
-}
-
-class _MenuRowState extends State<_MenuRow> {
-  bool _hovered = false;
-
-  void _setHovered(bool value) {
-    setState(() => _hovered = value);
-    widget.onHoverChanged(value);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final action = widget.action;
     final bool enabled = action.enabled;
     final bool hasSubmenu = action.submenu != null;
 
     final Color contentColor = !enabled
-        ? AppColors.textFaint.withValues(alpha: 0.5)
+        ? context.colors.textFaint.withValues(alpha: 0.5)
         : action.danger
-        ? AppColors.dangerBright
-        : AppColors.menuLabel;
+        ? context.colors.dangerBright
+        : context.colors.menuLabel;
 
-    return MouseRegion(
+    return HoverRegion(
       cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => _setHovered(true),
-      onExit: (_) => _setHovered(false),
-      child: GestureDetector(
-        onTap: enabled && !hasSubmenu ? widget.onTap : null,
-        child: Container(
-          height: 30,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: _hovered && enabled
-                ? AppColors.surfaceHigh
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                action.icon,
-                size: 15,
-                color: !enabled
-                    ? AppColors.textFaint.withValues(alpha: 0.5)
-                    : action.danger
-                    ? AppColors.dangerBright
-                    : AppColors.menuIcon,
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Text(
-                  action.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12.5, color: contentColor),
-                ),
-              ),
-              if (hasSubmenu)
+      onHoverChanged: onHoverChanged,
+      builder: (context, hovered) {
+        return GestureDetector(
+          onTap: enabled && !hasSubmenu ? onTap : null,
+          child: Container(
+            height: 30,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: hovered && enabled
+                  ? context.colors.surfaceHigh
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
                 Icon(
-                  Icons.chevron_right,
+                  action.icon,
                   size: 15,
-                  color: enabled
-                      ? AppColors.menuIcon
-                      : AppColors.textFaint.withValues(alpha: 0.5),
-                )
-              else if (action.shortcut != null)
-                Text(
-                  action.shortcut!,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: enabled
-                        ? AppColors.menuShortcut
-                        : AppColors.textFaint.withValues(alpha: 0.4),
+                  color: !enabled
+                      ? context.colors.textFaint.withValues(alpha: 0.5)
+                      : action.danger
+                      ? context.colors.dangerBright
+                      : context.colors.menuIcon,
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Text(
+                    action.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12.5, color: contentColor),
                   ),
                 ),
-            ],
+                if (hasSubmenu)
+                  Icon(
+                    Icons.chevron_right,
+                    size: 15,
+                    color: enabled
+                        ? context.colors.menuIcon
+                        : context.colors.textFaint.withValues(alpha: 0.5),
+                  )
+                else if (action.shortcut != null)
+                  Text(
+                    action.shortcut!,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: enabled
+                          ? context.colors.menuShortcut
+                          : context.colors.textFaint.withValues(alpha: 0.4),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

@@ -15,8 +15,8 @@ class ExplorerStatusBar extends GetView<FileExplorerController> {
     return Container(
       height: 25,
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.divider)),
+        color: context.colors.surface,
+        border: Border(top: BorderSide(color: context.colors.divider)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Obx(() {
@@ -32,7 +32,10 @@ class ExplorerStatusBar extends GetView<FileExplorerController> {
               selectedCount > 0
                   ? '$selectedCount of ${entries.length} selected'
                   : '${entries.length} items ($folders folders, $files files)',
-              style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: 11.5,
+                color: context.colors.textSecondary,
+              ),
             ),
             const Spacer(),
             if (usage != null) ...[
@@ -44,7 +47,10 @@ class ExplorerStatusBar extends GetView<FileExplorerController> {
               const SizedBox(width: 8),
               Text(
                 '${formatBytes(usage.freeBytes)} free of ${formatBytes(usage.totalBytes)}',
-                style: TextStyle(fontSize: 11.5, color: _freeTint(usage)),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: _freeTint(usage, context.colors),
+                ),
               ),
             ],
           ],
@@ -53,15 +59,15 @@ class ExplorerStatusBar extends GetView<FileExplorerController> {
     );
   }
 
-  Color _freeTint(rust_system.DiskUsage usage) {
-    if (usage.totalBytes == BigInt.zero) return AppColors.textSecondary;
+  Color _freeTint(rust_system.DiskUsage usage, AppThemeColors colors) {
+    if (usage.totalBytes == BigInt.zero) return colors.textSecondary;
 
     final double freeRatio =
         usage.freeBytes.toDouble() / usage.totalBytes.toDouble();
 
-    if (freeRatio <= 0.1) return AppColors.danger;
-    if (freeRatio <= 0.25) return AppColors.warning;
-    return AppColors.textSecondary;
+    if (freeRatio <= 0.1) return colors.danger;
+    if (freeRatio <= 0.25) return colors.warning;
+    return colors.textSecondary;
   }
 }
 
@@ -80,8 +86,8 @@ class _UsageBar extends StatelessWidget {
         child: LinearProgressIndicator(
           value: ratio.clamp(0.0, 1.0),
           minHeight: 4,
-          color: usageColor(ratio),
-          backgroundColor: AppColors.chip,
+          color: usageColor(ratio, context.colors),
+          backgroundColor: context.colors.chip,
         ),
       ),
     );

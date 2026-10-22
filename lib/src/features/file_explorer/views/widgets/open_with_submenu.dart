@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../services/theme_service.dart';
+import 'hover_region.dart';
 import 'themed_icon.dart';
 
 class OpenWithSubmenu extends StatefulWidget {
@@ -64,7 +65,7 @@ class _OpenWithSubmenuState extends State<OpenWithSubmenu> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(width: 220, child: _buildList()),
-          Container(width: 1, color: AppColors.divider),
+          Container(width: 1, color: context.colors.divider),
           Expanded(child: _buildDetails()),
         ],
       ),
@@ -86,7 +87,7 @@ class _OpenWithSubmenuState extends State<OpenWithSubmenu> {
       return Center(
         child: Text(
           'No applications found',
-          style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12.5, color: context.colors.textSecondary),
         ),
       );
     }
@@ -139,7 +140,7 @@ class _OpenWithSubmenuState extends State<OpenWithSubmenu> {
   }
 }
 
-class _OpenWithRow extends StatefulWidget {
+class _OpenWithRow extends StatelessWidget {
   const _OpenWithRow({
     required this.name,
     required this.active,
@@ -153,59 +154,53 @@ class _OpenWithRow extends StatefulWidget {
   final ValueChanged<bool> onHoverChanged;
 
   @override
-  State<_OpenWithRow> createState() => _OpenWithRowState();
-}
-
-class _OpenWithRowState extends State<_OpenWithRow> {
-  bool _hovered = false;
-
-  void _setHovered(bool value) {
-    setState(() => _hovered = value);
-    widget.onHoverChanged(value);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final bool active = _hovered || widget.active;
+    return HoverRegion(
+      onHoverChanged: onHoverChanged,
+      builder: (context, hovered) {
+        final bool active = hovered || this.active;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => _setHovered(true),
-      onExit: (_) => _setHovered(false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Container(
-          height: 34,
-          margin: const EdgeInsets.symmetric(vertical: 1),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: active ? AppColors.hover : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.open_in_new, size: 15, color: AppColors.menuIcon),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Text(
-                  widget.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.textPrimary,
+        return GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 34,
+            margin: const EdgeInsets.symmetric(vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: active ? context.colors.hover : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.open_in_new,
+                  size: 15,
+                  color: context.colors.menuIcon,
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: context.colors.textPrimary,
+                    ),
                   ),
                 ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                size: 15,
-                color: active ? AppColors.textSecondary : Colors.transparent,
-              ),
-            ],
+                Icon(
+                  Icons.chevron_right,
+                  size: 15,
+                  color: active
+                      ? context.colors.textSecondary
+                      : Colors.transparent,
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -221,12 +216,16 @@ class _DetailsPlaceholder extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.apps_outlined, size: 30, color: AppColors.textFaint),
+            Icon(
+              Icons.apps_outlined,
+              size: 30,
+              color: context.colors.textFaint,
+            ),
             const SizedBox(height: 10),
             Text(
               'Hover an application to preview it.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.5, color: AppColors.textFaint),
+              style: TextStyle(fontSize: 11.5, color: context.colors.textFaint),
             ),
           ],
         ),
@@ -264,15 +263,15 @@ class _Details extends StatelessWidget {
                     height: 44,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppColors.chip,
+                      color: context.colors.chip,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.chipBorder),
+                      border: Border.all(color: context.colors.chipBorder),
                     ),
                     child: app.icon.isEmpty
                         ? Icon(
                             Icons.open_in_new,
                             size: 21,
-                            color: AppColors.accent,
+                            color: context.colors.accent,
                           )
                         : ThemedIcon(
                             iconNames: [app.icon],
@@ -280,7 +279,7 @@ class _Details extends StatelessWidget {
                             fallback: Icon(
                               Icons.open_in_new,
                               size: 21,
-                              color: AppColors.accent,
+                              color: context.colors.accent,
                             ),
                           ),
                   ),
@@ -290,7 +289,7 @@ class _Details extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textStrong,
+                      color: context.colors.textStrong,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -298,7 +297,7 @@ class _Details extends StatelessWidget {
                     app.id,
                     style: TextStyle(
                       fontSize: 10.5,
-                      color: AppColors.textFaint,
+                      color: context.colors.textFaint,
                     ),
                   ),
                   if (app.comment.isNotEmpty) ...[
@@ -308,13 +307,13 @@ class _Details extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11.5,
                         height: 1.35,
-                        color: AppColors.textSecondary,
+                        color: context.colors.textSecondary,
                       ),
                     ),
                   ],
                   if (app.exec.isNotEmpty) ...[
                     const SizedBox(height: 14),
-                    Container(height: 1, color: AppColors.divider),
+                    Container(height: 1, color: context.colors.divider),
                     const SizedBox(height: 10),
                     _DetailsLabel('Command'),
                     const SizedBox(height: 3),
@@ -324,12 +323,12 @@ class _Details extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11.5,
-                        color: AppColors.textPrimary,
+                        color: context.colors.textPrimary,
                       ),
                     ),
                   ],
                   const SizedBox(height: 14),
-                  Container(height: 1, color: AppColors.divider),
+                  Container(height: 1, color: context.colors.divider),
                   const SizedBox(height: 10),
                   _DetailsLabel('Opens'),
                   const SizedBox(height: 3),
@@ -339,7 +338,7 @@ class _Details extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -349,7 +348,7 @@ class _Details extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 10.5,
-                      color: AppColors.textSecondary,
+                      color: context.colors.textSecondary,
                     ),
                   ),
                 ],
@@ -359,13 +358,17 @@ class _Details extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.touch_app_outlined, size: 13, color: AppColors.accent),
+              Icon(
+                Icons.touch_app_outlined,
+                size: 13,
+                color: context.colors.accent,
+              ),
               const SizedBox(width: 6),
               Text(
                 'Click to open',
                 style: TextStyle(
                   fontSize: 11.5,
-                  color: AppColors.textSecondary,
+                  color: context.colors.textSecondary,
                 ),
               ),
             ],
@@ -388,7 +391,7 @@ class _DetailsLabel extends StatelessWidget {
       style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w600,
-        color: AppColors.textFaint,
+        color: context.colors.textFaint,
       ),
     );
   }

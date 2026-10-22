@@ -9,12 +9,10 @@ pub fn document_to_pdf(path: String) -> Result<Vec<u8>, String> {
         .to_ascii_lowercase();
 
     match ext.as_str() {
-        "docx" | "docm" | "dotx" | "dotm" => {
-            zavora_docx::Document::open(&path)
-                .map_err(|error| format!("Failed to load document: {error}"))?
-                .to_pdf()
-                .map_err(|error| format!("Failed to render document: {error}"))
-        }
+        "docx" | "docm" | "dotx" | "dotm" => zavora_docx::Document::open(&path)
+            .map_err(|error| format!("Failed to load document: {error}"))?
+            .to_pdf()
+            .map_err(|error| format!("Failed to render document: {error}")),
         "doc" | "odt" | "rtf" => {
             let text = office_oxide::extract_text(&path)
                 .map_err(|error| format!("Failed to load document: {error}"))?;
@@ -30,17 +28,14 @@ pub fn document_to_pdf(path: String) -> Result<Vec<u8>, String> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn converts_docx_without_office() {
-        let path = std::env::temp_dir().join(format!(
-            "defile_docx_test_{}.docx",
-            std::process::id()
-        ));
+        let path =
+            std::env::temp_dir().join(format!("defile_docx_test_{}.docx", std::process::id()));
         let mut document = zavora_docx::Document::new();
         document.add_paragraph("Hello preview");
         document.save(&path).unwrap();
@@ -51,5 +46,3 @@ mod tests {
         let _ = std::fs::remove_file(path);
     }
 }
-
-

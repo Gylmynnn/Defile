@@ -1,12 +1,9 @@
 import 'package:defile/src/rust/api/appearance.dart' as rust;
-import 'package:defile/src/theme/app_theme.dart';
 import 'package:defile/src/theme/theme_palette.dart';
 import 'package:get/get.dart';
 
-import 'font_service.dart';
-
 /// Owns the selected base color theme and accent color, persists them, and
-/// applies the resulting [AppColors] + [ThemeData] to the running app.
+/// applies the resulting [AppThemeColors] + [ThemeData] to the running app.
 class ThemeService extends GetxService {
   final RxString baseThemeId = AppPalettes.defile.id.obs;
   final RxString accentId = AppAccents.amber.id.obs;
@@ -49,13 +46,10 @@ class ThemeService extends GetxService {
         uiScale.value = storedScale.clamp(minScale, maxScale);
       }
     } catch (_) {}
-
-    _apply();
   }
 
   Future<void> setBaseTheme(String id) async {
     baseThemeId.value = id;
-    _apply();
 
     try {
       await rust.setBaseTheme(name: id);
@@ -64,7 +58,6 @@ class ThemeService extends GetxService {
 
   Future<void> setAccent(String id) async {
     accentId.value = id;
-    _apply();
 
     try {
       await rust.setAccentColor(name: id);
@@ -79,16 +72,5 @@ class ThemeService extends GetxService {
     try {
       rust.setUiScale(scale: uiScale.value);
     } catch (_) {}
-  }
-
-  /// Recomputes [AppColors] from the current selection and rebuilds the theme.
-  void _apply() {
-    AppColors.usePalette(palette);
-    AppColors.useAccent(accent);
-
-    final String font = Get.isRegistered<FontService>()
-        ? Get.find<FontService>().fontFamily.value
-        : '';
-    Get.changeTheme(AppTheme.dark(fontFamily: font.isEmpty ? null : font));
   }
 }

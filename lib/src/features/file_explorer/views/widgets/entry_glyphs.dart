@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../utils/file_types.dart';
 
 class FolderGlyph extends StatelessWidget {
   const FolderGlyph({super.key, this.width = 76, this.height = 58});
@@ -10,11 +11,17 @@ class FolderGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(size: Size(width, height), painter: _FolderPainter());
+    return CustomPaint(
+      size: Size(width, height),
+      painter: _FolderPainter(context.colors),
+    );
   }
 }
 
 class _FolderPainter extends CustomPainter {
+  _FolderPainter(this.colors);
+
+  final AppThemeColors colors;
   @override
   void paint(Canvas canvas, Size size) {
     final double radius = size.width * 0.1;
@@ -43,7 +50,7 @@ class _FolderPainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
 
-    canvas.drawRRect(tab, Paint()..color = AppColors.folderTab);
+    canvas.drawRRect(tab, Paint()..color = colors.folderTab);
 
     final Rect bodyRect = Rect.fromLTWH(
       0,
@@ -62,7 +69,7 @@ class _FolderPainter extends CustomPainter {
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [AppColors.folder, AppColors.folderDark],
+          colors: [colors.folder, colors.folderDark],
         ).createShader(bodyRect),
     );
 
@@ -76,7 +83,8 @@ class _FolderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _FolderPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _FolderPainter oldDelegate) =>
+      oldDelegate.colors != colors;
 }
 
 class FileGlyph extends StatelessWidget {
@@ -95,121 +103,10 @@ class FileGlyph extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size(width, height),
-      painter: _FilePainter(fileColorFor(name)),
+      painter: _FilePainter(fileColorFor(name, context.colors)),
     );
   }
 }
-
-const Set<String> kImageExtensions = {
-  'png',
-  'jpg',
-  'jpeg',
-  'gif',
-  'webp',
-  'bmp',
-  'ico',
-  'heic',
-  'tiff',
-};
-
-bool isImageFile(String name) {
-  final int dot = name.lastIndexOf('.');
-  if (dot == -1 || dot == name.length - 1) return false;
-
-  return kImageExtensions.contains(name.substring(dot + 1).toLowerCase());
-}
-
-const Set<String> kVideoExtensions = {
-  'mp4',
-  'mkv',
-  'avi',
-  'mov',
-  'webm',
-  'flv',
-  'wmv',
-  'm4v',
-  'mpg',
-  'mpeg',
-};
-
-const Set<String> kAudioExtensions = {
-  'mp3',
-  'wav',
-  'flac',
-  'ogg',
-  'm4a',
-  'aac',
-  'opus',
-  'wma',
-  'mid',
-};
-
-const Set<String> kDocumentExtensions = {
-  'pdf',
-  'doc',
-  'docx',
-  'odt',
-  'xls',
-  'xlsx',
-  'ods',
-  'ppt',
-  'pptx',
-  'odp',
-  'txt',
-  'md',
-  'rtf',
-  'csv',
-};
-
-const Set<String> kArchiveExtensions = {
-  'zip',
-  'rar',
-  '7z',
-  'tar',
-  'gz',
-  'bz2',
-  'xz',
-  'zst',
-  'iso',
-  'deb',
-  'rpm',
-  'apk',
-  'jar',
-};
-
-const Set<String> kCodeExtensions = {
-  'dart',
-  'rs',
-  'py',
-  'js',
-  'ts',
-  'tsx',
-  'jsx',
-  'c',
-  'h',
-  'cpp',
-  'hpp',
-  'java',
-  'kt',
-  'go',
-  'rb',
-  'php',
-  'sh',
-  'bash',
-  'zsh',
-  'fish',
-  'html',
-  'css',
-  'scss',
-  'json',
-  'yaml',
-  'yml',
-  'toml',
-  'xml',
-  'sql',
-  'lua',
-  'vim',
-};
 
 const Map<String, List<String>> _specificIconNames = {
   'png': ['image-png'],
@@ -266,19 +163,18 @@ List<String> themedIconNamesFor({
     return const ['folder', 'inode-directory'];
   }
 
-  final int dot = name.lastIndexOf('.');
-  if (dot == -1 || dot == name.length - 1) {
+  final String ext = fileExtension(name);
+  if (ext.isEmpty) {
     return const ['text-x-generic'];
   }
 
-  final String ext = name.substring(dot + 1).toLowerCase();
   final List<String> specific = _specificIconNames[ext] ?? const <String>[];
 
   return [...specific, ..._categoryIconNames(ext), 'text-x-generic'];
 }
 
 List<String> _categoryIconNames(String ext) {
-  if (kImageExtensions.contains(ext) || ext == 'svg') {
+  if (kImageExtensions.contains(ext)) {
     return const ['image-x-generic'];
   }
   if (kVideoExtensions.contains(ext)) return const ['video-x-generic'];
@@ -290,11 +186,10 @@ List<String> _categoryIconNames(String ext) {
   return const [];
 }
 
-Color fileColorFor(String name) {
-  final int dot = name.lastIndexOf('.');
-  final String ext = dot == -1 ? '' : name.substring(dot + 1).toLowerCase();
+Color fileColorFor(String name, AppThemeColors colors) {
+  final String ext = fileExtension(name);
 
-  if (kImageExtensions.contains(ext) || ext == 'svg') {
+  if (kImageExtensions.contains(ext)) {
     return const Color(0xFF6FA89B);
   }
   if (kVideoExtensions.contains(ext)) return const Color(0xFF8E7BB5);
@@ -303,7 +198,7 @@ Color fileColorFor(String name) {
   if (kArchiveExtensions.contains(ext)) return const Color(0xFFA99055);
   if (kCodeExtensions.contains(ext)) return const Color(0xFF6C93B5);
 
-  return AppColors.fileDefault;
+  return colors.fileDefault;
 }
 
 class _FilePainter extends CustomPainter {

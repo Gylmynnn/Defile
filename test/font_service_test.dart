@@ -27,6 +27,9 @@ void main() {
 
     await tester.runAsync(service.init);
 
+    final String originalFont = service.fontFamily.value;
+    addTearDown(() => tester.runAsync(() => service.setFont(originalFont)));
+
     expect(service.fonts, isNotEmpty);
 
     await tester.runAsync(() => service.setFont('DejaVu Sans'));
@@ -49,15 +52,18 @@ void main() {
     await tester.runAsync(iconService.init);
     await tester.runAsync(fontService.init);
 
+    final String originalFont = fontService.fontFamily.value;
+    addTearDown(() => tester.runAsync(() => fontService.setFont(originalFont)));
+
     await tester.pumpWidget(
       const GetMaterialApp(home: Scaffold(body: SettingsDialog())),
     );
 
     expect(find.text('Appearance'), findsOneWidget);
-    expect(find.text('General'), findsOneWidget);
+    expect(find.text('About'), findsWidgets);
 
-    // Default section is General
-    expect(find.text('Version 1.14.4'), findsOneWidget);
+    // Default section is About
+    expect(find.text('Version 0.5.0'), findsOneWidget);
 
     // Pindah ke section Appearance
     await tester.tap(find.text('Appearance'));

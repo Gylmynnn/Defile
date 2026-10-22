@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
+import '../../utils/file_types.dart';
 import '../../utils/formatters.dart';
 import '../../utils/app_toast.dart';
 import 'app_dialog.dart';
@@ -85,7 +86,11 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
 
   Future<void> _copyPath() async {
     await Clipboard.setData(ClipboardData(text: widget.entry.path));
-    showAppToast(title: 'Path copied', message: widget.entry.path);
+    showAppToast(
+      title: 'Path copied',
+      message: widget.entry.path,
+      variant: AppToastVariant.success,
+    );
   }
 
   @override
@@ -146,7 +151,7 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
   }
 
   bool get _showPreview =>
-      widget.entry.isFile && isImageFile(widget.entry.name);
+      widget.entry.isFile && isRasterImageFile(widget.entry.name);
 
   Widget _buildPreview() {
     return Padding(
@@ -189,7 +194,10 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
               _error!,
-              style: TextStyle(fontSize: 12, color: AppColors.dangerBright),
+              style: TextStyle(
+                fontSize: 12,
+                color: context.colors.dangerBright,
+              ),
             ),
           )
         else ...[
@@ -219,23 +227,23 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
     return TextField(
       controller: _nameController,
       onSubmitted: (_) => _applyRename(),
-      style: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
+      style: TextStyle(fontSize: 12.5, color: context.colors.textPrimary),
       decoration: InputDecoration(
         isDense: true,
         filled: true,
-        fillColor: AppColors.input,
+        fillColor: context.colors.input,
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: AppColors.inputBorder),
+          borderSide: BorderSide(color: context.colors.inputBorder),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: AppColors.inputBorder),
+          borderSide: BorderSide(color: context.colors.inputBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: AppColors.selectionBorder),
+          borderSide: BorderSide(color: context.colors.selectionBorder),
         ),
       ),
     );
@@ -252,13 +260,19 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
             child: Text(
               label,
               textAlign: TextAlign.right,
-              style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: 12.5,
+                color: context.colors.textSecondary,
+              ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: DefaultTextStyle.merge(
-              style: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 12.5,
+                color: context.colors.textPrimary,
+              ),
               child: value,
             ),
           ),
@@ -318,16 +332,16 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
           TextSpan(text: '${formatBytesIec(usage.usedBytes)} used'),
           TextSpan(
             text: ' ($usedPercent%)',
-            style: TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
           TextSpan(
             text: '   |   ',
-            style: TextStyle(color: AppColors.textFaint),
+            style: TextStyle(color: context.colors.textFaint),
           ),
           TextSpan(text: '${formatBytesIec(usage.freeBytes)} free'),
           TextSpan(
             text: ' ($freePercent%)',
-            style: TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: context.colors.textSecondary),
           ),
         ],
       ),
@@ -345,8 +359,8 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
       child: LinearProgressIndicator(
         value: ratio.clamp(0.0, 1.0),
         minHeight: 8,
-        color: AppColors.folder,
-        backgroundColor: AppColors.chip,
+        color: context.colors.folder,
+        backgroundColor: context.colors.chip,
       ),
     );
   }

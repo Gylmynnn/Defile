@@ -23,6 +23,16 @@ void main() {
 
     await tester.runAsync(service.init);
 
+    final String originalTheme = service.themeName.value;
+    addTearDown(() => tester.runAsync(() => service.setTheme(originalTheme)));
+
+    if (service.themes.length < 2) {
+      markTestSkipped('Needs at least two usable icon themes');
+      return;
+    }
+    final String firstTheme = service.themes[0].name;
+    final String secondTheme = service.themes[1].name;
+
     await tester.pumpWidget(
       GetMaterialApp(
         home: Center(
@@ -46,13 +56,13 @@ void main() {
       await tester.pump();
     }
 
-    await tester.runAsync(() => service.setTheme('Tela-circle-blue'));
+    await tester.runAsync(() => service.setTheme(firstTheme));
     await settleFfi();
 
     expect(find.text('fallback'), findsNothing);
     final first = tester.widget<Image>(find.byType(Image)).image;
 
-    await tester.runAsync(() => service.setTheme('Colloid'));
+    await tester.runAsync(() => service.setTheme(secondTheme));
     await settleFfi();
 
     final second = tester.widget<Image>(find.byType(Image)).image;
@@ -86,7 +96,15 @@ void main() {
     final service = Get.find<IconThemeService>();
 
     await tester.runAsync(service.init);
-    await tester.runAsync(() => service.setTheme('Tela-circle-green'));
+
+    if (service.themes.isEmpty) {
+      markTestSkipped('Needs at least one usable icon theme');
+      return;
+    }
+    final String originalTheme = service.themeName.value;
+    addTearDown(() => tester.runAsync(() => service.setTheme(originalTheme)));
+
+    await tester.runAsync(() => service.setTheme(service.themes.first.name));
 
     await tester.pumpWidget(
       GetMaterialApp(

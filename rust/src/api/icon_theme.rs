@@ -1,10 +1,13 @@
 use std::{
-    collections::{HashSet, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     env, fs,
     path::{Path, PathBuf},
+    sync::{Mutex, OnceLock},
+    time::SystemTime,
 };
 
-use crate::api::system::home_dir;
+use crate::api::paths::home_dir;
+use crate::api::settings::{read_setting, write_setting};
 
 #[derive(Debug, Clone)]
 pub struct IconThemeEntry {
@@ -12,18 +15,44 @@ pub struct IconThemeEntry {
     pub path: std::string::String,
 }
 
+#[derive(Clone)]
 struct IconDir {
     rel: std::string::String,
     size: u32,
     scalable: bool,
 }
 
+#[derive(Clone)]
 struct ThemeIndex {
     dirs: Vec<IconDir>,
     inherits: Vec<std::string::String>,
 }
 
 fn parse_index_theme(path: &Path) -> Option<ThemeIndex> {
+    type Cache = HashMap<PathBuf, (Option<SystemTime>, ThemeIndex)>;
+    static CACHE: OnceLock<Mutex<Cache>> = OnceLock::new();
+
+    let modified = fs::metadata(path).and_then(|meta| meta.modified()).ok();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let cached = {
+        let cache = cache.lock().unwrap_or_else(|error| error.into_inner());
+        cache
+            .get(path)
+            .filter(|(cached_modified, _)| *cached_modified == modified)
+            .map(|(_, index)| index.clone())
+    };
+
+    if let Some(index) = cached {
+        return Some(index);
+    }
+
+    let index = parse_index_theme_uncached(path)?;
+    let mut cache = cache.lock().unwrap_or_else(|error| error.into_inner());
+    cache.insert(path.to_path_buf(), (modified, index.clone()));
+    Some(index)
+}
+
+fn parse_index_theme_uncached(path: &Path) -> Option<ThemeIndex> {
     let contents = fs::read_to_string(path).ok()?;
 
     let mut dirs: Vec<IconDir> = Vec::new();
@@ -32,14 +61,12 @@ fn parse_index_theme(path: &Path) -> Option<ThemeIndex> {
 
     let flush = |current: &mut Option<(std::string::String, Option<u32>, bool)>,
                  dirs: &mut Vec<IconDir>| {
-        if let Some((rel, size, scalable)) = current.take() {
-            if let Some(size) = size {
-                dirs.push(IconDir {
-                    rel,
-                    size,
-                    scalable,
-                });
-            }
+        if let Some((rel, Some(size), scalable)) = current.take() {
+            dirs.push(IconDir {
+                rel,
+                size,
+                scalable,
+            });
         }
     };
 
@@ -233,7 +260,7 @@ fn list_icon_themes_in_roots(roots: &[PathBuf]) -> Vec<IconThemeEntry> {
         }
     }
 
-    themes.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    themes.sort_by_key(|theme| theme.name.to_lowercase());
     themes
 }
 
@@ -319,38 +346,14 @@ pub fn icon_png(
     icon_png_in_roots(&icon_search_roots(), &theme, &icon_names, size)
 }
 
-fn settings_file() -> PathBuf {
-    let base = match env::var("XDG_CONFIG_HOME") {
-        Ok(value) if !value.is_empty() => PathBuf::from(value),
-        _ => home_dir().join(".config"),
-    };
-
-    base.join("defile").join("icon-theme")
-}
-
 #[flutter_rust_bridge::frb]
 pub fn get_icon_theme() -> std::string::String {
-    match fs::read_to_string(settings_file()) {
-        Ok(value) => value.trim().to_string(),
-        Err(_) => std::string::String::new(),
-    }
+    read_setting("icon-theme")
 }
 
 #[flutter_rust_bridge::frb]
 pub fn set_icon_theme(name: std::string::String) -> Result<(), std::string::String> {
-    let file = settings_file();
-
-    if name.trim().is_empty() {
-        let _ = fs::remove_file(file);
-        return Ok(());
-    }
-
-    if let Some(parent) = file.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("Failed to prepare settings folder: {error}"))?;
-    }
-
-    fs::write(&file, name.trim()).map_err(|error| format!("Failed to save icon settings: {error}"))
+    write_setting("icon-theme", &name)
 }
 
 #[cfg(test)]

@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `find_icon_candidates_in_roots`, `find_icon_in_roots`, `icon_png_in_roots`, `icon_search_roots`, `list_icon_themes_in_roots`, `locate_theme`, `parse_index_theme`, `render_svg`, `settings_file`, `theme_chain`, `theme_is_usable`
+// These functions are ignored because they are not marked as `pub`: `find_icon_candidates_in_roots`, `find_icon_in_roots`, `icon_png_in_roots`, `icon_search_roots`, `list_icon_themes_in_roots`, `locate_theme`, `parse_index_theme`, `render_svg`, `theme_chain`, `theme_is_usable`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `IconDir`, `ThemeIndex`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 

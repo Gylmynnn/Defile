@@ -26,30 +26,52 @@ void main() {
 
     await tester.runAsync(service.init);
 
+    final String originalTheme = service.baseThemeId.value;
+    final String originalAccent = service.accentId.value;
+    final double originalScale = service.uiScale.value;
+    addTearDown(
+      () => tester.runAsync(() async {
+        await service.setBaseTheme(originalTheme);
+        await service.setAccent(originalAccent);
+        service.setUiScale(originalScale);
+      }),
+    );
+
+    AppThemeColors colors() => AppTheme.dark(
+      palette: service.palette,
+      accentPreset: service.accent,
+    ).extension<AppThemeColors>()!;
+
     await tester.pumpWidget(
-      GetMaterialApp(theme: AppTheme.dark(), home: const SizedBox.shrink()),
+      GetMaterialApp(
+        theme: AppTheme.dark(
+          palette: service.palette,
+          accentPreset: service.accent,
+        ),
+        home: const SizedBox.shrink(),
+      ),
     );
 
     await tester.runAsync(() => service.setBaseTheme('gruvbox'));
     await tester.pumpAndSettle();
     expect(service.baseThemeId.value, 'gruvbox');
     expect(service.palette.id, AppPalettes.gruvbox.id);
-    expect(AppColors.window, AppPalettes.gruvbox.window);
+    expect(colors().window, AppPalettes.gruvbox.window);
 
     await tester.runAsync(() => service.setBaseTheme('everblush'));
     await tester.pumpAndSettle();
-    expect(AppColors.window, AppPalettes.everblush.window);
+    expect(colors().window, AppPalettes.everblush.window);
 
     await tester.runAsync(() => service.setAccent('blue'));
     await tester.pumpAndSettle();
     expect(service.accentId.value, 'blue');
-    expect(AppColors.accent, AppAccents.blue.color);
+    expect(colors().accent, AppAccents.blue.color);
 
     // Reset back to the default settings.
     await tester.runAsync(() => service.setBaseTheme(AppPalettes.defile.id));
     await tester.runAsync(() => service.setAccent(AppAccents.amber.id));
-    expect(AppColors.window, AppPalettes.defile.window);
-    expect(AppColors.accent, AppAccents.amber.color);
+    expect(colors().window, AppPalettes.defile.window);
+    expect(colors().accent, AppAccents.amber.color);
 
     service.setUiScale(1.25);
     await tester.pumpAndSettle();

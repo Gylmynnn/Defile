@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `clean_font_stem`, `font_search_roots`, `list_fonts_from_fc_list`, `parse_font_family_from_bytes`, `parse_font_family_from_file`, `scan_fonts_in_dir`, `settings_file`
+// These functions are ignored because they are not marked as `pub`: `clean_font_stem`, `font_search_roots`, `list_fonts_from_fc_list`, `parse_font_family_from_bytes`, `parse_font_family_from_file`, `scan_fonts_in_dir`
 
 Future<List<String>> listSystemFonts() =>
     RustLib.instance.api.crateApiFontListSystemFonts();

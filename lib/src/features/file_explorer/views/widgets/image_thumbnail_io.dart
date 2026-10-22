@@ -22,6 +22,7 @@ class ImageThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final double devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final double radius = width < 24 ? 2.5 : 5;
 
@@ -30,8 +31,8 @@ class ImageThumbnail extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: AppColors.border),
-        color: AppColors.surfaceHigh,
+        border: Border.all(color: colors.border),
+        color: colors.surfaceHigh,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius - 1),

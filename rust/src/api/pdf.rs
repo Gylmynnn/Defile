@@ -39,15 +39,15 @@ pub struct PdfPageInfo {
 pub fn get_pdf_page_info(path: String, page_index: i32) -> Result<PdfPageInfo, String> {
     let document = Document::load(&path).map_err(|e| format!("Failed to load PDF: {}", e))?;
     let pages = document.get_pages();
-    
+
     let page_id = pages
         .get(&((page_index + 1) as u32))
         .ok_or("Page not found")?;
-    
+
     let page = document
         .get_dictionary(*page_id)
         .map_err(|e| format!("Failed to get page: {}", e))?;
-    
+
     if let Ok(media_box) = page.get(b"MediaBox") {
         if let Ok(arr) = media_box.as_array() {
             if arr.len() >= 4 {
@@ -65,6 +65,9 @@ pub fn get_pdf_page_info(path: String, page_index: i32) -> Result<PdfPageInfo, S
             }
         }
     }
-    
-    Ok(PdfPageInfo { width: 612.0, height: 792.0 })
+
+    Ok(PdfPageInfo {
+        width: 612.0,
+        height: 792.0,
+    })
 }
