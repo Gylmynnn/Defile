@@ -10,6 +10,8 @@ extension ExplorerSelection on FileExplorerController {
   void stopSearch() {
     isSearching.value = false;
     searchQuery.value = '';
+    searchFocusNode.unfocus();
+    keyboardFocusNode.requestFocus();
   }
 
   void updateSearch(String value) => searchQuery.value = value;

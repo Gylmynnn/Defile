@@ -17,6 +17,17 @@ typedef EntryMenuCallback = void Function(
   rust.FileEntry entry,
   Offset position,
 );
+typedef EntryDragEntriesCallback = List<rust.FileEntry> Function(
+  rust.FileEntry entry,
+);
+typedef EntryCanDropCallback = bool Function(
+  List<rust.FileEntry> entries,
+  String destinationDirectory,
+);
+typedef EntryDropCallback = void Function(
+  List<rust.FileEntry> entries,
+  String destinationDirectory,
+);
 
 final Map<String, GlobalKey> _entryKeys = <String, GlobalKey>{};
 
@@ -44,6 +55,9 @@ class EntryGridView extends StatelessWidget {
     required this.onTap,
     required this.onOpen,
     required this.onMenu,
+    this.dragEntries,
+    this.canDrop,
+    this.onDrop,
   });
 
   final List<rust.FileEntry> entries;
@@ -52,6 +66,9 @@ class EntryGridView extends StatelessWidget {
   final EntryOpenCallback onTap;
   final EntryOpenCallback onOpen;
   final EntryMenuCallback onMenu;
+  final EntryDragEntriesCallback? dragEntries;
+  final EntryCanDropCallback? canDrop;
+  final EntryDropCallback? onDrop;
 
   @override
   Widget build(BuildContext context) {
@@ -68,13 +85,19 @@ class EntryGridView extends StatelessWidget {
         final entry = entries[index];
 
         return Obx(
-          () => _GridTile(
+          () => _EntryDragWrapper(
             entry: entry,
-            selected: selectedPaths.contains(entry.path),
-            onPress: () => onPress(entry),
-            onTap: () => onTap(entry),
-            onOpen: () => onOpen(entry),
-            onMenu: (position) => onMenu(entry, position),
+            dragEntries: dragEntries,
+            canDrop: canDrop,
+            onDrop: onDrop,
+            child: _GridTile(
+              entry: entry,
+              selected: selectedPaths.contains(entry.path),
+              onPress: () => onPress(entry),
+              onTap: () => onTap(entry),
+              onOpen: () => onOpen(entry),
+              onMenu: (position) => onMenu(entry, position),
+            ),
           ),
         );
       },
@@ -170,6 +193,9 @@ class EntryListView extends StatelessWidget {
     required this.onTap,
     required this.onOpen,
     required this.onMenu,
+    this.dragEntries,
+    this.canDrop,
+    this.onDrop,
   });
 
   final List<rust.FileEntry> entries;
@@ -178,6 +204,9 @@ class EntryListView extends StatelessWidget {
   final EntryOpenCallback onTap;
   final EntryOpenCallback onOpen;
   final EntryMenuCallback onMenu;
+  final EntryDragEntriesCallback? dragEntries;
+  final EntryCanDropCallback? canDrop;
+  final EntryDropCallback? onDrop;
 
   @override
   Widget build(BuildContext context) {
@@ -218,13 +247,19 @@ class EntryListView extends StatelessWidget {
               final entry = entries[index];
 
               return Obx(
-                () => _ListRow(
+                () => _EntryDragWrapper(
                   entry: entry,
-                  selected: selectedPaths.contains(entry.path),
-                  onPress: () => onPress(entry),
-                  onTap: () => onTap(entry),
-                  onOpen: () => onOpen(entry),
-                  onMenu: (position) => onMenu(entry, position),
+                  dragEntries: dragEntries,
+                  canDrop: canDrop,
+                  onDrop: onDrop,
+                  child: _ListRow(
+                    entry: entry,
+                    selected: selectedPaths.contains(entry.path),
+                    onPress: () => onPress(entry),
+                    onTap: () => onTap(entry),
+                    onOpen: () => onOpen(entry),
+                    onMenu: (position) => onMenu(entry, position),
+                  ),
                 ),
               );
             },
@@ -381,6 +416,9 @@ class EntryCompactView extends StatelessWidget {
     required this.onTap,
     required this.onOpen,
     required this.onMenu,
+    this.dragEntries,
+    this.canDrop,
+    this.onDrop,
   });
 
   final List<rust.FileEntry> entries;
@@ -389,6 +427,9 @@ class EntryCompactView extends StatelessWidget {
   final EntryOpenCallback onTap;
   final EntryOpenCallback onOpen;
   final EntryMenuCallback onMenu;
+  final EntryDragEntriesCallback? dragEntries;
+  final EntryCanDropCallback? canDrop;
+  final EntryDropCallback? onDrop;
 
   @override
   Widget build(BuildContext context) {
@@ -399,13 +440,19 @@ class EntryCompactView extends StatelessWidget {
         final entry = entries[index];
 
         return Obx(
-          () => _CompactRow(
+          () => _EntryDragWrapper(
             entry: entry,
-            selected: selectedPaths.contains(entry.path),
-            onPress: () => onPress(entry),
-            onTap: () => onTap(entry),
-            onOpen: () => onOpen(entry),
-            onMenu: (position) => onMenu(entry, position),
+            dragEntries: dragEntries,
+            canDrop: canDrop,
+            onDrop: onDrop,
+            child: _CompactRow(
+              entry: entry,
+              selected: selectedPaths.contains(entry.path),
+              onPress: () => onPress(entry),
+              onTap: () => onTap(entry),
+              onOpen: () => onOpen(entry),
+              onMenu: (position) => onMenu(entry, position),
+            ),
           ),
         );
       },
@@ -483,6 +530,123 @@ class _CompactRow extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _EntryDragWrapper extends StatelessWidget {
+  const _EntryDragWrapper({
+    required this.entry,
+    required this.child,
+    this.dragEntries,
+    this.canDrop,
+    this.onDrop,
+  });
+
+  final rust.FileEntry entry;
+  final Widget child;
+  final EntryDragEntriesCallback? dragEntries;
+  final EntryCanDropCallback? canDrop;
+  final EntryDropCallback? onDrop;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<rust.FileEntry> dragged =
+        dragEntries?.call(entry) ?? <rust.FileEntry>[entry];
+
+    final Widget source = Draggable<List<rust.FileEntry>>(
+      data: dragged,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: _EntryDragFeedback(entries: dragged),
+      childWhenDragging: Opacity(opacity: 0.45, child: child),
+      child: child,
+    );
+
+    if (!entry.isDirectory || canDrop == null || onDrop == null) return source;
+
+    return DragTarget<List<rust.FileEntry>>(
+      onWillAcceptWithDetails: (details) => canDrop!(details.data, entry.path),
+      onAcceptWithDetails: (details) => onDrop!(details.data, entry.path),
+      builder: (context, candidateData, rejectedData) {
+        final bool hovering = candidateData.any(
+          (data) => data != null && canDrop!(data, entry.path),
+        );
+
+        return Stack(
+          children: [
+            source,
+            if (hovering)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: context.colors.selection.withValues(alpha: 0.32),
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(color: context.colors.selectionBorder),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _EntryDragFeedback extends StatelessWidget {
+  const _EntryDragFeedback({required this.entries});
+
+  final List<rust.FileEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final String label = entries.length == 1
+        ? entries.single.name
+        : '${entries.length} items';
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 220),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: context.colors.surfaceHigh,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: context.colors.selectionBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.28),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              entries.length == 1 && entries.single.isDirectory
+                  ? Icons.folder_outlined
+                  : Icons.insert_drive_file_outlined,
+              size: 15,
+              color: context.colors.textSecondary,
+            ),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

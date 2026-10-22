@@ -51,4 +51,30 @@ void main() {
     controller.entries.assignAll([_entry('gamma')]);
     expect(names(), ['gamma']);
   });
+
+  test('canDropEntries rejects self, same parent, and nested destinations', () {
+    final controller = FileExplorerController(_FakeFs(const []));
+    final folder = rust.FileEntry(
+      name: 'docs',
+      path: '/home/docs',
+      isDirectory: true,
+      isFile: false,
+      sizeBytes: BigInt.zero,
+      modifiedSeconds: 0,
+    );
+    final file = rust.FileEntry(
+      name: 'notes.txt',
+      path: '/home/notes.txt',
+      isDirectory: false,
+      isFile: true,
+      sizeBytes: BigInt.zero,
+      modifiedSeconds: 0,
+    );
+
+    expect(controller.canDropEntries([file], '/home/target'), isTrue);
+    expect(controller.canDropEntries([file], '/home'), isFalse);
+    expect(controller.canDropEntries([folder], folder.path), isFalse);
+    expect(controller.canDropEntries([folder], '/home/docs/sub'), isFalse);
+    expect(controller.canDropEntries([], '/home/target'), isFalse);
+  });
 }

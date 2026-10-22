@@ -88,6 +88,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
               _newFolder(context),
         },
         child: Focus(
+          focusNode: controller.keyboardFocusNode,
           autofocus: true,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -452,6 +453,9 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         onTap: _handleEntryTap,
         onOpen: _handleEntryOpen,
         onMenu: openMenu,
+        dragEntries: _dragEntriesFor,
+        canDrop: controller.canDropEntries,
+        onDrop: _moveEntriesTo,
       ),
       ExplorerViewMode.list => EntryListView(
         entries: entries,
@@ -460,6 +464,9 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         onTap: _handleEntryTap,
         onOpen: _handleEntryOpen,
         onMenu: openMenu,
+        dragEntries: _dragEntriesFor,
+        canDrop: controller.canDropEntries,
+        onDrop: _moveEntriesTo,
       ),
       ExplorerViewMode.compact => EntryCompactView(
         entries: entries,
@@ -468,6 +475,9 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         onTap: _handleEntryTap,
         onOpen: _handleEntryOpen,
         onMenu: openMenu,
+        dragEntries: _dragEntriesFor,
+        canDrop: controller.canDropEntries,
+        onDrop: _moveEntriesTo,
       ),
     };
 
@@ -491,9 +501,13 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
       return;
     }
 
-    final bool wasSelected = controller.isSelected(entry);
-    controller.selectOnly(entry);
-    _pendingOpenPath = wasSelected ? entry.path : null;
+    if (!controller.isSelected(entry)) {
+      controller.selectOnly(entry);
+      _pendingOpenPath = null;
+      return;
+    }
+
+    _pendingOpenPath = controller.selection.length == 1 ? entry.path : null;
   }
 
   void _handleEntryTap(rust.FileEntry entry) {
@@ -505,10 +519,36 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
       return;
     }
 
-    if (_pendingOpenPath != entry.path) return;
+    if (_pendingOpenPath == entry.path) {
+      _pendingOpenPath = null;
+      controller.openFile(entry);
+      return;
+    }
 
-    _pendingOpenPath = null;
-    controller.openFile(entry);
+    if (controller.selection.length > 1) {
+      controller.selectOnly(entry);
+      _pendingOpenPath = entry.path;
+    }
+  }
+
+  List<rust.FileEntry> _dragEntriesFor(rust.FileEntry entry) {
+    if (controller.isSelected(entry) && controller.selection.length > 1) {
+      return controller.selection.toList();
+    }
+
+    return <rust.FileEntry>[entry];
+  }
+
+  void _moveEntriesTo(
+    List<rust.FileEntry> entries,
+    String destinationDirectory,
+  ) {
+    if (!controller.canDropEntries(entries, destinationDirectory)) return;
+
+    controller.moveEntries(
+      entries: entries,
+      destinationDirectory: destinationDirectory,
+    );
   }
 
   void _handleEntryOpen(rust.FileEntry entry) {

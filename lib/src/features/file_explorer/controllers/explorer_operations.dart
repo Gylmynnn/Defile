@@ -308,6 +308,25 @@ extension ExplorerOperations on FileExplorerController {
     );
   }
 
+  bool canDropEntries(
+    List<rust.FileEntry> entries,
+    String destinationDirectory,
+  ) {
+    if (entries.isEmpty || destinationDirectory.isEmpty) return false;
+
+    final String destination = p.normalize(destinationDirectory);
+
+    for (final entry in entries) {
+      final String source = p.normalize(entry.path);
+
+      if (source == destination) return false;
+      if (p.dirname(source) == destination) return false;
+      if (entry.isDirectory && p.isWithin(source, destination)) return false;
+    }
+
+    return true;
+  }
+
   Future<void> renameEntry(rust.FileEntry entry, String newName) async {
     final String trimmedName = newName.trim();
     if (trimmedName.isEmpty) {

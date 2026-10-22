@@ -61,6 +61,7 @@ class FileExplorerController extends GetxController {
   final RxList<String> forwardHistory = <String>[].obs;
 
   final FocusNode searchFocusNode = FocusNode();
+  final FocusNode keyboardFocusNode = FocusNode();
 
   @override
   void onInit() {
@@ -91,6 +92,7 @@ class FileExplorerController extends GetxController {
   @override
   void onClose() {
     searchFocusNode.dispose();
+    keyboardFocusNode.dispose();
     super.onClose();
   }
 

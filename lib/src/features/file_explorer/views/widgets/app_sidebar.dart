@@ -1,3 +1,4 @@
+import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -25,32 +26,21 @@ class AppSidebar extends GetView<FileExplorerController> {
                 padding: const EdgeInsets.only(top: 2, bottom: 12),
                 children: [
                   for (final place in controller.quickPlaces)
-                    _PlaceTile(
-                      place: place,
-                      icon: _iconFor(place),
-                      active: controller.isPlaceActive(place),
-                      onTap: () => controller.openPlace(place),
-                    ),
+                    _placeTile(context, place, icon: _iconFor(place)),
                   if (controller.folderPlaces.isNotEmpty) ...[
                     _SidebarGroupLabel('Places'),
                     for (final place in controller.folderPlaces)
-                      _PlaceTile(
-                        place: place,
+                      _placeTile(
+                        context,
+                        place,
                         icon: CupertinoIcons.folder,
                         iconColor: context.colors.folder,
-                        active: controller.isPlaceActive(place),
-                        onTap: () => controller.openPlace(place),
                       ),
                   ],
                   if (controller.drivePlaces.isNotEmpty) ...[
                     _SidebarGroupLabel('Drives'),
                     for (final place in controller.drivePlaces)
-                      _DriveTile(
-                        place: place,
-                        usage: controller.driveUsages[place.path],
-                        active: controller.isPlaceActive(place),
-                        onTap: () => controller.openPlace(place),
-                      ),
+                      _driveTile(context, place),
                   ],
                 ],
               );
@@ -76,6 +66,63 @@ class AppSidebar extends GetView<FileExplorerController> {
       case rust_system.PlaceKind.drive:
         return Icons.storage;
     }
+  }
+
+  Widget _placeTile(
+    BuildContext context,
+    rust_system.Place place, {
+    required IconData icon,
+    Color? iconColor,
+  }) {
+    Widget tile(bool dropping) => _PlaceTile(
+      place: place,
+      icon: icon,
+      iconColor: iconColor,
+      active: controller.isPlaceActive(place),
+      dropping: dropping,
+      onTap: () => controller.openPlace(place),
+    );
+
+    if (!_acceptsDrop(place)) return tile(false);
+
+    return _dropTarget(place.path, (dropping) => tile(dropping));
+  }
+
+  Widget _driveTile(BuildContext context, rust_system.Place place) {
+    return _dropTarget(
+      place.path,
+      (dropping) => _DriveTile(
+        place: place,
+        usage: controller.driveUsages[place.path],
+        active: controller.isPlaceActive(place),
+        dropping: dropping,
+        onTap: () => controller.openPlace(place),
+      ),
+    );
+  }
+
+  bool _acceptsDrop(rust_system.Place place) {
+    return place.kind == rust_system.PlaceKind.home ||
+        place.kind == rust_system.PlaceKind.folder ||
+        place.kind == rust_system.PlaceKind.drive;
+  }
+
+  Widget _dropTarget(String path, Widget Function(bool dropping) builder) {
+    return DragTarget<List<rust.FileEntry>>(
+      onWillAcceptWithDetails: (details) =>
+          controller.canDropEntries(details.data, path),
+      onAcceptWithDetails: (details) => controller.moveEntries(
+        entries: details.data,
+        destinationDirectory: path,
+      ),
+      builder: (context, candidateData, rejectedData) {
+        final bool dropping = candidateData.any(
+          (data) => data != null && controller.canDropEntries(data, path),
+        );
+
+        return builder(dropping);
+      },
+    );
   }
 }
 
@@ -151,19 +198,21 @@ class _PlaceTile extends StatelessWidget {
     required this.active,
     required this.onTap,
     this.iconColor,
+    this.dropping = false,
   });
 
   final rust_system.Place place;
   final IconData icon;
   final Color? iconColor;
   final bool active;
+  final bool dropping;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return HoverRegion(
       builder: (context, hovered) {
-        final Color background = active
+        final Color background = dropping || active
             ? context.colors.selection
             : hovered
             ? context.colors.hover
@@ -179,7 +228,7 @@ class _PlaceTile extends StatelessWidget {
               color: background,
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
-                color: active
+                color: dropping || active
                     ? context.colors.selectionBorder
                     : Colors.transparent,
               ),
@@ -189,7 +238,7 @@ class _PlaceTile extends StatelessWidget {
                 Icon(
                   icon,
                   size: 14,
-                  color: active
+                  color: dropping || active
                       ? context.colors.textPrimary
                       : (iconColor ?? context.colors.textSecondary),
                 ),
@@ -201,10 +250,12 @@ class _PlaceTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12.5,
-                      color: active
+                      color: dropping || active
                           ? context.colors.textPrimary
                           : context.colors.textSecondary,
-                      fontWeight: active ? FontWeight.w500 : FontWeight.w400,
+                      fontWeight: dropping || active
+                          ? FontWeight.w500
+                          : FontWeight.w400,
                     ),
                   ),
                 ),
@@ -223,11 +274,13 @@ class _DriveTile extends StatelessWidget {
     required this.usage,
     required this.active,
     required this.onTap,
+    this.dropping = false,
   });
 
   final rust_system.Place place;
   final rust_system.DiskUsage? usage;
   final bool active;
+  final bool dropping;
   final VoidCallback onTap;
 
   @override
@@ -245,14 +298,14 @@ class _DriveTile extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 7),
             decoration: BoxDecoration(
-              color: active
+              color: dropping || active
                   ? context.colors.selection
                   : hovered
                   ? context.colors.hover
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
-                color: active
+                color: dropping || active
                     ? context.colors.selectionBorder
                     : Colors.transparent,
               ),
@@ -265,7 +318,7 @@ class _DriveTile extends StatelessWidget {
                     Icon(
                       CupertinoIcons.device_desktop,
                       size: 14,
-                      color: active
+                      color: dropping || active
                           ? context.colors.textPrimary
                           : context.colors.textSecondary,
                     ),
@@ -277,10 +330,10 @@ class _DriveTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12.5,
-                          color: active
+                          color: dropping || active
                               ? context.colors.textPrimary
                               : context.colors.textSecondary,
-                          fontWeight: active
+                          fontWeight: dropping || active
                               ? FontWeight.w500
                               : FontWeight.w400,
                         ),
