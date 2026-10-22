@@ -40,9 +40,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
         children: [
           Obx(
             () => _ToolbarIconButton(
-              icon: controller.showSidebar.value
-                  ? CupertinoIcons.sidebar_right
-                  : CupertinoIcons.sidebar_left,
+              icon: CupertinoIcons.sidebar_right,
               tooltip: controller.showSidebar.value
                   ? 'Hide sidebar'
                   : 'Show sidebar',
@@ -119,8 +117,8 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
             final themeService = Get.find<ThemeService>();
             return _ToolbarIconButton(
               icon: themeService.previewEnabled.value
-                  ? CupertinoIcons.eye_solid
-                  : CupertinoIcons.eye,
+                  ? CupertinoIcons.book_solid
+                  : CupertinoIcons.book,
               tooltip: themeService.previewEnabled.value
                   ? 'Hide preview'
                   : 'Show preview',
@@ -132,7 +130,9 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           _ToolbarIconButton(
             icon: Icons.settings_outlined,
             tooltip: 'Settings',
-            onTap: () => showAppDialog(builder: (BuildContext _) => const SettingsDialog()),
+            onTap: () => showAppDialog(
+              builder: (BuildContext _) => const SettingsDialog(),
+            ),
           ),
         ],
       ),

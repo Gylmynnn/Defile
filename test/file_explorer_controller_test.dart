@@ -50,6 +50,12 @@ void main() {
 
     controller.entries.assignAll([_entry('gamma')]);
     expect(names(), ['gamma']);
+
+    controller.selection.assignAll(controller.entries);
+    expect(controller.selectionSnapshot.single.name, 'gamma');
+
+    controller.selection.clear();
+    expect(controller.selectionSnapshot, isEmpty);
   });
 
   test('canDropEntries rejects self, same parent, and nested destinations', () {

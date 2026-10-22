@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +30,30 @@ typedef EntryDropCallback = void Function(
   List<rust.FileEntry> entries,
   String destinationDirectory,
 );
+
+class _LazyEntries extends ListBase<rust.FileEntry> {
+  _LazyEntries(this._resolve);
+
+  final List<rust.FileEntry> Function() _resolve;
+  List<rust.FileEntry>? _value;
+
+  void reset() => _value = null;
+
+  List<rust.FileEntry> get _entries => _value ??= _resolve();
+
+  @override
+  int get length => _entries.length;
+
+  @override
+  set length(int value) => throw UnsupportedError('read-only');
+
+  @override
+  rust.FileEntry operator [](int index) => _entries[index];
+
+  @override
+  void operator []=(int index, rust.FileEntry value) =>
+      throw UnsupportedError('read-only');
+}
 
 final Map<String, GlobalKey> _entryKeys = <String, GlobalKey>{};
 
@@ -84,20 +110,18 @@ class EntryGridView extends StatelessWidget {
       itemBuilder: (context, index) {
         final entry = entries[index];
 
-        return Obx(
-          () => _EntryDragWrapper(
+        return _EntryDragWrapper(
+          entry: entry,
+          dragEntries: dragEntries,
+          canDrop: canDrop,
+          onDrop: onDrop,
+          child: _GridTile(
             entry: entry,
-            dragEntries: dragEntries,
-            canDrop: canDrop,
-            onDrop: onDrop,
-            child: _GridTile(
-              entry: entry,
-              selected: selectedPaths.contains(entry.path),
-              onPress: () => onPress(entry),
-              onTap: () => onTap(entry),
-              onOpen: () => onOpen(entry),
-              onMenu: (position) => onMenu(entry, position),
-            ),
+            selectedPaths: selectedPaths,
+            onPress: () => onPress(entry),
+            onTap: () => onTap(entry),
+            onOpen: () => onOpen(entry),
+            onMenu: (position) => onMenu(entry, position),
           ),
         );
       },
@@ -108,7 +132,7 @@ class EntryGridView extends StatelessWidget {
 class _GridTile extends StatelessWidget {
   const _GridTile({
     required this.entry,
-    required this.selected,
+    required this.selectedPaths,
     required this.onPress,
     required this.onTap,
     required this.onOpen,
@@ -116,7 +140,7 @@ class _GridTile extends StatelessWidget {
   });
 
   final rust.FileEntry entry;
-  final bool selected;
+  final RxSet<String> selectedPaths;
   final VoidCallback onPress;
   final VoidCallback onTap;
   final VoidCallback onOpen;
@@ -124,6 +148,28 @@ class _GridTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Widget content = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          height: 62,
+          child: Center(child: _EntryGlyph(entry: entry)),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          entry.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: context.colors.textPrimary,
+            height: 1.2,
+          ),
+        ),
+      ],
+    );
+
     return HoverRegion(
       key: entryTileKey(entry.path),
       builder: (context, hovered) {
@@ -136,47 +182,31 @@ class _GridTile extends StatelessWidget {
             onDoubleTap: onOpen,
             onSecondaryTapDown: (details) => onMenu(details.globalPosition),
             onLongPressStart: (details) => onMenu(details.globalPosition),
-            child: AnimatedContainer(
-              duration: _selectionAnimationDuration,
-              curve: Curves.easeOut,
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected
-                    ? context.colors.selection
-                    : hovered
-                    ? context.colors.hover
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(7),
-                border: Border.all(
+            child: Obx(() {
+              final bool selected = selectedPaths.contains(entry.path);
+
+              return AnimatedContainer(
+                duration: _selectionAnimationDuration,
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                decoration: BoxDecoration(
                   color: selected
-                      ? context.colors.selectionBorder
+                      ? context.colors.selection
                       : hovered
-                      ? context.colors.border
+                      ? context.colors.hover
                       : Colors.transparent,
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(
+                    color: selected
+                        ? context.colors.selectionBorder
+                        : hovered
+                        ? context.colors.border
+                        : Colors.transparent,
+                  ),
                 ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    height: 62,
-                    child: Center(child: _EntryGlyph(entry: entry)),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    entry.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: context.colors.textPrimary,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                child: content,
+              );
+            }),
           ),
         );
       },
@@ -246,20 +276,18 @@ class EntryListView extends StatelessWidget {
             itemBuilder: (context, index) {
               final entry = entries[index];
 
-              return Obx(
-                () => _EntryDragWrapper(
+              return _EntryDragWrapper(
+                entry: entry,
+                dragEntries: dragEntries,
+                canDrop: canDrop,
+                onDrop: onDrop,
+                child: _ListRow(
                   entry: entry,
-                  dragEntries: dragEntries,
-                  canDrop: canDrop,
-                  onDrop: onDrop,
-                  child: _ListRow(
-                    entry: entry,
-                    selected: selectedPaths.contains(entry.path),
-                    onPress: () => onPress(entry),
-                    onTap: () => onTap(entry),
-                    onOpen: () => onOpen(entry),
-                    onMenu: (position) => onMenu(entry, position),
-                  ),
+                  selectedPaths: selectedPaths,
+                  onPress: () => onPress(entry),
+                  onTap: () => onTap(entry),
+                  onOpen: () => onOpen(entry),
+                  onMenu: (position) => onMenu(entry, position),
                 ),
               );
             },
@@ -279,7 +307,7 @@ TextStyle _headerStyle(BuildContext context) => TextStyle(
 class _ListRow extends StatelessWidget {
   const _ListRow({
     required this.entry,
-    required this.selected,
+    required this.selectedPaths,
     required this.onPress,
     required this.onTap,
     required this.onOpen,
@@ -287,7 +315,7 @@ class _ListRow extends StatelessWidget {
   });
 
   final rust.FileEntry entry;
-  final bool selected;
+  final RxSet<String> selectedPaths;
   final VoidCallback onPress;
   final VoidCallback onTap;
   final VoidCallback onOpen;
@@ -298,6 +326,77 @@ class _ListRow extends StatelessWidget {
     return HoverRegion(
       key: entryTileKey(entry.path),
       builder: (context, hovered) {
+        final Widget content = Row(
+          children: [
+            SizedBox(width: 24, child: _EntryMiniIcon(entry: entry)),
+            Expanded(
+              child: Text(
+                entry.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: context.colors.textPrimary,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 92,
+              child: Text(
+                entry.isFile ? formatBytes(entry.sizeBytes) : '—',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: context.colors.textSecondary,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 158,
+              child: Text(
+                formatDate(entry.modifiedSeconds.toInt()),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: context.colors.textSecondary,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 64,
+              child: Text(
+                entry.isDirectory ? 'Folder' : fileTypeShortLabel(entry.name),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: context.colors.textSecondary,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 26,
+              child: hovered
+                  ? InkWell(
+                      onTap: () {
+                        final RenderBox box =
+                            context.findRenderObject()! as RenderBox;
+                        onMenu(box.localToGlobal(box.size.center(Offset.zero)));
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      child: Icon(
+                        Icons.more_horiz,
+                        size: 16,
+                        color: context.colors.textSecondary,
+                      ),
+                    )
+                  : null,
+            ),
+          ],
+        );
+
         return Listener(
           onPointerDown: (event) {
             if (event.buttons == kPrimaryButton) onPress();
@@ -306,100 +405,31 @@ class _ListRow extends StatelessWidget {
             onTap: onTap,
             onDoubleTap: onOpen,
             onSecondaryTapDown: (details) => onMenu(details.globalPosition),
-            child: AnimatedContainer(
-              duration: _selectionAnimationDuration,
-              curve: Curves.easeOut,
-              height: 29,
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: selected
-                    ? context.colors.selection
-                    : hovered
-                    ? context.colors.hover
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(
+            child: Obx(() {
+              final bool selected = selectedPaths.contains(entry.path);
+
+              return AnimatedContainer(
+                duration: _selectionAnimationDuration,
+                curve: Curves.easeOut,
+                height: 29,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
                   color: selected
-                      ? context.colors.selectionBorder
+                      ? context.colors.selection
+                      : hovered
+                      ? context.colors.hover
                       : Colors.transparent,
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: selected
+                        ? context.colors.selectionBorder
+                        : Colors.transparent,
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(width: 24, child: _EntryMiniIcon(entry: entry)),
-                  Expanded(
-                    child: Text(
-                      entry.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: context.colors.textPrimary,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 92,
-                    child: Text(
-                      entry.isFile ? formatBytes(entry.sizeBytes) : '—',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: context.colors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 158,
-                    child: Text(
-                      formatDate(entry.modifiedSeconds.toInt()),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: context.colors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 64,
-                    child: Text(
-                      entry.isDirectory
-                          ? 'Folder'
-                          : fileTypeShortLabel(entry.name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: context.colors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 26,
-                    child: hovered
-                        ? InkWell(
-                            onTap: () {
-                              final RenderBox box =
-                                  context.findRenderObject()! as RenderBox;
-                              onMenu(
-                                box.localToGlobal(box.size.center(Offset.zero)),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(4),
-                            child: Icon(
-                              Icons.more_horiz,
-                              size: 16,
-                              color: context.colors.textSecondary,
-                            ),
-                          )
-                        : null,
-                  ),
-                ],
-              ),
-            ),
+                child: content,
+              );
+            }),
           ),
         );
       },
@@ -439,20 +469,18 @@ class EntryCompactView extends StatelessWidget {
       itemBuilder: (context, index) {
         final entry = entries[index];
 
-        return Obx(
-          () => _EntryDragWrapper(
+        return _EntryDragWrapper(
+          entry: entry,
+          dragEntries: dragEntries,
+          canDrop: canDrop,
+          onDrop: onDrop,
+          child: _CompactRow(
             entry: entry,
-            dragEntries: dragEntries,
-            canDrop: canDrop,
-            onDrop: onDrop,
-            child: _CompactRow(
-              entry: entry,
-              selected: selectedPaths.contains(entry.path),
-              onPress: () => onPress(entry),
-              onTap: () => onTap(entry),
-              onOpen: () => onOpen(entry),
-              onMenu: (position) => onMenu(entry, position),
-            ),
+            selectedPaths: selectedPaths,
+            onPress: () => onPress(entry),
+            onTap: () => onTap(entry),
+            onOpen: () => onOpen(entry),
+            onMenu: (position) => onMenu(entry, position),
           ),
         );
       },
@@ -463,7 +491,7 @@ class EntryCompactView extends StatelessWidget {
 class _CompactRow extends StatelessWidget {
   const _CompactRow({
     required this.entry,
-    required this.selected,
+    required this.selectedPaths,
     required this.onPress,
     required this.onTap,
     required this.onOpen,
@@ -471,7 +499,7 @@ class _CompactRow extends StatelessWidget {
   });
 
   final rust.FileEntry entry;
-  final bool selected;
+  final RxSet<String> selectedPaths;
   final VoidCallback onPress;
   final VoidCallback onTap;
   final VoidCallback onOpen;
@@ -479,6 +507,21 @@ class _CompactRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Widget content = Row(
+      children: [
+        SizedBox(width: 20, child: _EntryMiniIcon(entry: entry)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            entry.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: context.colors.textPrimary),
+          ),
+        ),
+      ],
+    );
+
     return HoverRegion(
       key: entryTileKey(entry.path),
       builder: (context, hovered) {
@@ -490,43 +533,31 @@ class _CompactRow extends StatelessWidget {
             onTap: onTap,
             onDoubleTap: onOpen,
             onSecondaryTapDown: (details) => onMenu(details.globalPosition),
-            child: AnimatedContainer(
-              duration: _selectionAnimationDuration,
-              curve: Curves.easeOut,
-              height: 22,
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: selected
-                    ? context.colors.selection
-                    : hovered
-                    ? context.colors.hover
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
+            child: Obx(() {
+              final bool selected = selectedPaths.contains(entry.path);
+
+              return AnimatedContainer(
+                duration: _selectionAnimationDuration,
+                curve: Curves.easeOut,
+                height: 22,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
                   color: selected
-                      ? context.colors.selectionBorder
+                      ? context.colors.selection
+                      : hovered
+                      ? context.colors.hover
                       : Colors.transparent,
-                ),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(width: 20, child: _EntryMiniIcon(entry: entry)),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      entry.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.colors.textPrimary,
-                      ),
-                    ),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: selected
+                        ? context.colors.selectionBorder
+                        : Colors.transparent,
                   ),
-                ],
-              ),
-            ),
+                ),
+                child: content,
+              );
+            }),
           ),
         );
       },
@@ -551,14 +582,16 @@ class _EntryDragWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<rust.FileEntry> dragged =
-        dragEntries?.call(entry) ?? <rust.FileEntry>[entry];
+    final _LazyEntries dragged = _LazyEntries(
+      () => dragEntries?.call(entry) ?? <rust.FileEntry>[entry],
+    );
 
     final Widget source = Draggable<List<rust.FileEntry>>(
       data: dragged,
       dragAnchorStrategy: pointerDragAnchorStrategy,
       feedback: _EntryDragFeedback(entries: dragged),
       childWhenDragging: Opacity(opacity: 0.45, child: child),
+      onDragStarted: dragged.reset,
       child: child,
     );
 

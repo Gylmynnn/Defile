@@ -152,10 +152,12 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
                                         onPointerUp: _handleBandUp,
                                         onPointerCancel: _handleBandUp,
                                         child: IgnorePointer(
-                                          child: CustomPaint(
-                                            painter: _SelectionBandPainter(
-                                              _bandRect,
-                                              context.colors,
+                                          child: RepaintBoundary(
+                                            child: CustomPaint(
+                                              painter: _SelectionBandPainter(
+                                                _bandRect,
+                                                context.colors,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -533,7 +535,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
 
   List<rust.FileEntry> _dragEntriesFor(rust.FileEntry entry) {
     if (controller.isSelected(entry) && controller.selection.length > 1) {
-      return controller.selection.toList();
+      return controller.selectionSnapshot;
     }
 
     return <rust.FileEntry>[entry];

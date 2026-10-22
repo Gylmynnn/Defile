@@ -118,5 +118,21 @@ void main() {
 
     expect(dropped?.map((entry) => entry.path), [alpha.path, beta.path]);
     expect(destination, folder.path);
+
+    selected.clear();
+    await tester.pumpAndSettle();
+
+    final gesture2 = await tester.startGesture(
+      tester.getCenter(find.byKey(entryTileKey(alpha.path))),
+    );
+    await tester.pump();
+    await gesture2.moveTo(
+      tester.getCenter(find.byKey(entryTileKey(folder.path))),
+    );
+    await tester.pumpAndSettle();
+    await gesture2.up();
+    await tester.pumpAndSettle();
+
+    expect(dropped?.map((entry) => entry.path), [alpha.path]);
   });
 }

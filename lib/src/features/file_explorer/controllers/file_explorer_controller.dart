@@ -52,6 +52,9 @@ class FileExplorerController extends GetxController {
   final RxList<rust.FileEntry> selection = <rust.FileEntry>[].obs;
   final RxSet<String> selectedPaths = <String>{}.obs;
   final RxnString selectionAnchor = RxnString();
+  List<rust.FileEntry> _selectionSnapshot = const <rust.FileEntry>[];
+
+  List<rust.FileEntry> get selectionSnapshot => _selectionSnapshot;
   final RxList<rust.FileEntry> clipboardEntries = <rust.FileEntry>[].obs;
   final RxBool clipboardIsCut = false.obs;
   final RxString terminal = ''.obs;
@@ -69,10 +72,10 @@ class FileExplorerController extends GetxController {
   void onInit() {
     super.onInit();
     ever(entries, (_) => _entriesRevision++);
-    ever(
-      selection,
-      (_) => selectedPaths.assignAll(selection.map((e) => e.path)),
-    );
+    ever(selection, (List<rust.FileEntry> selected) {
+      _selectionSnapshot = List<rust.FileEntry>.unmodifiable(selected);
+      selectedPaths.assignAll(selected.map((entry) => entry.path));
+    });
     ever(places, (_) {
       quickPlaces.assignAll(
         places.where(
