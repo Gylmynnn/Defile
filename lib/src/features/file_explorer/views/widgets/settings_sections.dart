@@ -427,34 +427,29 @@ extension _SettingsSections on _SettingsDialogState {
               ),
             ),
             _CustomDivider(),
-            _CustomSettingRow(
-              title: 'Default terminal application',
-              subtitle: 'Terminal emulator launched when pressing F4 or clicking terminal icon.',
-              control: _CustomDropdown<String>(
-                value: _terminalChoice,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'System default',
-                    child: Text('System default'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'gnome-terminal',
-                    child: Text('gnome-terminal'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'x-terminal-emulator',
-                    child: Text('x-terminal-emulator'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'kitty / alacritty',
-                    child: Text('kitty / alacritty'),
-                  ),
-                ],
-                onChanged: (val) {
-                  if (val != null) _update(() => _terminalChoice = val);
-                },
-              ),
-            ),
+            Obx(() {
+              final selected = controller?.terminal.value ?? '';
+              final terminals = controller?.availableTerminals ?? <String>[];
+
+              return _CustomSettingRow(
+                title: 'Default terminal application',
+                subtitle: 'Terminal emulator launched when pressing F4 or clicking terminal icon.',
+                control: _CustomDropdown<String>(
+                  value: selected,
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('System default'),
+                    ),
+                    for (final terminal in terminals)
+                      DropdownMenuItem(value: terminal, child: Text(terminal)),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) controller?.setTerminal(val);
+                  },
+                ),
+              );
+            }),
             if (controller != null) ...[
               _CustomDivider(),
               Obx(

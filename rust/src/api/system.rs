@@ -90,8 +90,23 @@ pub fn list_recent_files(
     recent::list_recent_files(root, limit)
 }
 
-pub fn open_in_terminal(path: std::string::String) -> Result<(), std::string::String> {
-    terminal::open_in_terminal(path)
+pub fn list_terminals() -> Vec<std::string::String> {
+    terminal::available_terminals()
+}
+
+pub fn get_terminal() -> std::string::String {
+    terminal::get_terminal()
+}
+
+pub fn set_terminal(terminal: std::string::String) -> Result<(), std::string::String> {
+    terminal::set_terminal(&terminal)
+}
+
+pub fn open_in_terminal(
+    path: std::string::String,
+    terminal: std::string::String,
+) -> Result<(), std::string::String> {
+    terminal::open_in_terminal(path, terminal)
 }
 
 #[flutter_rust_bridge::frb]

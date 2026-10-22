@@ -35,8 +35,20 @@ Future<List<FileEntry>> listRecentFiles({
   limit: limit,
 );
 
-Future<void> openInTerminal({required String path}) =>
-    RustLib.instance.api.crateApiSystemOpenInTerminal(path: path);
+Future<List<String>> listTerminals() =>
+    RustLib.instance.api.crateApiSystemListTerminals();
+
+Future<String> getTerminal() =>
+    RustLib.instance.api.crateApiSystemGetTerminal();
+
+Future<void> setTerminal({required String terminal}) =>
+    RustLib.instance.api.crateApiSystemSetTerminal(terminal: terminal);
+
+Future<void> openInTerminal({required String path, required String terminal}) =>
+    RustLib.instance.api.crateApiSystemOpenInTerminal(
+      path: path,
+      terminal: terminal,
+    );
 
 Future<List<OpenWithApp>> listOpenWithApps({required String path}) =>
     RustLib.instance.api.crateApiSystemListOpenWithApps(path: path);

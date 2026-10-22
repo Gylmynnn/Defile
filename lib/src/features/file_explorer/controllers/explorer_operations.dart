@@ -246,9 +246,37 @@ extension ExplorerOperations on FileExplorerController {
     }
   }
 
+  Future<void> _loadTerminalSettings() async {
+    try {
+      availableTerminals.assignAll(await rust_system.listTerminals());
+    } catch (_) {}
+
+    try {
+      final String saved = await rust_system.getTerminal();
+      if (saved.isNotEmpty && !availableTerminals.contains(saved)) {
+        availableTerminals.add(saved);
+      }
+      terminal.value = saved;
+    } catch (_) {}
+  }
+
+  Future<void> setTerminal(String value) async {
+    terminal.value = value;
+
+    try {
+      await rust_system.setTerminal(terminal: value);
+    } catch (error) {
+      showAppToast(
+        title: 'Terminal',
+        message: error.toString(),
+        variant: AppToastVariant.error,
+      );
+    }
+  }
+
   Future<void> openTerminalAt(String path) async {
     try {
-      await rust_system.openInTerminal(path: path);
+      await rust_system.openInTerminal(path: path, terminal: terminal.value);
     } catch (error) {
       showAppToast(
         title: 'Terminal',

@@ -128,7 +128,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   // Setting states
   bool _confirmTrash = true;
-  String _terminalChoice = 'System default';
 
   IconThemeService get _iconService => Get.find<IconThemeService>();
   FontService get _fontService => Get.find<FontService>();

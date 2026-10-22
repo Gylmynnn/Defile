@@ -54,6 +54,8 @@ class FileExplorerController extends GetxController {
   final RxnString selectionAnchor = RxnString();
   final RxList<rust.FileEntry> clipboardEntries = <rust.FileEntry>[].obs;
   final RxBool clipboardIsCut = false.obs;
+  final RxString terminal = ''.obs;
+  final RxList<String> availableTerminals = <String>[].obs;
 
   final Rxn<rust.FileEntry> previewFile = Rxn();
 
@@ -103,7 +105,11 @@ class FileExplorerController extends GetxController {
       homePath.value = '/';
     }
 
-    await Future.wait([loadDirectory(homePath.value), _loadPlaces()]);
+    await Future.wait([
+      loadDirectory(homePath.value),
+      _loadPlaces(),
+      _loadTerminalSettings(),
+    ]);
   }
 
   List<rust.FileEntry> get visibleEntries {
