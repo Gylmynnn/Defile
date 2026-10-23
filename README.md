@@ -2,6 +2,9 @@
 
 A minimalist modern file manager for Linux.
 
+<img width="2752" height="1536" alt="defile" src="https://github.com/user-attachments/assets/4ecf372a-cb6e-48f6-ae4d-07b49e427fbd" />
+
+
 ## Install
 
 ```bash
