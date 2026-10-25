@@ -15,4 +15,8 @@ Installs the latest AppImage to `~/.local/opt/defile`, adds the `defile` command
 `~/.local/bin`, and registers it in the application launcher. Requires `curl`,
 `mpv` (libmpv), and FUSE (`libfuse2` on Debian/Ubuntu, `fuse2` on Arch).
 
+```bash
+sudo pacman -S curl mpv fuse2
+```
+
 
