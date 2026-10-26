@@ -1,6 +1,6 @@
 part of 'file_explorer_page.dart';
 
-extension _ExplorerPageActions on _FileExplorerPageState {
+extension _ExplorerPageActions on _ExplorerBodyState {
   void _showEntryMenu(
     BuildContext context,
     rust.FileEntry entry,
@@ -37,14 +37,26 @@ extension _ExplorerPageActions on _FileExplorerPageState {
               onSelected: () => controller.openTerminalAt(entry.path),
             ),
           ),
+        if (single && entry.isDirectory)
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: Icons.tab,
+              label: 'Open in New Tab',
+              onSelected: () =>
+                  Get.find<ExplorerTabsController>().addTab(path: entry.path),
+            ),
+          ),
         if (single && entry.isFile && !inTrash)
           ContextMenuActionEntry(
             ContextMenuAction(
               icon: Icons.apps_outlined,
               label: 'Open with...',
               onSelected: () {},
-              submenu: (closeMenu) =>
-                  OpenWithSubmenu(entry: entry, onDismiss: closeMenu),
+              submenu: (closeMenu) => OpenWithSubmenu(
+                entry: entry,
+                controller: controller,
+                onDismiss: closeMenu,
+              ),
             ),
           ),
         ContextMenuSeparator(),

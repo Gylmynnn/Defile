@@ -1,4 +1,4 @@
-import 'package:defile/src/features/file_explorer/controllers/file_explorer_controller.dart';
+import 'package:defile/src/features/file_explorer/controllers/explorer_tabs_controller.dart';
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 import 'package:defile/src/features/file_explorer/services/font_service.dart';
 import 'package:defile/src/features/file_explorer/services/icon_theme_service.dart';
@@ -22,8 +22,8 @@ class FileExplorerBinding extends Bindings {
 
     Get.lazyPut<FileSystemService>(() => FileSystemService());
 
-    Get.lazyPut<FileExplorerController>(
-      () => FileExplorerController(Get.find<FileSystemService>()),
+    Get.lazyPut<ExplorerTabsController>(
+      () => ExplorerTabsController(Get.find<FileSystemService>()),
     );
   }
 }

@@ -12,13 +12,15 @@ import '../../utils/formatters.dart';
 import '../../utils/app_toast.dart';
 import 'app_dialog.dart';
 import 'entry_glyphs.dart';
+import 'explorer_scope.dart';
 import 'image_thumbnail.dart';
 import 'themed_icon.dart';
 
 class PropertiesDialog extends StatefulWidget {
-  const PropertiesDialog({super.key, required this.entry});
+  const PropertiesDialog({super.key, required this.entry, this.controller});
 
   final rust.FileEntry entry;
+  final FileExplorerController? controller;
 
   @override
   State<PropertiesDialog> createState() => _PropertiesDialogState();
@@ -33,7 +35,7 @@ class _PropertiesDialogState extends State<PropertiesDialog> {
   bool _loading = true;
 
   FileExplorerController get _explorerController =>
-      Get.find<FileExplorerController>();
+      widget.controller ?? ExplorerScope.of(context);
 
   @override
   void initState() {

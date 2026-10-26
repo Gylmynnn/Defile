@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../services/theme_service.dart';
+import 'explorer_scope.dart';
 import 'hover_region.dart';
 import 'themed_icon.dart';
 
@@ -13,10 +14,12 @@ class OpenWithSubmenu extends StatefulWidget {
   const OpenWithSubmenu({
     super.key,
     required this.entry,
+    this.controller,
     required this.onDismiss,
   });
 
   final rust.FileEntry entry;
+  final FileExplorerController? controller;
   final VoidCallback onDismiss;
 
   @override
@@ -24,7 +27,8 @@ class OpenWithSubmenu extends StatefulWidget {
 }
 
 class _OpenWithSubmenuState extends State<OpenWithSubmenu> {
-  FileExplorerController get _controller => Get.find<FileExplorerController>();
+  FileExplorerController get _controller =>
+      widget.controller ?? ExplorerScope.of(context);
 
   Duration get _animDuration => Get.isRegistered<ThemeService>()
       ? Get.find<ThemeService>().animationDuration

@@ -5,42 +5,88 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../controllers/explorer_tabs_controller.dart';
 import '../../controllers/file_explorer_controller.dart';
+import 'context_menu.dart';
+import 'explorer_scope.dart';
 import 'hover_region.dart';
 
-class AppSidebar extends GetView<FileExplorerController> {
-  const AppSidebar({super.key});
+class AppSidebar extends StatelessWidget {
+  const AppSidebar({super.key, this.controller});
+
+  final FileExplorerController? controller;
+
+  FileExplorerController _getController(BuildContext context) =>
+      controller ?? ExplorerScope.of(context);
+
+  void _openPlaceInNewTab(rust_system.Place place) {
+    if (Get.isRegistered<ExplorerTabsController>()) {
+      final tabs = Get.find<ExplorerTabsController>();
+      if (place.kind == rust_system.PlaceKind.recent) {
+        tabs.addTab(location: ExplorerLocation.recent);
+      } else if (place.kind == rust_system.PlaceKind.trash) {
+        tabs.addTab(location: ExplorerLocation.trash);
+      } else if (place.path.isNotEmpty) {
+        tabs.addTab(path: place.path);
+      }
+    }
+  }
+
+  void _showPlaceMenu(
+    BuildContext context,
+    rust_system.Place place,
+    Offset position,
+  ) {
+    if (place.kind == rust_system.PlaceKind.network) return;
+
+    showAppContextMenu(
+      context: context,
+      position: position,
+      entries: [
+        ContextMenuActionEntry(
+          ContextMenuAction(
+            icon: Icons.tab,
+            label: 'Open in New Tab',
+            onSelected: () => _openPlaceInNewTab(place),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final c = _getController(context);
+
     return Container(
       width: 178,
       color: context.colors.sidebar,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _SidebarHeader(),
+          const _SidebarHeader(),
           Expanded(
             child: Obx(() {
               return ListView(
                 padding: const EdgeInsets.only(top: 2, bottom: 12),
                 children: [
-                  for (final place in controller.quickPlaces)
-                    _placeTile(context, place, icon: _iconFor(place)),
-                  if (controller.folderPlaces.isNotEmpty) ...[
-                    _SidebarGroupLabel('Places'),
-                    for (final place in controller.folderPlaces)
+                  for (final place in c.quickPlaces)
+                    _placeTile(context, c, place, icon: _iconFor(place)),
+                  if (c.folderPlaces.isNotEmpty) ...[
+                    const _SidebarGroupLabel('Places'),
+                    for (final place in c.folderPlaces)
                       _placeTile(
                         context,
+                        c,
                         place,
                         icon: CupertinoIcons.folder,
                         iconColor: context.colors.folder,
                       ),
                   ],
-                  if (controller.drivePlaces.isNotEmpty) ...[
-                    _SidebarGroupLabel('Drives'),
-                    for (final place in controller.drivePlaces)
-                      _driveTile(context, place),
+                  if (c.drivePlaces.isNotEmpty) ...[
+                    const _SidebarGroupLabel('Drives'),
+                    for (final place in c.drivePlaces)
+                      _driveTile(context, c, place),
                   ],
                 ],
               );
@@ -70,6 +116,7 @@ class AppSidebar extends GetView<FileExplorerController> {
 
   Widget _placeTile(
     BuildContext context,
+    FileExplorerController c,
     rust_system.Place place, {
     required IconData icon,
     Color? iconColor,
@@ -78,25 +125,35 @@ class AppSidebar extends GetView<FileExplorerController> {
       place: place,
       icon: icon,
       iconColor: iconColor,
-      active: controller.isPlaceActive(place),
+      active: c.isPlaceActive(place),
       dropping: dropping,
-      onTap: () => controller.openPlace(place),
+      onTap: () => c.openPlace(place),
+      onMiddleClick: () => _openPlaceInNewTab(place),
+      onSecondaryTap: (pos) => _showPlaceMenu(context, place, pos),
     );
 
     if (!_acceptsDrop(place)) return tile(false);
 
-    return _dropTarget(place.path, (dropping) => tile(dropping));
+    return _dropTarget(context, c, place.path, (dropping) => tile(dropping));
   }
 
-  Widget _driveTile(BuildContext context, rust_system.Place place) {
+  Widget _driveTile(
+    BuildContext context,
+    FileExplorerController c,
+    rust_system.Place place,
+  ) {
     return _dropTarget(
+      context,
+      c,
       place.path,
       (dropping) => _DriveTile(
         place: place,
-        usage: controller.driveUsages[place.path],
-        active: controller.isPlaceActive(place),
+        usage: c.driveUsages[place.path],
+        active: c.isPlaceActive(place),
         dropping: dropping,
-        onTap: () => controller.openPlace(place),
+        onTap: () => c.openPlace(place),
+        onMiddleClick: () => _openPlaceInNewTab(place),
+        onSecondaryTap: (pos) => _showPlaceMenu(context, place, pos),
       ),
     );
   }
@@ -107,17 +164,22 @@ class AppSidebar extends GetView<FileExplorerController> {
         place.kind == rust_system.PlaceKind.drive;
   }
 
-  Widget _dropTarget(String path, Widget Function(bool dropping) builder) {
+  Widget _dropTarget(
+    BuildContext context,
+    FileExplorerController c,
+    String path,
+    Widget Function(bool dropping) builder,
+  ) {
     return DragTarget<List<rust.FileEntry>>(
       onWillAcceptWithDetails: (details) =>
-          controller.canDropEntries(details.data, path),
-      onAcceptWithDetails: (details) => controller.moveEntries(
+          c.canDropEntries(details.data, path),
+      onAcceptWithDetails: (details) => c.moveEntries(
         entries: details.data,
         destinationDirectory: path,
       ),
       builder: (context, candidateData, rejectedData) {
         final bool dropping = candidateData.any(
-          (data) => data != null && controller.canDropEntries(data, path),
+          (data) => data != null && c.canDropEntries(data, path),
         );
 
         return builder(dropping);
@@ -197,6 +259,8 @@ class _PlaceTile extends StatelessWidget {
     required this.icon,
     required this.active,
     required this.onTap,
+    this.onMiddleClick,
+    this.onSecondaryTap,
     this.iconColor,
     this.dropping = false,
   });
@@ -207,6 +271,8 @@ class _PlaceTile extends StatelessWidget {
   final bool active;
   final bool dropping;
   final VoidCallback onTap;
+  final VoidCallback? onMiddleClick;
+  final void Function(Offset position)? onSecondaryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -220,6 +286,9 @@ class _PlaceTile extends StatelessWidget {
 
         return GestureDetector(
           onTap: onTap,
+          onTertiaryTapUp: (_) => onMiddleClick?.call(),
+          onSecondaryTapDown: (details) =>
+              onSecondaryTap?.call(details.globalPosition),
           child: Container(
             height: 27,
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
@@ -274,6 +343,8 @@ class _DriveTile extends StatelessWidget {
     required this.usage,
     required this.active,
     required this.onTap,
+    this.onMiddleClick,
+    this.onSecondaryTap,
     this.dropping = false,
   });
 
@@ -282,6 +353,8 @@ class _DriveTile extends StatelessWidget {
   final bool active;
   final bool dropping;
   final VoidCallback onTap;
+  final VoidCallback? onMiddleClick;
+  final void Function(Offset position)? onSecondaryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -294,6 +367,9 @@ class _DriveTile extends StatelessWidget {
       builder: (context, hovered) {
         return GestureDetector(
           onTap: onTap,
+          onTertiaryTapUp: (_) => onMiddleClick?.call(),
+          onSecondaryTapDown: (details) =>
+              onSecondaryTap?.call(details.globalPosition),
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 7),
@@ -322,14 +398,14 @@ class _DriveTile extends StatelessWidget {
                           ? context.colors.textPrimary
                           : context.colors.textSecondary,
                     ),
-                    const SizedBox(width: 9),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         place.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 12,
                           color: dropping || active
                               ? context.colors.textPrimary
                               : context.colors.textSecondary,
@@ -341,16 +417,20 @@ class _DriveTile extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(
-                    value: ratio?.clamp(0.0, 1.0) ?? 0,
-                    minHeight: 3.5,
-                    color: usageColor(ratio, context.colors),
-                    backgroundColor: context.colors.chip,
+                if (ratio != null) ...[
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: ratio,
+                      minHeight: 3,
+                      backgroundColor: context.colors.divider,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        context.colors.accent,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -358,11 +438,4 @@ class _DriveTile extends StatelessWidget {
       },
     );
   }
-}
-
-Color usageColor(double? ratio, AppThemeColors colors) {
-  if (ratio == null) return colors.fileDefault;
-  if (ratio >= 0.9) return colors.danger;
-  if (ratio >= 0.75) return colors.warning;
-  return colors.success;
 }

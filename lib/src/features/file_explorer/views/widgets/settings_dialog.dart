@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../theme/theme_palette.dart';
+import '../../controllers/explorer_tabs_controller.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../services/font_service.dart';
 import '../../services/icon_theme_service.dart';
@@ -132,10 +133,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
   IconThemeService get _iconService => Get.find<IconThemeService>();
   FontService get _fontService => Get.find<FontService>();
   ThemeService get _themeService => Get.find<ThemeService>();
-  FileExplorerController? get _explorerController =>
-      Get.isRegistered<FileExplorerController>()
-      ? Get.find<FileExplorerController>()
-      : null;
+  FileExplorerController? get _explorerController {
+    if (Get.isRegistered<FileExplorerController>()) {
+      return Get.find<FileExplorerController>();
+    }
+    if (Get.isRegistered<ExplorerTabsController>()) {
+      return Get.find<ExplorerTabsController>().activeController;
+    }
+    return null;
+  }
 
   @override
   void initState() {

@@ -11,11 +11,11 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../../../theme/app_theme.dart';
-import '../../controllers/file_explorer_controller.dart';
 import '../../services/font_service.dart';
 import '../../services/theme_service.dart';
 import '../../utils/file_types.dart';
 import '../../utils/formatters.dart';
+import 'explorer_scope.dart';
 
 part 'preview_document.dart';
 part 'preview_media.dart';
@@ -41,7 +41,7 @@ class _PreviewPanelState extends State<PreviewPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<FileExplorerController>();
+    final controller = ExplorerScope.of(context);
     final themeService = Get.find<ThemeService>();
 
     return Obx(() {

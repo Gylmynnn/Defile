@@ -5,13 +5,18 @@ import 'package:get/get.dart';
 import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../utils/formatters.dart';
-import 'app_sidebar.dart';
+import 'explorer_scope.dart';
 
-class ExplorerStatusBar extends GetView<FileExplorerController> {
-  const ExplorerStatusBar({super.key});
+class ExplorerStatusBar extends StatelessWidget {
+  const ExplorerStatusBar({super.key, this.controller});
+
+  final FileExplorerController? controller;
 
   @override
   Widget build(BuildContext context) {
+    final FileExplorerController controller =
+        this.controller ?? ExplorerScope.of(context);
+
     return Container(
       height: 25,
       decoration: BoxDecoration(
@@ -92,4 +97,11 @@ class _UsageBar extends StatelessWidget {
       ),
     );
   }
+}
+
+Color usageColor(double? ratio, AppThemeColors colors) {
+  if (ratio == null) return colors.textSecondary;
+  if (ratio >= 0.9) return colors.danger;
+  if (ratio >= 0.75) return colors.warning;
+  return colors.accent;
 }

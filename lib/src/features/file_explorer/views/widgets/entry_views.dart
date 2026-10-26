@@ -81,6 +81,7 @@ class EntryGridView extends StatelessWidget {
     required this.onTap,
     required this.onOpen,
     required this.onMenu,
+    this.onMiddleClick,
     this.dragEntries,
     this.canDrop,
     this.onDrop,
@@ -92,6 +93,7 @@ class EntryGridView extends StatelessWidget {
   final EntryOpenCallback onTap;
   final EntryOpenCallback onOpen;
   final EntryMenuCallback onMenu;
+  final EntryOpenCallback? onMiddleClick;
   final EntryDragEntriesCallback? dragEntries;
   final EntryCanDropCallback? canDrop;
   final EntryDropCallback? onDrop;
@@ -122,6 +124,7 @@ class EntryGridView extends StatelessWidget {
             onTap: () => onTap(entry),
             onOpen: () => onOpen(entry),
             onMenu: (position) => onMenu(entry, position),
+            onMiddleClick: onMiddleClick == null ? null : () => onMiddleClick!(entry),
           ),
         );
       },
@@ -137,6 +140,7 @@ class _GridTile extends StatelessWidget {
     required this.onTap,
     required this.onOpen,
     required this.onMenu,
+    this.onMiddleClick,
   });
 
   final rust.FileEntry entry;
@@ -145,6 +149,7 @@ class _GridTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onOpen;
   final ValueChanged<Offset> onMenu;
+  final VoidCallback? onMiddleClick;
 
   @override
   Widget build(BuildContext context) {
@@ -180,6 +185,7 @@ class _GridTile extends StatelessWidget {
           child: GestureDetector(
             onTap: onTap,
             onDoubleTap: onOpen,
+            onTertiaryTapUp: (_) => onMiddleClick?.call(),
             onSecondaryTapDown: (details) => onMenu(details.globalPosition),
             onLongPressStart: (details) => onMenu(details.globalPosition),
             child: Obx(() {
@@ -223,6 +229,7 @@ class EntryListView extends StatelessWidget {
     required this.onTap,
     required this.onOpen,
     required this.onMenu,
+    this.onMiddleClick,
     this.dragEntries,
     this.canDrop,
     this.onDrop,
@@ -234,6 +241,7 @@ class EntryListView extends StatelessWidget {
   final EntryOpenCallback onTap;
   final EntryOpenCallback onOpen;
   final EntryMenuCallback onMenu;
+  final EntryOpenCallback? onMiddleClick;
   final EntryDragEntriesCallback? dragEntries;
   final EntryCanDropCallback? canDrop;
   final EntryDropCallback? onDrop;
@@ -288,6 +296,9 @@ class EntryListView extends StatelessWidget {
                   onTap: () => onTap(entry),
                   onOpen: () => onOpen(entry),
                   onMenu: (position) => onMenu(entry, position),
+                  onMiddleClick: onMiddleClick == null
+                      ? null
+                      : () => onMiddleClick!(entry),
                 ),
               );
             },
@@ -312,6 +323,7 @@ class _ListRow extends StatelessWidget {
     required this.onTap,
     required this.onOpen,
     required this.onMenu,
+    this.onMiddleClick,
   });
 
   final rust.FileEntry entry;
@@ -320,6 +332,7 @@ class _ListRow extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onOpen;
   final ValueChanged<Offset> onMenu;
+  final VoidCallback? onMiddleClick;
 
   @override
   Widget build(BuildContext context) {
@@ -404,6 +417,7 @@ class _ListRow extends StatelessWidget {
           child: GestureDetector(
             onTap: onTap,
             onDoubleTap: onOpen,
+            onTertiaryTapUp: (_) => onMiddleClick?.call(),
             onSecondaryTapDown: (details) => onMenu(details.globalPosition),
             child: Obx(() {
               final bool selected = selectedPaths.contains(entry.path);
@@ -446,6 +460,7 @@ class EntryCompactView extends StatelessWidget {
     required this.onTap,
     required this.onOpen,
     required this.onMenu,
+    this.onMiddleClick,
     this.dragEntries,
     this.canDrop,
     this.onDrop,
@@ -457,6 +472,7 @@ class EntryCompactView extends StatelessWidget {
   final EntryOpenCallback onTap;
   final EntryOpenCallback onOpen;
   final EntryMenuCallback onMenu;
+  final EntryOpenCallback? onMiddleClick;
   final EntryDragEntriesCallback? dragEntries;
   final EntryCanDropCallback? canDrop;
   final EntryDropCallback? onDrop;
@@ -481,6 +497,9 @@ class EntryCompactView extends StatelessWidget {
             onTap: () => onTap(entry),
             onOpen: () => onOpen(entry),
             onMenu: (position) => onMenu(entry, position),
+            onMiddleClick: onMiddleClick == null
+                ? null
+                : () => onMiddleClick!(entry),
           ),
         );
       },
@@ -496,6 +515,7 @@ class _CompactRow extends StatelessWidget {
     required this.onTap,
     required this.onOpen,
     required this.onMenu,
+    this.onMiddleClick,
   });
 
   final rust.FileEntry entry;
@@ -504,6 +524,7 @@ class _CompactRow extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onOpen;
   final ValueChanged<Offset> onMenu;
+  final VoidCallback? onMiddleClick;
 
   @override
   Widget build(BuildContext context) {
@@ -532,6 +553,7 @@ class _CompactRow extends StatelessWidget {
           child: GestureDetector(
             onTap: onTap,
             onDoubleTap: onOpen,
+            onTertiaryTapUp: (_) => onMiddleClick?.call(),
             onSecondaryTapDown: (details) => onMenu(details.globalPosition),
             child: Obx(() {
               final bool selected = selectedPaths.contains(entry.path);

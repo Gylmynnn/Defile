@@ -8,15 +8,16 @@ extension ExplorerNavigation on FileExplorerController {
       places.clear();
     }
 
-    for (final drive in drivePlaces) {
-      try {
-        driveUsages[drive.path] = await rust_system.getDiskUsage(
-          path: drive.path,
-        );
-      } catch (_) {
-        continue;
-      }
-    }
+    await Future.wait([
+      for (final drive in drivePlaces)
+        () async {
+          try {
+            driveUsages[drive.path] = await rust_system.getDiskUsage(
+              path: drive.path,
+            );
+          } catch (_) {}
+        }(),
+    ]);
   }
 
   bool isPlaceActive(rust_system.Place place) {
