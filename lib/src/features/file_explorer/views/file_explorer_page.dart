@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../theme/app_theme.dart';
+import '../controllers/explorer_tabs_controller.dart';
 import '../controllers/file_explorer_controller.dart';
 import '../services/theme_service.dart';
 import '../utils/app_dialog_route.dart';
@@ -18,7 +19,9 @@ import 'widgets/app_sidebar.dart';
 import 'widgets/context_menu.dart';
 import 'widgets/directory_picker_dialog.dart';
 import 'widgets/entry_views.dart';
+import 'widgets/explorer_scope.dart';
 import 'widgets/explorer_status_bar.dart';
+import 'widgets/explorer_tab_bar.dart';
 import 'widgets/explorer_toolbar.dart';
 import 'widgets/open_with_submenu.dart';
 import 'widgets/preview_panel.dart';
@@ -27,17 +30,117 @@ import 'widgets/properties_dialog.dart';
 part 'explorer_page_actions.dart';
 part 'explorer_page_extras.dart';
 
-class FileExplorerPage extends StatefulWidget {
+/// Application shell: hosts the tab strip and renders the active tab.
+///
+/// Only the active explorer subtree is built, so the number of open tabs does
+/// not add widget-tree or paint cost. Each tab keeps its own
+/// [FileExplorerController] alive, preserving directory, history and
+/// selection while switching.
+class FileExplorerPage extends StatelessWidget {
   const FileExplorerPage({super.key});
 
   @override
-  State<FileExplorerPage> createState() => _FileExplorerPageState();
+  Widget build(BuildContext context) {
+    final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
+
+    return Scaffold(
+      body: CallbackShortcuts(
+        bindings: {
+          // Tab management
+          const SingleActivator(LogicalKeyboardKey.keyT, control: true): () =>
+              tabs.addTab(),
+          const SingleActivator(LogicalKeyboardKey.keyT, meta: true): () =>
+              tabs.addTab(),
+          const SingleActivator(
+            LogicalKeyboardKey.keyT,
+            control: true,
+            shift: true,
+          ): () => tabs.reopenClosedTab(),
+          const SingleActivator(
+            LogicalKeyboardKey.keyT,
+            meta: true,
+            shift: true,
+          ): () => tabs.reopenClosedTab(),
+          const SingleActivator(LogicalKeyboardKey.keyW, control: true):
+              tabs.closeActiveTab,
+          const SingleActivator(LogicalKeyboardKey.keyW, meta: true):
+              tabs.closeActiveTab,
+          const SingleActivator(LogicalKeyboardKey.tab, control: true):
+              () => tabs.selectRelative(1),
+          const SingleActivator(
+            LogicalKeyboardKey.tab,
+            control: true,
+            shift: true,
+          ): () => tabs.selectRelative(-1),
+          // Tab direct selection (1-9)
+          const SingleActivator(LogicalKeyboardKey.digit1, control: true): () =>
+              tabs.selectTab(0),
+          const SingleActivator(LogicalKeyboardKey.digit2, control: true): () =>
+              tabs.selectTab(1),
+          const SingleActivator(LogicalKeyboardKey.digit3, control: true): () =>
+              tabs.selectTab(2),
+          const SingleActivator(LogicalKeyboardKey.digit4, control: true): () =>
+              tabs.selectTab(3),
+          const SingleActivator(LogicalKeyboardKey.digit5, control: true): () =>
+              tabs.selectTab(4),
+          const SingleActivator(LogicalKeyboardKey.digit6, control: true): () =>
+              tabs.selectTab(5),
+          const SingleActivator(LogicalKeyboardKey.digit7, control: true): () =>
+              tabs.selectTab(6),
+          const SingleActivator(LogicalKeyboardKey.digit8, control: true): () =>
+              tabs.selectTab(7),
+          const SingleActivator(LogicalKeyboardKey.digit9, control: true): () =>
+              tabs.selectTab(tabs.tabs.length - 1),
+          const SingleActivator(LogicalKeyboardKey.digit1, meta: true): () =>
+              tabs.selectTab(0),
+          const SingleActivator(LogicalKeyboardKey.digit2, meta: true): () =>
+              tabs.selectTab(1),
+          const SingleActivator(LogicalKeyboardKey.digit3, meta: true): () =>
+              tabs.selectTab(2),
+          const SingleActivator(LogicalKeyboardKey.digit4, meta: true): () =>
+              tabs.selectTab(3),
+          const SingleActivator(LogicalKeyboardKey.digit5, meta: true): () =>
+              tabs.selectTab(4),
+          const SingleActivator(LogicalKeyboardKey.digit6, meta: true): () =>
+              tabs.selectTab(5),
+          const SingleActivator(LogicalKeyboardKey.digit7, meta: true): () =>
+              tabs.selectTab(6),
+          const SingleActivator(LogicalKeyboardKey.digit8, meta: true): () =>
+              tabs.selectTab(7),
+          const SingleActivator(LogicalKeyboardKey.digit9, meta: true): () =>
+              tabs.selectTab(tabs.tabs.length - 1),
+        },
+        child: Obx(() {
+          final FileExplorerController active = tabs.activeController;
+
+          return ExplorerScope(
+            controller: active,
+            child: ExplorerBody(key: ValueKey(tabs.activeTab.id)),
+          );
+        }),
+      ),
+    );
+  }
 }
 
-class _FileExplorerPageState extends State<FileExplorerPage> {
+class ExplorerBody extends StatefulWidget {
+  const ExplorerBody({super.key});
+
+  @override
+  State<ExplorerBody> createState() => _ExplorerBodyState();
+}
+
+class _ExplorerBodyState extends State<ExplorerBody> {
   final GlobalKey _selectionLayerKey = GlobalKey();
 
-  FileExplorerController get controller => Get.find<FileExplorerController>();
+  FileExplorerController? _controller;
+  FileExplorerController get controller => _controller!;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _controller = ExplorerScope.of(context);
+  }
 
   bool _entryPressActive = false;
   String? _pendingOpenPath;
@@ -126,6 +229,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
                           child: Column(
                             children: [
                               ExplorerToolbar(),
+                              const ExplorerTabBar(),
                               Expanded(
                                 child: Stack(
                                   children: [
@@ -455,6 +559,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         onTap: _handleEntryTap,
         onOpen: _handleEntryOpen,
         onMenu: openMenu,
+        onMiddleClick: _handleEntryMiddleClick,
         dragEntries: _dragEntriesFor,
         canDrop: controller.canDropEntries,
         onDrop: _moveEntriesTo,
@@ -466,6 +571,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         onTap: _handleEntryTap,
         onOpen: _handleEntryOpen,
         onMenu: openMenu,
+        onMiddleClick: _handleEntryMiddleClick,
         dragEntries: _dragEntriesFor,
         canDrop: controller.canDropEntries,
         onDrop: _moveEntriesTo,
@@ -477,6 +583,7 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
         onTap: _handleEntryTap,
         onOpen: _handleEntryOpen,
         onMenu: openMenu,
+        onMiddleClick: _handleEntryMiddleClick,
         dragEntries: _dragEntriesFor,
         canDrop: controller.canDropEntries,
         onDrop: _moveEntriesTo,
@@ -484,6 +591,12 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
     };
 
     return _LoadingShroud(loading: controller.isLoading.value, child: view);
+  }
+
+  void _handleEntryMiddleClick(rust.FileEntry entry) {
+    if (entry.isDirectory && Get.isRegistered<ExplorerTabsController>()) {
+      Get.find<ExplorerTabsController>().addTab(path: entry.path);
+    }
   }
 
   void _handleEntryPress(rust.FileEntry entry) {

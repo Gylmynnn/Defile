@@ -6,6 +6,7 @@ import '../../../../theme/app_theme.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../services/theme_service.dart';
 import '../../utils/app_dialog_route.dart';
+import 'explorer_scope.dart';
 import 'hover_region.dart';
 import 'settings_dialog.dart';
 
@@ -19,7 +20,7 @@ class ExplorerToolbar extends StatefulWidget {
 class _ExplorerToolbarState extends State<ExplorerToolbar> {
   final TextEditingController _searchController = TextEditingController();
 
-  FileExplorerController get controller => Get.find<FileExplorerController>();
+  FileExplorerController get controller => ExplorerScope.of(context);
 
   @override
   void dispose() {
