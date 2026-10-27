@@ -1,3 +1,5 @@
+import 'dart:io' as io;
+
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 
 import '../utils/app_toast.dart';

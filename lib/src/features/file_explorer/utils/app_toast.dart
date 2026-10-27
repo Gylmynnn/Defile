@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 import '../../../theme/app_theme.dart';
 import '../services/theme_service.dart';
 
-enum AppToastVariant { success, error, info }
+enum AppToastVariant { success, error, info, loading }
 
 OverlayEntry? _currentToast;
 
@@ -92,7 +92,11 @@ class _ToastHostState extends State<_ToastHost>
   void initState() {
     super.initState();
     _controller.forward();
-    _timer = Timer(widget.duration, _dismiss);
+    // A loading toast stays up until it is replaced by another toast — the
+    // operation finishing swaps it for a success or error notification.
+    if (widget.variant != AppToastVariant.loading) {
+      _timer = Timer(widget.duration, _dismiss);
+    }
   }
 
   @override
@@ -117,6 +121,7 @@ class _ToastHostState extends State<_ToastHost>
       AppToastVariant.success => (Icons.check_circle_outline, colors.success),
       AppToastVariant.error => (Icons.error_outline, colors.danger),
       AppToastVariant.info => (Icons.info_outline, colors.accent),
+      AppToastVariant.loading => (Icons.rotate_right, colors.accent),
     };
 
     return Positioned(
@@ -148,7 +153,17 @@ class _ToastHostState extends State<_ToastHost>
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(icon, size: 16, color: color),
+                    if (widget.variant == AppToastVariant.loading)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.8,
+                          strokeCap: StrokeCap.round,
+                        ),
+                      )
+                    else
+                      Icon(icon, size: 16, color: color),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
