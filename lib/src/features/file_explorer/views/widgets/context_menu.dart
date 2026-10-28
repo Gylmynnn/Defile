@@ -16,6 +16,7 @@ class ContextMenuAction {
     this.shortcut,
     this.danger = false,
     this.enabled = true,
+    this.checked,
     this.submenu,
   });
 
@@ -24,6 +25,9 @@ class ContextMenuAction {
   final String? shortcut;
   final bool danger;
   final bool enabled;
+
+  /// Whether the entry renders a trailing checkmark (toggle state).
+  final bool? checked;
   final VoidCallback onSelected;
   final Widget Function(VoidCallback closeMenu)? submenu;
 }
@@ -470,6 +474,12 @@ class _MenuRow extends StatelessWidget {
                     color: enabled
                         ? context.colors.menuIcon
                         : context.colors.textFaint.withValues(alpha: 0.5),
+                  )
+                else if (action.checked == true)
+                  Icon(
+                    Icons.check,
+                    size: 15,
+                    color: enabled ? context.colors.accent : context.colors.accent.withValues(alpha: 0.5),
                   )
                 else if (action.shortcut != null)
                   Text(

@@ -3,15 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../controllers/explorer_tabs_controller.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../services/theme_service.dart';
 import '../../utils/app_dialog_route.dart';
+import 'context_menu.dart';
 import 'explorer_scope.dart';
 import 'hover_region.dart';
 import 'settings_dialog.dart';
 
 class ExplorerToolbar extends StatefulWidget {
-  const ExplorerToolbar({super.key});
+  const ExplorerToolbar({super.key, this.compact = false});
+
+  /// Slim mode for split panes: global controls (sidebar, split, preview and
+  /// settings) live in the shared top bar instead.
+  final bool compact;
 
   @override
   State<ExplorerToolbar> createState() => _ExplorerToolbarState();
@@ -39,16 +45,17 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          Obx(
-            () => _ToolbarIconButton(
-              icon: CupertinoIcons.sidebar_right,
-              tooltip: controller.showSidebar.value
-                  ? 'Hide sidebar'
-                  : 'Show sidebar',
-              active: controller.showSidebar.value,
-              onTap: controller.toggleSidebar,
+          if (!widget.compact)
+            Obx(
+              () => _ToolbarIconButton(
+                icon: CupertinoIcons.sidebar_right,
+                tooltip: controller.showSidebar.value
+                    ? 'Hide sidebar'
+                    : 'Show sidebar',
+                active: controller.showSidebar.value,
+                onTap: controller.toggleSidebar,
+              ),
             ),
-          ),
           Obx(
             () => _ToolbarIconButton(
               icon: CupertinoIcons.arrow_left,
@@ -82,6 +89,9 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
             ),
           ),
           const SizedBox(width: 6),
+          if (!widget.compact)
+            const ExplorerSplitControls(),
+          if (!widget.compact) const SizedBox(width: 6),
           Obx(() {
             if (!controller.isSearching.value) {
               return _ToolbarIconButton(
@@ -389,12 +399,14 @@ class _ToolbarIconButton extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    this.onSecondaryTap,
     this.active = false,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
+  final ValueChanged<Offset>? onSecondaryTap;
   final bool active;
 
   @override
@@ -414,6 +426,9 @@ class _ToolbarIconButton extends StatelessWidget {
 
           return GestureDetector(
             onTap: onTap,
+            onSecondaryTapDown: onSecondaryTap != null
+                ? (details) => onSecondaryTap!(details.globalPosition)
+                : null,
             child: Container(
               width: 27,
               height: 26,
@@ -434,6 +449,169 @@ class _ToolbarIconButton extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// The two explicit split toggles: [side by side] and [stacked]. Clicking the
+/// one that is already active leaves split view. A right-click opens the
+/// split action menu (swap, reset, leave).
+class ExplorerSplitControls extends StatelessWidget {
+  const ExplorerSplitControls({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
+      final ExplorerSplitMode mode = tabs.splitMode.value;
+
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ToolbarIconButton(
+            icon: Icons.view_column_outlined,
+            tooltip: mode == ExplorerSplitMode.horizontal
+                ? 'Leave side-by-side split'
+                : 'Split side by side',
+            active: mode == ExplorerSplitMode.horizontal,
+            onTap: () => tabs.setSplitMode(
+              mode == ExplorerSplitMode.horizontal
+                  ? ExplorerSplitMode.none
+                  : ExplorerSplitMode.horizontal,
+            ),
+            onSecondaryTap: (position) =>
+                _showSplitMenu(context, tabs, position),
+          ),
+          _ToolbarIconButton(
+            icon: Icons.table_rows_outlined,
+            tooltip: mode == ExplorerSplitMode.vertical
+                ? 'Leave stacked split'
+                : 'Split stacked',
+            active: mode == ExplorerSplitMode.vertical,
+            onTap: () => tabs.setSplitMode(
+              mode == ExplorerSplitMode.vertical
+                  ? ExplorerSplitMode.none
+                  : ExplorerSplitMode.vertical,
+            ),
+            onSecondaryTap: (position) =>
+                _showSplitMenu(context, tabs, position),
+          ),
+        ],
+      );
+    });
+  }
+}
+
+void _showSplitMenu(
+  BuildContext context,
+  ExplorerTabsController tabs,
+  Offset position,
+) {
+  showAppContextMenu(
+    context: context,
+    position: position,
+    entries: [
+      ContextMenuActionEntry(
+        ContextMenuAction(
+          icon: Icons.view_column_outlined,
+          label: 'Side by side',
+          checked: tabs.splitMode.value == ExplorerSplitMode.horizontal,
+          onSelected: () =>
+              tabs.setSplitMode(ExplorerSplitMode.horizontal),
+        ),
+      ),
+      ContextMenuActionEntry(
+        ContextMenuAction(
+          icon: Icons.table_rows_outlined,
+          label: 'Stacked',
+          checked: tabs.splitMode.value == ExplorerSplitMode.vertical,
+          onSelected: () => tabs.setSplitMode(ExplorerSplitMode.vertical),
+        ),
+      ),
+      if (tabs.isSplit) ...[
+        ContextMenuSeparator(),
+        ContextMenuActionEntry(
+          ContextMenuAction(
+            icon: Icons.swap_horiz,
+            label: 'Swap Panes',
+            onSelected: tabs.swapPanes,
+          ),
+        ),
+        ContextMenuActionEntry(
+          ContextMenuAction(
+            icon: Icons.vertical_align_center,
+            label: 'Reset Size (50/50)',
+            onSelected: tabs.resetSplitRatio,
+          ),
+        ),
+        ContextMenuSeparator(),
+        ContextMenuActionEntry(
+          ContextMenuAction(
+            icon: Icons.close,
+            label: 'Leave Split View',
+            onSelected: tabs.exitSplit,
+          ),
+        ),
+      ],
+    ],
+  );
+}
+
+/// Shared top bar shown above the tab strip while split view is active. It
+/// carries the controls that only make sense once per window: sidebar
+/// toggle, the split controls, the preview toggle and settings.
+class ExplorerSplitTopBar extends StatelessWidget {
+  const ExplorerSplitTopBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final FileExplorerController controller = ExplorerScope.of(context);
+
+    return Container(
+      height: 36,
+      decoration: BoxDecoration(
+        color: context.colors.surface,
+        border: Border(bottom: BorderSide(color: context.colors.divider)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          Obx(
+            () => _ToolbarIconButton(
+              icon: CupertinoIcons.sidebar_right,
+              tooltip: controller.showSidebar.value
+                  ? 'Hide sidebar'
+                  : 'Show sidebar',
+              active: controller.showSidebar.value,
+              onTap: controller.toggleSidebar,
+            ),
+          ),
+          const Spacer(),
+          const ExplorerSplitControls(),
+          const SizedBox(width: 6),
+          Obx(() {
+            final themeService = Get.find<ThemeService>();
+            return _ToolbarIconButton(
+              icon: themeService.previewEnabled.value
+                  ? CupertinoIcons.book_solid
+                  : CupertinoIcons.book,
+              tooltip: themeService.previewEnabled.value
+                  ? 'Hide preview'
+                  : 'Show preview',
+              active: themeService.previewEnabled.value,
+              onTap: () => themeService.previewEnabled.value =
+                  !themeService.previewEnabled.value,
+            );
+          }),
+          _ToolbarIconButton(
+            icon: Icons.settings_outlined,
+            tooltip: 'Settings',
+            onTap: () => showAppDialog(
+              builder: (BuildContext _) => const SettingsDialog(),
+            ),
+          ),
+        ],
       ),
     );
   }

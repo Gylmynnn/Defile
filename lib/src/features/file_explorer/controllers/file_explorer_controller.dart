@@ -10,6 +10,8 @@ import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 
+import 'explorer_tabs_controller.dart';
+
 part 'explorer_navigation.dart';
 part 'explorer_operations.dart';
 part 'explorer_selection.dart';

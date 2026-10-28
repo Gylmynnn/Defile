@@ -148,6 +148,133 @@ class _PreviewPanelState extends State<PreviewPanel> {
   }
 }
 
+/// Horizontal preview strip docked at the bottom of a split pane (vertical
+/// split view). The previewed file renders on the left, the name/type info
+/// on the right, and the strip's height is draggable through its top edge.
+class PreviewBottomPanel extends StatefulWidget {
+  const PreviewBottomPanel({super.key, required this.availableWidth});
+
+  final double availableWidth;
+
+  @override
+  State<PreviewBottomPanel> createState() => _PreviewBottomPanelState();
+}
+
+class _PreviewBottomPanelState extends State<PreviewBottomPanel> {
+  bool _resizing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = ExplorerScope.of(context);
+    final themeService = Get.find<ThemeService>();
+
+    return Obx(() {
+      final bool enabled = themeService.previewEnabled.value;
+      final rust.FileEntry? file = controller.previewFile.value;
+
+      // Only mount when there is something to preview; the pane content
+      // simply grows back when there is not.
+      if (!enabled || file == null) return const SizedBox.shrink();
+
+      final double height = themeService.previewHeight.value.clamp(
+        110.0,
+        420.0,
+      );
+
+      final Widget content = Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: _PreviewContent(file: file)),
+          Container(
+            width: 200,
+            decoration: BoxDecoration(
+              color: context.colors.surface,
+              border: Border(left: BorderSide(color: context.colors.divider)),
+            ),
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  file.name,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.textStrong,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  file.isDirectory ? 'Folder' : fileTypeLabel(file.name),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+                if (!file.isDirectory) ...[
+                  const Spacer(),
+                  Text(
+                    formatBytes(file.sizeBytes),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: context.colors.textFaint,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      );
+
+      return Container(
+        height: height,
+        decoration: BoxDecoration(color: context.colors.surface),
+        child: ClipRect(
+          child: Column(
+            children: [
+              // Top resize handle.
+              MouseRegion(
+                cursor: SystemMouseCursors.resizeRow,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragStart: (_) {
+                    setState(() => _resizing = true);
+                    themeService.previewHeight.value = height;
+                  },
+                  onVerticalDragUpdate: (details) {
+                    themeService.previewHeight.value =
+                        (themeService.previewHeight.value - details.delta.dy)
+                            .clamp(110.0, 420.0);
+                  },
+                  onVerticalDragEnd: (_) =>
+                      setState(() => _resizing = false),
+                  onVerticalDragCancel: () =>
+                      setState(() => _resizing = false),
+                  child: Container(
+                    height: _resizing ? 6 : 4,
+                    color: Colors.transparent,
+                    child: Center(
+                      child: Container(
+                        width: _resizing ? double.infinity : 60,
+                        height: 1,
+                        color: context.colors.divider,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(child: content),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
 class _PreviewHeader extends StatelessWidget {
   const _PreviewHeader({required this.file});
 

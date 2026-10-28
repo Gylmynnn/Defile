@@ -60,8 +60,15 @@ final Map<String, GlobalKey> _entryKeys = <String, GlobalKey>{};
 // ponytail: keys cached per path to avoid re-allocating a GlobalKey on every
 // tile build. Never pruned; harmless for typical sessions. Add pruning keyed on
 // the live entry set if enormous unique trees get visited.
-GlobalKey entryTileKey(String path) =>
-    _entryKeys.putIfAbsent(path, GlobalKey.new);
+//
+// The optional [owner] (the pane's controller) namespaces the keys because
+// split view can show the very same file in two panes at once, and a GlobalKey
+// must never appear on two widgets simultaneously.
+GlobalKey entryTileKey(String path, {Object? owner}) =>
+    _entryKeys.putIfAbsent(
+      '${identityHashCode(owner)}\u001f$path',
+      GlobalKey.new,
+    );
 
 Duration get _selectionAnimationDuration {
   if (!Get.isRegistered<ThemeService>()) {
@@ -85,6 +92,7 @@ class EntryGridView extends StatelessWidget {
     this.dragEntries,
     this.canDrop,
     this.onDrop,
+    this.paneOwner,
   });
 
   final List<rust.FileEntry> entries;
@@ -97,6 +105,7 @@ class EntryGridView extends StatelessWidget {
   final EntryDragEntriesCallback? dragEntries;
   final EntryCanDropCallback? canDrop;
   final EntryDropCallback? onDrop;
+  final Object? paneOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +134,7 @@ class EntryGridView extends StatelessWidget {
             onOpen: () => onOpen(entry),
             onMenu: (position) => onMenu(entry, position),
             onMiddleClick: onMiddleClick == null ? null : () => onMiddleClick!(entry),
+            paneOwner: paneOwner,
           ),
         );
       },
@@ -141,6 +151,7 @@ class _GridTile extends StatelessWidget {
     required this.onOpen,
     required this.onMenu,
     this.onMiddleClick,
+    this.paneOwner,
   });
 
   final rust.FileEntry entry;
@@ -150,6 +161,7 @@ class _GridTile extends StatelessWidget {
   final VoidCallback onOpen;
   final ValueChanged<Offset> onMenu;
   final VoidCallback? onMiddleClick;
+  final Object? paneOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +188,7 @@ class _GridTile extends StatelessWidget {
     );
 
     return HoverRegion(
-      key: entryTileKey(entry.path),
+      key: entryTileKey(entry.path, owner: paneOwner),
       builder: (context, hovered) {
         return Listener(
           onPointerDown: (event) {
@@ -233,6 +245,7 @@ class EntryListView extends StatelessWidget {
     this.dragEntries,
     this.canDrop,
     this.onDrop,
+    this.paneOwner,
   });
 
   final List<rust.FileEntry> entries;
@@ -245,6 +258,7 @@ class EntryListView extends StatelessWidget {
   final EntryDragEntriesCallback? dragEntries;
   final EntryCanDropCallback? canDrop;
   final EntryDropCallback? onDrop;
+  final Object? paneOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -299,6 +313,7 @@ class EntryListView extends StatelessWidget {
                   onMiddleClick: onMiddleClick == null
                       ? null
                       : () => onMiddleClick!(entry),
+                  paneOwner: paneOwner,
                 ),
               );
             },
@@ -324,6 +339,7 @@ class _ListRow extends StatelessWidget {
     required this.onOpen,
     required this.onMenu,
     this.onMiddleClick,
+    this.paneOwner,
   });
 
   final rust.FileEntry entry;
@@ -333,11 +349,12 @@ class _ListRow extends StatelessWidget {
   final VoidCallback onOpen;
   final ValueChanged<Offset> onMenu;
   final VoidCallback? onMiddleClick;
+  final Object? paneOwner;
 
   @override
   Widget build(BuildContext context) {
     return HoverRegion(
-      key: entryTileKey(entry.path),
+      key: entryTileKey(entry.path, owner: paneOwner),
       builder: (context, hovered) {
         final Widget content = Row(
           children: [
@@ -464,6 +481,7 @@ class EntryCompactView extends StatelessWidget {
     this.dragEntries,
     this.canDrop,
     this.onDrop,
+    this.paneOwner,
   });
 
   final List<rust.FileEntry> entries;
@@ -476,6 +494,7 @@ class EntryCompactView extends StatelessWidget {
   final EntryDragEntriesCallback? dragEntries;
   final EntryCanDropCallback? canDrop;
   final EntryDropCallback? onDrop;
+  final Object? paneOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -500,6 +519,7 @@ class EntryCompactView extends StatelessWidget {
             onMiddleClick: onMiddleClick == null
                 ? null
                 : () => onMiddleClick!(entry),
+            paneOwner: paneOwner,
           ),
         );
       },
@@ -516,6 +536,7 @@ class _CompactRow extends StatelessWidget {
     required this.onOpen,
     required this.onMenu,
     this.onMiddleClick,
+    this.paneOwner,
   });
 
   final rust.FileEntry entry;
@@ -525,6 +546,7 @@ class _CompactRow extends StatelessWidget {
   final VoidCallback onOpen;
   final ValueChanged<Offset> onMenu;
   final VoidCallback? onMiddleClick;
+  final Object? paneOwner;
 
   @override
   Widget build(BuildContext context) {
@@ -544,7 +566,7 @@ class _CompactRow extends StatelessWidget {
     );
 
     return HoverRegion(
-      key: entryTileKey(entry.path),
+      key: entryTileKey(entry.path, owner: paneOwner),
       builder: (context, hovered) {
         return Listener(
           onPointerDown: (event) {

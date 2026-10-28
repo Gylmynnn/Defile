@@ -1,6 +1,6 @@
 part of 'file_explorer_page.dart';
 
-extension _ExplorerPageActions on _ExplorerBodyState {
+extension _ExplorerPageActions on _EntryContentState {
   void _showEntryMenu(
     BuildContext context,
     rust.FileEntry entry,
@@ -44,6 +44,22 @@ extension _ExplorerPageActions on _ExplorerBodyState {
               label: 'Open in New Tab',
               onSelected: () =>
                   Get.find<ExplorerTabsController>().addTab(path: entry.path),
+            ),
+          ),
+        if (single && entry.isDirectory && !inTrash)
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: Icons.splitscreen,
+              label: (Get.isRegistered<ExplorerTabsController>() &&
+                      Get.find<ExplorerTabsController>().isSplit)
+                  ? 'Open in Other Pane'
+                  : 'Open in Split View',
+              onSelected: () {
+                if (Get.isRegistered<ExplorerTabsController>()) {
+                  Get.find<ExplorerTabsController>()
+                      .openInOtherPane(entry.path);
+                }
+              },
             ),
           ),
         if (single && entry.isFile && !inTrash)

@@ -119,6 +119,22 @@ extension ExplorerOperations on FileExplorerController {
 
     await refreshDirectory();
 
+    if (Get.isRegistered<ExplorerTabsController>()) {
+      final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
+      final String dest = p.normalize(destinationDirectory);
+      final Set<String> sourceDirs = entries
+          .map((e) => p.normalize(p.dirname(e.path)))
+          .toSet();
+
+      for (final tab in tabs.tabs) {
+        if (tab.controller == this) continue;
+        final String tabPath = p.normalize(tab.controller.currentPath.value);
+        if (sourceDirs.contains(tabPath) || tabPath == dest) {
+          tab.controller.refreshDirectory();
+        }
+      }
+    }
+
     final String label = move ? 'moved' : 'copied';
 
     if (succeeded == entries.length) {

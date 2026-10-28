@@ -196,6 +196,13 @@ class _ExplorerTabBarState extends State<ExplorerTabBar> {
             onSelected: () => _tabs.duplicateTab(index),
           ),
         ),
+        ContextMenuActionEntry(
+          ContextMenuAction(
+            icon: Icons.splitscreen,
+            label: _tabs.isSplit ? 'Move to Other Pane' : 'Open in Split View',
+            onSelected: () => _tabs.moveTabToOtherPane(index),
+          ),
+        ),
         ContextMenuSeparator(),
         ContextMenuActionEntry(
           ContextMenuAction(
@@ -265,17 +272,39 @@ class _ExplorerTabBarState extends State<ExplorerTabBar> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      for (int index = 0; index < tabs.length; index++)
-                        _TabItem(
-                          key: ValueKey(tabs[index].id),
-                          tab: tabs[index],
-                          active: index == activeIndex,
-                          canClose: _tabs.canCloseTabs,
-                          onSelect: () => _tabs.selectTab(index),
-                          onClose: () => _tabs.closeTab(index),
-                          onContextMenu: (position) =>
-                              _showTabContextMenu(context, index, position),
-                        ),
+                      for (int index = 0; index < tabs.length; index++) ...[
+                        () {
+                          final ExplorerTab t = tabs[index];
+                          final bool isFirstPane = index == activeIndex;
+                          final bool isSecondPane =
+                              _tabs.isSplit && t.id == _tabs.splitPartnerId.value;
+                          final bool isVisibleInSplit =
+                              isFirstPane || isSecondPane;
+                          final bool isFocused = _tabs.isSplit
+                              ? (_tabs.splitFocusSecond.value
+                                  ? isSecondPane
+                                  : isFirstPane)
+                              : isFirstPane;
+
+                          return _TabItem(
+                            key: ValueKey(t.id),
+                            tab: t,
+                            active: isFocused,
+                            dimmed: _tabs.isSplit && !isVisibleInSplit,
+                            // Pane number badge: 1 or 2 when the tab is docked
+                            // into a split pane, 0 when not docked.
+                            paneBadge: isVisibleInSplit
+                                ? (isFirstPane ? 1 : 2)
+                                : 0,
+                            badgeHighlighted: isFocused,
+                            canClose: _tabs.canCloseTabs,
+                            onSelect: () => _tabs.selectTab(index),
+                            onClose: () => _tabs.closeTab(index),
+                            onContextMenu: (position) =>
+                                _showTabContextMenu(context, index, position),
+                          );
+                        }(),
+                      ],
                     ],
                   ),
                 );
@@ -294,6 +323,9 @@ class _TabItem extends StatelessWidget {
     super.key,
     required this.tab,
     required this.active,
+    this.dimmed = false,
+    this.paneBadge = 0,
+    this.badgeHighlighted = false,
     required this.canClose,
     required this.onSelect,
     required this.onClose,
@@ -306,6 +338,16 @@ class _TabItem extends StatelessWidget {
 
   final ExplorerTab tab;
   final bool active;
+
+  /// Background tabs during split view render at reduced opacity.
+  final bool dimmed;
+
+  /// Pane number rendered on the pill when the tab docks into a split pane
+  /// (1 = first pane, 2 = partner pane, 0 = not docked).
+  final int paneBadge;
+
+  /// Whether [paneBadge] renders in the accent color (focused pane) or muted.
+  final bool badgeHighlighted;
   final bool canClose;
   final VoidCallback onSelect;
   final VoidCallback onClose;
@@ -336,7 +378,7 @@ class _TabItem extends StatelessWidget {
             ? context.colors.hover
             : Colors.transparent;
 
-        return Obx(() {
+        Widget child = Obx(() {
           final String title = tab.controller.tabTitle;
           final String tooltip = tab.controller.currentPath.value.isNotEmpty
               ? tab.controller.currentPath.value
@@ -386,6 +428,13 @@ class _TabItem extends StatelessWidget {
                             : context.colors.textFaint,
                       ),
                     ),
+                    if (paneBadge > 0) ...[
+                      const SizedBox(width: 5),
+                      _PaneBadge(
+                        number: paneBadge,
+                        highlighted: badgeHighlighted,
+                      ),
+                    ],
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -440,7 +489,47 @@ class _TabItem extends StatelessWidget {
             ),
           );
         });
+
+        if (!dimmed) return child;
+
+        return Opacity(opacity: 0.55, child: child);
       },
+    );
+  }
+}
+
+/// Tiny pane number chip on tabs docked into a split pane.
+class _PaneBadge extends StatelessWidget {
+  const _PaneBadge({required this.number, required this.highlighted});
+
+  final int number;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color foreground = highlighted
+        ? context.colors.accentContent
+        : context.colors.textFaint;
+
+    return Container(
+      width: 13,
+      height: 13,
+      decoration: BoxDecoration(
+        color: highlighted
+            ? context.colors.accent
+            : context.colors.accent.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '$number',
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          height: 1,
+          color: foreground,
+        ),
+      ),
     );
   }
 }
