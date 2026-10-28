@@ -1,6 +1,6 @@
 part of 'file_explorer_page.dart';
 
-extension _ExplorerPageActions on _ExplorerBodyState {
+extension _ExplorerPageActions on _EntryContentState {
   void _showEntryMenu(
     BuildContext context,
     rust.FileEntry entry,
@@ -46,6 +46,22 @@ extension _ExplorerPageActions on _ExplorerBodyState {
                   Get.find<ExplorerTabsController>().addTab(path: entry.path),
             ),
           ),
+        if (single && entry.isDirectory && !inTrash)
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: Icons.splitscreen,
+              label: (Get.isRegistered<ExplorerTabsController>() &&
+                      Get.find<ExplorerTabsController>().isSplit)
+                  ? 'Open in Other Pane'
+                  : 'Open in Split View',
+              onSelected: () {
+                if (Get.isRegistered<ExplorerTabsController>()) {
+                  Get.find<ExplorerTabsController>()
+                      .openInOtherPane(entry.path);
+                }
+              },
+            ),
+          ),
         if (single && entry.isFile && !inTrash)
           ContextMenuActionEntry(
             ContextMenuAction(
@@ -84,6 +100,25 @@ extension _ExplorerPageActions on _ExplorerBodyState {
             onSelected: () => _copyPath(targets),
           ),
         ),
+        if (!inTrash) ...[
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: Icons.folder_zip_outlined,
+              label: single
+                  ? 'Compress...'
+                  : 'Compress ${targets.length} Items...',
+              onSelected: () => _showCompressDialog(context, targets),
+            ),
+          ),
+          if (single && controller.isExtractableArchive(entry))
+            ContextMenuActionEntry(
+              ContextMenuAction(
+                icon: Icons.unarchive_outlined,
+                label: 'Extract Here',
+                onSelected: () => controller.extractEntry(entry),
+              ),
+            ),
+        ],
         ContextMenuSeparator(),
         ContextMenuActionEntry(
           ContextMenuAction(
@@ -317,6 +352,111 @@ extension _ExplorerPageActions on _ExplorerBodyState {
     );
   }
 
+  void _showCompressDialog(BuildContext context, List<rust.FileEntry> targets) {
+    final String defaultName = targets.length == 1
+        ? _defaultArchiveName(targets.first.name)
+        : 'archive';
+
+    final TextEditingController textController = TextEditingController(
+      text: defaultName,
+    );
+
+    String format = 'zip';
+
+    showAppDialog(
+      builder: (_) => AppDialog(
+        title: 'Compress',
+        width: 360,
+        content: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: textController,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Archive name',
+                      hintText: 'Example: Documents',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Format',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                      color: context.colors.textFaint,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: context.colors.window,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: context.colors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        for (final entry in _archiveFormats.entries)
+                          Expanded(
+                            child: _ArchiveFormatSegment(
+                              label: entry.key,
+                              hint: entry.value,
+                              active: format == entry.value,
+                              onTap: () =>
+                                  setDialogState(() => format = entry.value),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        actions: [
+          AppDialogButton(label: 'Cancel', onTap: Get.back),
+          AppDialogButton(
+            label: 'Compress',
+            primary: true,
+            onTap: () {
+              final String name = textController.text;
+              Get.back();
+              controller.compressEntries(targets, archiveName: name, format: format);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Format id mapped to the file extension it produces.
+  static const Map<String, String> _archiveFormats = {
+    'ZIP': 'zip',
+    'TAR': 'tar',
+    'TAR.GZ': 'tar.gz',
+  };
+
+  String _defaultArchiveName(String fileName) {
+    const List<String> suffixes = ['.zip', '.tar.gz', '.tgz', '.tar'];
+    final String lower = fileName.toLowerCase();
+
+    for (final suffix in suffixes) {
+      if (lower.endsWith(suffix)) {
+        return fileName.substring(0, fileName.length - suffix.length);
+      }
+    }
+
+    return fileName;
+  }
+
   void _showCreateFolderDialog(BuildContext context) {
     final TextEditingController textController = TextEditingController();
 
@@ -413,6 +553,55 @@ extension _ExplorerPageActions on _ExplorerBodyState {
               label: const Text('Try again'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ArchiveFormatSegment extends StatelessWidget {
+  const _ArchiveFormatSegment({
+    required this.label,
+    required this.hint,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final String hint;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Creates a $hint archive',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: active ? context.colors.accent : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                letterSpacing: 0.3,
+                color: active
+                    ? context.colors.accentContent
+                    : context.colors.textSecondary,
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -196,6 +196,13 @@ class _ExplorerTabBarState extends State<ExplorerTabBar> {
             onSelected: () => _tabs.duplicateTab(index),
           ),
         ),
+        ContextMenuActionEntry(
+          ContextMenuAction(
+            icon: Icons.splitscreen,
+            label: _tabs.isSplit ? 'Move to Other Pane' : 'Open in Split View',
+            onSelected: () => _tabs.moveTabToOtherPane(index),
+          ),
+        ),
         ContextMenuSeparator(),
         ContextMenuActionEntry(
           ContextMenuAction(
@@ -265,17 +272,49 @@ class _ExplorerTabBarState extends State<ExplorerTabBar> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      for (int index = 0; index < tabs.length; index++)
-                        _TabItem(
-                          key: ValueKey(tabs[index].id),
-                          tab: tabs[index],
-                          active: index == activeIndex,
-                          canClose: _tabs.canCloseTabs,
-                          onSelect: () => _tabs.selectTab(index),
-                          onClose: () => _tabs.closeTab(index),
-                          onContextMenu: (position) =>
-                              _showTabContextMenu(context, index, position),
-                        ),
+                      for (int index = 0; index < tabs.length; index++) ...[
+                        () {
+                          final ExplorerTab t = tabs[index];
+                          final bool isFirstPane = index == activeIndex;
+                          final bool isSecondPane =
+                              _tabs.isSplit && t.id == _tabs.splitPartnerId.value;
+                          final bool isVisibleInSplit =
+                              isFirstPane || isSecondPane;
+                          final bool isFocused = _tabs.isSplit
+                              ? (_tabs.splitFocusSecond.value
+                                  ? isSecondPane
+                                  : isFirstPane)
+                              : isFirstPane;
+
+                          // Every tab carries a pane flag while split view is
+                          // on: docked tabs show the pane they ARE in, the
+                          // rest show the pane they would JOIN when clicked
+                          // (the focused one). The flag always follows the
+                          // accent color.
+                          final bool docked = _tabs.isSplit && isVisibleInSplit;
+                          final int paneBadge = _tabs.isSplit
+                              ? (docked
+                                    ? (isFirstPane ? 1 : 2)
+                                    : (_tabs.splitFocusSecond.value ? 2 : 1))
+                              : 0;
+                          final Color badgeColor = context.colors.accent;
+
+                          return _TabItem(
+                            key: ValueKey(t.id),
+                            tab: t,
+                            active: isFocused,
+                            dimmed: _tabs.isSplit && !isVisibleInSplit,
+                            paneBadge: paneBadge,
+                            badgeFilled: docked,
+                            badgeColor: badgeColor,
+                            canClose: _tabs.canCloseTabs,
+                            onSelect: () => _tabs.selectTab(index),
+                            onClose: () => _tabs.closeTab(index),
+                            onContextMenu: (position) =>
+                                _showTabContextMenu(context, index, position),
+                          );
+                        }(),
+                      ],
                     ],
                   ),
                 );
@@ -294,6 +333,10 @@ class _TabItem extends StatelessWidget {
     super.key,
     required this.tab,
     required this.active,
+    this.dimmed = false,
+    this.paneBadge = 0,
+    this.badgeFilled = false,
+    required this.badgeColor,
     required this.canClose,
     required this.onSelect,
     required this.onClose,
@@ -306,6 +349,20 @@ class _TabItem extends StatelessWidget {
 
   final ExplorerTab tab;
   final bool active;
+
+  /// Background tabs during split view render at reduced opacity.
+  final bool dimmed;
+
+  /// Pane number rendered on the pill while split view is on (1 = first
+  /// pane, 2 = partner / would-be pane, 0 = hidden outside split view).
+  final int paneBadge;
+
+  /// Filled badge = the tab is actually docked in that pane; outline badge =
+  /// the pane it would join when clicked.
+  final bool badgeFilled;
+
+  /// Badge color — matches the tab icon's semantic color (folder / accent).
+  final Color badgeColor;
   final bool canClose;
   final VoidCallback onSelect;
   final VoidCallback onClose;
@@ -336,7 +393,7 @@ class _TabItem extends StatelessWidget {
             ? context.colors.hover
             : Colors.transparent;
 
-        return Obx(() {
+        Widget child = Obx(() {
           final String title = tab.controller.tabTitle;
           final String tooltip = tab.controller.currentPath.value.isNotEmpty
               ? tab.controller.currentPath.value
@@ -372,75 +429,146 @@ class _TabItem extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 120),
-                      child: Icon(
-                        icon,
-                        key: ValueKey(icon),
-                        size: 14,
-                        color: active
-                            ? (tab.controller.location.value ==
-                                      ExplorerLocation.directory
-                                  ? context.colors.folder
-                                  : context.colors.accent)
-                            : context.colors.textFaint,
+                    // Pane badge stays OUTSIDE the dim veil: a dimmed
+                    // background tab must still show which split pane (1/2)
+                    // it is docked into.
+                    if (paneBadge > 0) ...[
+                      _PaneBadge(
+                        number: paneBadge,
+                        color: badgeColor,
+                        filled: badgeFilled,
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 5),
+                    ],
                     Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: active
-                              ? context.colors.textStrong
-                              : context.colors.textSecondary,
-                          fontWeight: active
-                              ? FontWeight.w500
-                              : FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                    if (canClose && (active || hovered))
-                      HoverRegion(
-                        cursor: SystemMouseCursors.click,
-                        builder: (context, closeHovered) {
-                          return GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: onClose,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 100),
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: closeHovered
-                                    ? context.colors.hover
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              alignment: Alignment.center,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 120),
+                        opacity: dimmed ? 0.55 : 1.0,
+                        child: Row(
+                          children: [
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 120),
                               child: Icon(
-                                CupertinoIcons.xmark,
-                                size: 10.5,
-                                color: closeHovered
-                                    ? context.colors.textPrimary
+                                icon,
+                                key: ValueKey(icon),
+                                size: 14,
+                                color: active
+                                    ? (tab.controller.location.value ==
+                                              ExplorerLocation.directory
+                                          ? context.colors.folder
+                                          : context.colors.accent)
                                     : context.colors.textFaint,
                               ),
                             ),
-                          );
-                        },
-                      )
-                    else
-                      const SizedBox(width: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: active
+                                      ? context.colors.textStrong
+                                      : context.colors.textSecondary,
+                                  fontWeight: active
+                                      ? FontWeight.w500
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                            ),
+                            if (canClose && (active || hovered))
+                              HoverRegion(
+                                cursor: SystemMouseCursors.click,
+                                builder: (context, closeHovered) {
+                                  return GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: onClose,
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 100,
+                                      ),
+                                      width: 20,
+                                      height: 20,
+                                      decoration: BoxDecoration(
+                                        color: closeHovered
+                                            ? context.colors.hover
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(
+                                          10,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        CupertinoIcons.xmark,
+                                        size: 10.5,
+                                        color: closeHovered
+                                            ? context.colors.textPrimary
+                                            : context.colors.textFaint,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              )
+                            else
+                              const SizedBox(width: 20),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           );
         });
+
+        return child;
       },
+    );
+  }
+}
+
+/// Tiny pane number chip on tabs while split view is on. Rendered before the
+/// icon, outside the dim veil, always in the accent color: filled = the tab
+/// is docked in that pane, outline = the pane it would join when clicked.
+class _PaneBadge extends StatelessWidget {
+  const _PaneBadge({
+    required this.number,
+    required this.color,
+    required this.filled,
+  });
+
+  final int number;
+  final Color color;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color foreground = filled
+        ? context.colors.accentContent
+        : color;
+
+    return Container(
+      width: 13,
+      height: 13,
+      decoration: BoxDecoration(
+        color: filled ? color : color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(4),
+        border: filled
+            ? null
+            : Border.all(color: color.withValues(alpha: 0.55)),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '$number',
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          height: 1,
+          color: foreground,
+        ),
+      ),
     );
   }
 }

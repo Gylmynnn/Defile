@@ -1,3 +1,5 @@
+import 'dart:io' as io;
+
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 
 import '../utils/app_toast.dart';
@@ -7,6 +9,8 @@ import 'package:defile/src/rust/api/system.dart' as rust_system;
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
+
+import 'explorer_tabs_controller.dart';
 
 part 'explorer_navigation.dart';
 part 'explorer_operations.dart';
@@ -72,6 +76,15 @@ class FileExplorerController extends GetxController {
   final RxList<String> availableTerminals = <String>[].obs;
 
   final Rxn<rust.FileEntry> previewFile = Rxn();
+
+  /// Whether THIS pane's own preview panel is open (split view). Independent
+  /// per tab; the global preview toggle lives in the ThemeService.
+  final RxBool panePreviewEnabled = false.obs;
+
+  /// Per-pane preview sizes (split view) so resizing one pane's preview does
+  /// not move the other's.
+  final RxDouble panePreviewWidth = 320.0.obs;
+  final RxDouble panePreviewHeight = 170.0.obs;
 
   final RxList<String> pathHistory = <String>[].obs;
   final RxList<String> forwardHistory = <String>[].obs;

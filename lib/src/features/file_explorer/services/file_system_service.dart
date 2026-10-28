@@ -1,3 +1,4 @@
+import 'package:defile/src/rust/api/archive.dart' as rust_archive;
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;
 
@@ -71,5 +72,19 @@ class FileSystemService {
       destinationDirectory: destinationDirectory,
       newName: newName,
     );
+  }
+
+  Future<void> compressEntries({
+    required List<String> paths,
+    required String destination,
+  }) {
+    return rust_archive.compressEntries(paths: paths, destination: destination);
+  }
+
+  Future<BigInt> extractArchive({
+    required String path,
+    required String destinationDir,
+  }) {
+    return rust_archive.extractArchive(path: path, destinationDir: destinationDir);
   }
 }

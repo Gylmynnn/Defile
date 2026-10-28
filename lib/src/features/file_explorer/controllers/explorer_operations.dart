@@ -119,6 +119,22 @@ extension ExplorerOperations on FileExplorerController {
 
     await refreshDirectory();
 
+    if (Get.isRegistered<ExplorerTabsController>()) {
+      final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
+      final String dest = p.normalize(destinationDirectory);
+      final Set<String> sourceDirs = entries
+          .map((e) => p.normalize(p.dirname(e.path)))
+          .toSet();
+
+      for (final tab in tabs.tabs) {
+        if (tab.controller == this) continue;
+        final String tabPath = p.normalize(tab.controller.currentPath.value);
+        if (sourceDirs.contains(tabPath) || tabPath == dest) {
+          tab.controller.refreshDirectory();
+        }
+      }
+    }
+
     final String label = move ? 'moved' : 'copied';
 
     if (succeeded == entries.length) {
@@ -245,6 +261,158 @@ extension ExplorerOperations on FileExplorerController {
       );
     }
   }
+
+  static const List<String> _archiveSuffixes = [
+    '.zip',
+    '.tar',
+    '.tar.gz',
+    '.tgz',
+  ];
+
+  /// Whether the entry is an archive the built-in extractor understands.
+  bool isExtractableArchive(rust.FileEntry entry) {
+    if (entry.isDirectory) return false;
+
+    final String lower = entry.name.toLowerCase();
+    return _archiveSuffixes.any(lower.endsWith);
+  }
+
+  /// Name given to the folder an archive's contents land in.
+  static String? _archiveRootName(String fileName) {
+    final String lower = fileName.toLowerCase();
+
+    for (final suffix in _archiveSuffixes) {
+      if (lower.endsWith(suffix)) {
+        return fileName.substring(0, fileName.length - suffix.length);
+      }
+    }
+
+    return null;
+  }
+
+  /// Bundles [entries] into an archive named `<archiveFile>` in the current
+  /// directory, de-duplicating the name when it already exists. [format]
+  /// selects the output type: `zip` (default), `tar`, or `tar.gz`.
+  Future<void> compressEntries(
+    List<rust.FileEntry> entries, {
+    required String archiveName,
+    String format = 'zip',
+  }) async {
+    if (entries.isEmpty) return;
+
+    final String trimmed = archiveName.trim();
+    if (trimmed.isEmpty) {
+      showAppToast(
+        title: 'Empty archive name',
+        message: 'Enter an archive name first',
+        variant: AppToastVariant.error,
+      );
+      return;
+    }
+
+    final String extension = switch (format) {
+      'tar' => '.tar',
+      'tar.gz' => '.tar.gz',
+      _ => '.zip',
+    };
+    final String fileName = trimmed.toLowerCase().endsWith(extension)
+        ? trimmed
+        : '$trimmed$extension';
+    final String destination = _uniqueChildPath(currentPath.value, fileName);
+
+    showAppToast(
+      title: 'Compressing',
+      message: 'Packing ${entries.length} item(s) into "${p.basename(destination)}"',
+      variant: AppToastVariant.loading,
+    );
+
+    try {
+      await fileSystemService.compressEntries(
+        paths: entries.map((entry) => entry.path).toList(),
+        destination: destination,
+      );
+      await refreshDirectory();
+
+      showAppToast(
+        title: 'Compressed',
+        message: '${entries.length} item(s) packed into "${p.basename(destination)}"',
+        variant: AppToastVariant.success,
+      );
+    } catch (error) {
+      showAppToast(
+        title: 'Failed to compress',
+        message: error.toString(),
+        variant: AppToastVariant.error,
+      );
+    }
+  }
+
+  /// Extracts an archive next to itself, into a folder named after it.
+  Future<void> extractEntry(rust.FileEntry entry) async {
+    final String? rootName = _archiveRootName(entry.name);
+    if (rootName == null || rootName.trim().isEmpty) {
+      showAppToast(
+        title: 'Extract',
+        message: 'Unsupported archive format. Zip, tar and tar.gz are supported.',
+        variant: AppToastVariant.error,
+      );
+      return;
+    }
+
+    final String destination = _uniqueChildPath(
+      p.dirname(entry.path),
+      rootName,
+    );
+
+    showAppToast(
+      title: 'Extracting',
+      message: 'Unpacking "${entry.name}" into "${p.basename(destination)}"',
+      variant: AppToastVariant.loading,
+    );
+
+    try {
+      final BigInt items = await fileSystemService.extractArchive(
+        path: entry.path,
+        destinationDir: destination,
+      );
+      await refreshDirectory();
+
+      showAppToast(
+        title: 'Extracted',
+        message:
+            '$items item(s) extracted into "${p.basename(destination)}"',
+        variant: AppToastVariant.success,
+      );
+    } catch (error) {
+      showAppToast(
+        title: 'Failed to extract',
+        message: error.toString(),
+        variant: AppToastVariant.error,
+      );
+      return;
+    }
+  }
+
+  /// Returns a child path in [directory] that does not exist yet by appending
+  /// " (n)" before the extension.
+  String _uniqueChildPath(String directory, String fileName) {
+    String candidate = p.join(directory, fileName);
+    if (!_pathExists(candidate)) return candidate;
+
+    final String basename = p.basenameWithoutExtension(fileName);
+    final String extension = p.extension(fileName);
+
+    int counter = 2;
+    while (_pathExists(candidate)) {
+      candidate = p.join(directory, '$basename ($counter)$extension');
+      counter++;
+    }
+
+    return candidate;
+  }
+
+  bool _pathExists(String path) =>
+      io.FileSystemEntity.typeSync(path) != io.FileSystemEntityType.notFound;
 
   Future<void> _loadTerminalSettings() async {
     try {

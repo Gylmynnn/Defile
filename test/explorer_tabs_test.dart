@@ -155,6 +155,130 @@ void main() {
     });
   });
 
+  group('ExplorerTabsController split view', () {
+    test('cycleSplitMode enters horizontal, rotates, and exits', () {
+      final tabs = ExplorerTabsController(_FakeFs());
+      tabs.onInit();
+      tabs.activeController.currentPath.value = '/home';
+      final int activeId = tabs.activeTab.id;
+
+      tabs.cycleSplitMode();
+
+      expect(tabs.isSplit, isTrue);
+      expect(tabs.splitMode.value, ExplorerSplitMode.horizontal);
+      expect(tabs.splitPartnerId.value, isNotNull);
+      expect(tabs.splitPartnerId.value, isNot(activeId));
+      expect(tabs.activeTab.id, activeId); // pane one keeps the active tab
+      expect(tabs.partnerTab!.controller.initialPath, '/home');
+
+      tabs.cycleSplitMode();
+      expect(tabs.splitMode.value, ExplorerSplitMode.vertical);
+      expect(tabs.splitPartnerId.value, isNot(activeId));
+
+      tabs.cycleSplitMode();
+      expect(tabs.isSplit, isFalse);
+      expect(tabs.splitPartnerId.value, isNull);
+      // Partner tab remains open after leaving split view.
+      expect(tabs.tabs.length, 2);
+      expect(tabs.activeTab.id, activeId);
+    });
+
+    test('setSplitMode applies vertical directly from none', () {
+      final tabs = ExplorerTabsController(_FakeFs());
+      tabs.onInit();
+
+      tabs.setSplitMode(ExplorerSplitMode.vertical);
+
+      expect(tabs.isSplit, isTrue);
+      expect(tabs.splitMode.value, ExplorerSplitMode.vertical);
+      expect(tabs.partnerTab, isNotNull);
+    });
+
+    test('focusedController follows the focused pane', () {
+      final tabs = ExplorerTabsController(_FakeFs());
+      tabs.onInit();
+      tabs.addTab(path: '/tab2');
+
+      tabs.cycleSplitMode();
+      final int partnerId = tabs.splitPartnerId.value!;
+
+      expect(tabs.focusedController, same(tabs.activeController));
+
+      tabs.focusPane(second: true);
+      expect(tabs.splitFocusSecond.value, isTrue);
+      expect(tabs.focusedController, same(tabs.partnerTab!.controller));
+
+      tabs.focusPane(second: false);
+      expect(tabs.focusedController, same(tabs.activeController));
+      expect(partnerId, isNotNull);
+    });
+
+    test('selectTab focuses the partner pane instead of rebinding', () {
+      final tabs = ExplorerTabsController(_FakeFs());
+      tabs.onInit();
+      tabs.addTab(path: '/tab2');
+      tabs.setSplitMode(ExplorerSplitMode.horizontal);
+
+      final int partnerIndex = tabs.splitPartnerId.value != null
+          ? tabs.tabs.indexWhere((t) => t.id == tabs.splitPartnerId.value!)
+          : -1;
+      expect(partnerIndex, isNot(-1));
+
+      tabs.selectTab(partnerIndex);
+      expect(tabs.splitFocusSecond.value, isTrue);
+      expect(tabs.activeTab.controller, same(tabs.activeController));
+    });
+
+    test('swapPanes exchanges pane contents and keeps both open', () {
+      final tabs = ExplorerTabsController(_FakeFs());
+      tabs.onInit();
+      tabs.activeController.currentPath.value = '/pane1';
+      tabs.setSplitMode(ExplorerSplitMode.horizontal);
+      tabs.partnerTab!.controller.currentPath.value = '/pane2';
+
+      final int oldActiveId = tabs.activeTab.id;
+      final int oldPartnerId = tabs.splitPartnerId.value!;
+
+      tabs.swapPanes();
+
+      expect(tabs.activeTab.id, oldPartnerId);
+      expect(tabs.splitPartnerId.value, oldActiveId);
+      expect(tabs.activeTab.controller.currentPath.value, '/pane2');
+      expect(tabs.partnerTab!.controller.currentPath.value, '/pane1');
+      expect(tabs.tabs.length, 2);
+    });
+
+    test('closing the partner tab leaves split; closing active keeps partner', ()
+    {
+      final tabs = ExplorerTabsController(_FakeFs());
+      tabs.onInit();
+      tabs.setSplitMode(ExplorerSplitMode.horizontal);
+      final int partnerIdx = tabs.tabs.indexWhere(
+        (t) => t.id == tabs.splitPartnerId.value!,
+      );
+
+      tabs.closeTab(partnerIdx);
+
+      expect(tabs.isSplit, isFalse);
+      expect(tabs.splitMode.value, ExplorerSplitMode.none);
+      expect(tabs.tabs.length, 1);
+    });
+
+    test('splitRatio clamps and resets', () {
+      final tabs = ExplorerTabsController(_FakeFs());
+      tabs.onInit();
+
+      tabs.updateSplitRatio(0.6);
+      expect(tabs.splitRatio.value, 0.85); // clamped at upper bound
+
+      tabs.updateSplitRatio(-10);
+      expect(tabs.splitRatio.value, 0.15); // clamped at lower bound
+
+      tabs.resetSplitRatio();
+      expect(tabs.splitRatio.value, 0.5);
+    });
+  });
+
   group('ExplorerTabBar widget', () {
     testWidgets('renders tabs, adds tab via + button, and switches tab on tap', (
       tester,

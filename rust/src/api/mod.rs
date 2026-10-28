@@ -6,6 +6,7 @@ mod terminal;
 mod trash;
 
 pub mod appearance;
+pub mod archive;
 pub mod document;
 pub mod file_entry;
 pub mod font;

@@ -15,6 +15,9 @@ class ThemeService extends GetxService {
   final RxBool previewEnabled = false.obs;
   final RxDouble previewWidth = 320.0.obs;
 
+  /// Height of the bottom preview strip used in vertical split view.
+  final RxDouble previewHeight = 170.0.obs;
+
   Duration get animationDuration => animationsEnabled.value
       ? const Duration(milliseconds: 200)
       : Duration.zero;
