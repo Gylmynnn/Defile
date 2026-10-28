@@ -126,25 +126,33 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
           // ),
           Obx(() {
             final themeService = Get.find<ThemeService>();
+            final bool compact = widget.compact;
+            // Per-pane preview in split view; the global toggle otherwise.
+            final bool active = compact
+                ? controller.panePreviewEnabled.value
+                : themeService.previewEnabled.value;
+
             return _ToolbarIconButton(
-              icon: themeService.previewEnabled.value
-                  ? CupertinoIcons.book_solid
-                  : CupertinoIcons.book,
-              tooltip: themeService.previewEnabled.value
-                  ? 'Hide preview'
-                  : 'Show preview',
-              active: themeService.previewEnabled.value,
-              onTap: () => themeService.previewEnabled.value =
-                  !themeService.previewEnabled.value,
+              icon: active ? CupertinoIcons.book_solid : CupertinoIcons.book,
+              tooltip: active
+                  ? (compact ? "Hide this pane's preview" : 'Hide preview')
+                  : (compact ? "Show this pane's preview" : 'Show preview'),
+              active: active,
+              onTap: compact
+                  ? () => controller.panePreviewEnabled.value =
+                        !controller.panePreviewEnabled.value
+                  : () => themeService.previewEnabled.value =
+                        !themeService.previewEnabled.value,
             );
           }),
-          _ToolbarIconButton(
-            icon: Icons.settings_outlined,
-            tooltip: 'Settings',
-            onTap: () => showAppDialog(
-              builder: (BuildContext _) => const SettingsDialog(),
+          if (!widget.compact)
+            _ToolbarIconButton(
+              icon: Icons.settings_outlined,
+              tooltip: 'Settings',
+              onTap: () => showAppDialog(
+                builder: (BuildContext _) => const SettingsDialog(),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -564,6 +572,22 @@ void _showSplitMenu(
 class ExplorerSplitTopBar extends StatelessWidget {
   const ExplorerSplitTopBar({super.key});
 
+  bool _anyPanePreviewOpen() {
+    final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
+    final ExplorerTab? partner = tabs.partnerTab;
+
+    return tabs.activeController.panePreviewEnabled.value ||
+        (partner?.controller.panePreviewEnabled.value ?? false);
+  }
+
+  void _setAllPanePreviews(bool target) {
+    final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
+    final ExplorerTab? partner = tabs.partnerTab;
+
+    tabs.activeController.panePreviewEnabled.value = target;
+    if (partner != null) partner.controller.panePreviewEnabled.value = target;
+  }
+
   @override
   Widget build(BuildContext context) {
     final FileExplorerController controller = ExplorerScope.of(context);
@@ -591,17 +615,14 @@ class ExplorerSplitTopBar extends StatelessWidget {
           const ExplorerSplitControls(),
           const SizedBox(width: 6),
           Obx(() {
-            final themeService = Get.find<ThemeService>();
+            // Toggles BOTH pane previews at once; each pane can still get its
+            // own preview from the pane toolbar button.
+            final bool bothOpen = _anyPanePreviewOpen();
             return _ToolbarIconButton(
-              icon: themeService.previewEnabled.value
-                  ? CupertinoIcons.book_solid
-                  : CupertinoIcons.book,
-              tooltip: themeService.previewEnabled.value
-                  ? 'Hide preview'
-                  : 'Show preview',
-              active: themeService.previewEnabled.value,
-              onTap: () => themeService.previewEnabled.value =
-                  !themeService.previewEnabled.value,
+              icon: bothOpen ? CupertinoIcons.book_solid : CupertinoIcons.book,
+              tooltip: bothOpen ? 'Hide all previews' : 'Show all previews',
+              active: bothOpen,
+              onTap: () => _setAllPanePreviews(!bothOpen),
             );
           }),
           _ToolbarIconButton(

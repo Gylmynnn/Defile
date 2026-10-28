@@ -77,6 +77,10 @@ class FileExplorerController extends GetxController {
 
   final Rxn<rust.FileEntry> previewFile = Rxn();
 
+  /// Whether THIS pane's own preview panel is open (split view). Independent
+  /// per tab; the global preview toggle lives in the ThemeService.
+  final RxBool panePreviewEnabled = false.obs;
+
   final RxList<String> pathHistory = <String>[].obs;
   final RxList<String> forwardHistory = <String>[].obs;
 

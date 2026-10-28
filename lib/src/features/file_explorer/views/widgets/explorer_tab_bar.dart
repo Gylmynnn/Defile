@@ -428,13 +428,6 @@ class _TabItem extends StatelessWidget {
                             : context.colors.textFaint,
                       ),
                     ),
-                    if (paneBadge > 0) ...[
-                      const SizedBox(width: 5),
-                      _PaneBadge(
-                        number: paneBadge,
-                        highlighted: badgeHighlighted,
-                      ),
-                    ],
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -452,6 +445,13 @@ class _TabItem extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (paneBadge > 0) ...[
+                      _PaneBadge(
+                        number: paneBadge,
+                        highlighted: badgeHighlighted,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
                     if (canClose && (active || hovered))
                       HoverRegion(
                         cursor: SystemMouseCursors.click,
@@ -498,7 +498,9 @@ class _TabItem extends StatelessWidget {
   }
 }
 
-/// Tiny pane number chip on tabs docked into a split pane.
+/// Tiny pane number chip on tabs docked into a split pane. Rendered at the
+/// back of the pill, and styled noticeably on non-focused tabs so a docked
+/// tab never loses its pane marker.
 class _PaneBadge extends StatelessWidget {
   const _PaneBadge({required this.number, required this.highlighted});
 
@@ -509,7 +511,7 @@ class _PaneBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color foreground = highlighted
         ? context.colors.accentContent
-        : context.colors.textFaint;
+        : context.colors.textSecondary;
 
     return Container(
       width: 13,
@@ -517,8 +519,13 @@ class _PaneBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: highlighted
             ? context.colors.accent
-            : context.colors.accent.withValues(alpha: 0.14),
+            : context.colors.accent.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(4),
+        border: highlighted
+            ? null
+            : Border.all(
+                color: context.colors.accent.withValues(alpha: 0.45),
+              ),
       ),
       alignment: Alignment.center,
       child: Text(

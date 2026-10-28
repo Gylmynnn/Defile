@@ -334,8 +334,9 @@ class _SplitPane extends StatelessWidget {
           final bool vertical =
               tabs.splitMode.value == ExplorerSplitMode.vertical;
 
-          // Own preview per pane: beside the content in side-by-side split,
-          // below the content in stacked split.
+          // Own preview per pane: below the content in side-by-side split,
+          // beside the content in stacked split (reads better at half width
+          // vs half height).
           final Widget mainArea = Column(
             children: [
               ExplorerToolbar(compact: true),
@@ -346,7 +347,11 @@ class _SplitPane extends StatelessWidget {
                   second: second,
                 ),
               ),
-              if (vertical) PreviewBottomPanel(availableWidth: 0),
+              if (!vertical)
+                PreviewBottomPanel(
+                  availableWidth: 0,
+                  enabledOverride: tab.controller.panePreviewEnabled,
+                ),
               ExplorerStatusBar(),
             ],
           );
@@ -361,19 +366,21 @@ class _SplitPane extends StatelessWidget {
               ),
             ),
             child: vertical
-                ? mainArea
-                : LayoutBuilder(
+                ? LayoutBuilder(
                     builder: (context, constraints) {
                       return Row(
                         children: [
                           Expanded(child: mainArea),
                           PreviewPanel(
                             availableWidth: constraints.maxWidth,
+                            enabledOverride:
+                                tab.controller.panePreviewEnabled,
                           ),
                         ],
                       );
                     },
-                  ),
+                  )
+                : mainArea,
           );
         }),
       ),

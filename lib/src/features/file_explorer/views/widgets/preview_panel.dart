@@ -22,9 +22,13 @@ part 'preview_media.dart';
 part 'preview_text.dart';
 
 class PreviewPanel extends StatefulWidget {
-  const PreviewPanel({super.key, required this.availableWidth});
+  const PreviewPanel({super.key, required this.availableWidth, this.enabledOverride});
 
   final double availableWidth;
+
+  /// When given, the panel obeys this per-pane flag instead of the global
+  /// ThemeService preview toggle (split view).
+  final RxBool? enabledOverride;
 
   @override
   State<PreviewPanel> createState() => _PreviewPanelState();
@@ -45,7 +49,8 @@ class _PreviewPanelState extends State<PreviewPanel> {
     final themeService = Get.find<ThemeService>();
 
     return Obx(() {
-      final bool enabled = themeService.previewEnabled.value;
+      final bool enabled =
+          widget.enabledOverride?.value ?? themeService.previewEnabled.value;
       final double minMainWidth = controller.isSearching.value
           ? _minMainWidthSearching
           : _minMainWidth;
@@ -152,9 +157,12 @@ class _PreviewPanelState extends State<PreviewPanel> {
 /// split view). The previewed file renders on the left, the name/type info
 /// on the right, and the strip's height is draggable through its top edge.
 class PreviewBottomPanel extends StatefulWidget {
-  const PreviewBottomPanel({super.key, required this.availableWidth});
+  const PreviewBottomPanel({super.key, required this.availableWidth, this.enabledOverride});
 
   final double availableWidth;
+
+  /// Per-pane flag override (split view), see [PreviewPanel.enabledOverride].
+  final RxBool? enabledOverride;
 
   @override
   State<PreviewBottomPanel> createState() => _PreviewBottomPanelState();
@@ -169,7 +177,8 @@ class _PreviewBottomPanelState extends State<PreviewBottomPanel> {
     final themeService = Get.find<ThemeService>();
 
     return Obx(() {
-      final bool enabled = themeService.previewEnabled.value;
+      final bool enabled =
+          widget.enabledOverride?.value ?? themeService.previewEnabled.value;
       final rust.FileEntry? file = controller.previewFile.value;
 
       // Only mount when there is something to preview; the pane content
