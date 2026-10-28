@@ -81,6 +81,11 @@ class FileExplorerController extends GetxController {
   /// per tab; the global preview toggle lives in the ThemeService.
   final RxBool panePreviewEnabled = false.obs;
 
+  /// Per-pane preview sizes (split view) so resizing one pane's preview does
+  /// not move the other's.
+  final RxDouble panePreviewWidth = 320.0.obs;
+  final RxDouble panePreviewHeight = 170.0.obs;
+
   final RxList<String> pathHistory = <String>[].obs;
   final RxList<String> forwardHistory = <String>[].obs;
 

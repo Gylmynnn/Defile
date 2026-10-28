@@ -572,22 +572,6 @@ void _showSplitMenu(
 class ExplorerSplitTopBar extends StatelessWidget {
   const ExplorerSplitTopBar({super.key});
 
-  bool _anyPanePreviewOpen() {
-    final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
-    final ExplorerTab? partner = tabs.partnerTab;
-
-    return tabs.activeController.panePreviewEnabled.value ||
-        (partner?.controller.panePreviewEnabled.value ?? false);
-  }
-
-  void _setAllPanePreviews(bool target) {
-    final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
-    final ExplorerTab? partner = tabs.partnerTab;
-
-    tabs.activeController.panePreviewEnabled.value = target;
-    if (partner != null) partner.controller.panePreviewEnabled.value = target;
-  }
-
   @override
   Widget build(BuildContext context) {
     final FileExplorerController controller = ExplorerScope.of(context);
@@ -614,17 +598,6 @@ class ExplorerSplitTopBar extends StatelessWidget {
           const Spacer(),
           const ExplorerSplitControls(),
           const SizedBox(width: 6),
-          Obx(() {
-            // Toggles BOTH pane previews at once; each pane can still get its
-            // own preview from the pane toolbar button.
-            final bool bothOpen = _anyPanePreviewOpen();
-            return _ToolbarIconButton(
-              icon: bothOpen ? CupertinoIcons.book_solid : CupertinoIcons.book,
-              tooltip: bothOpen ? 'Hide all previews' : 'Show all previews',
-              active: bothOpen,
-              onTap: () => _setAllPanePreviews(!bothOpen),
-            );
-          }),
           _ToolbarIconButton(
             icon: Icons.settings_outlined,
             tooltip: 'Settings',

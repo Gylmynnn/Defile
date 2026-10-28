@@ -119,23 +119,118 @@ class FileExplorerPage extends StatelessWidget {
           const SingleActivator(LogicalKeyboardKey.digit9, meta: true): () =>
               tabs.selectTab(tabs.tabs.length - 1),
         },
-        child: Obx(() {
-          final FileExplorerController focused = tabs.focusedController;
-
-          return ExplorerScope(
-            controller: focused,
-            child: tabs.isSplit
-                ? _SplitLayout(
-                    key: ValueKey(
-                      'split:${tabs.splitMode.value}:'
-                      '${tabs.activeTab.id}:${tabs.splitPartnerId.value ?? -1}',
-                    ),
-                  )
-                : ExplorerBody(key: ValueKey(tabs.activeTab.id)),
-          );
-        }),
+        child: _LayoutHost(tabs: tabs),
       ),
     );
+  }
+}
+
+/// Chooses between the single body and the split layout, and owns the split
+/// exit transition: when split view is turned off, a snapshot of the split
+/// layout stays mounted one beat while its second pane glides shut and the
+/// shared top bar collapses — then the single body takes over. Only one
+/// layout is ever mounted, so rapid toggling cannot duplicate elements.
+class _LayoutHost extends StatefulWidget {
+  const _LayoutHost({required this.tabs});
+
+  final ExplorerTabsController tabs;
+
+  @override
+  State<_LayoutHost> createState() => _LayoutHostState();
+}
+
+class _LayoutHostState extends State<_LayoutHost> {
+  ExplorerTab? _exitFirst;
+  ExplorerTab? _exitSecond;
+  ExplorerSplitMode? _exitMode;
+  bool _exiting = false;
+  Timer? _exitTimer;
+
+  void _rememberSplit() {
+    final ExplorerTabsController tabs = widget.tabs;
+    _exitFirst = tabs.activeTab;
+    _exitSecond = tabs.partnerTab;
+    _exitMode = tabs.splitMode.value;
+  }
+
+  void _clearExit() {
+    _exitTimer?.cancel();
+    _exitTimer = null;
+    _exiting = false;
+    _exitFirst = null;
+    _exitSecond = null;
+    _exitMode = null;
+  }
+
+  void _beginExit() {
+    _exiting = true;
+    final Duration glide = Get.isRegistered<ThemeService>()
+        ? Get.find<ThemeService>().animationDuration * 1.4
+        : Duration.zero;
+    _exitTimer?.cancel();
+    _exitTimer = Timer(glide + const Duration(milliseconds: 50), () {
+      if (mounted) setState(_clearExit);
+    });
+  }
+
+  @override
+  void dispose() {
+    _exitTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ExplorerTabsController tabs = widget.tabs;
+
+    // ExplorerScope must live INSIDE the Obx: it has to pick up the freshly
+    // focused controller every time the active tab / pane changes, otherwise
+    // the body would keep showing the controller it was first built with.
+    return Obx(() {
+      final FileExplorerController focused = tabs.focusedController;
+
+      return ExplorerScope(
+        controller: focused,
+        child: () {
+          if (tabs.isSplit) {
+            _clearExit();
+            _rememberSplit();
+            // Key on the MODE only: switching tabs (or the focused pane)
+            // updates this layout in place — the glide should replay solely
+            // when the split mode itself is toggled.
+            return _SplitLayout(
+              key: ValueKey('split:${tabs.splitMode.value}'),
+            );
+          }
+
+          if (_exitMode != null && _exitFirst != null && _exitSecond != null) {
+            // Cut the exit short if a pane's tab was closed mid-glide.
+            final bool alive = tabs.tabs.contains(_exitFirst) &&
+                tabs.tabs.contains(_exitSecond);
+            if (alive) {
+              if (!_exiting) {
+                // First frame after leaving split: the snapshot is already
+                // mounted below; start the exit clock after this frame so the
+                // state machine settles once the glide finishes.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) setState(_beginExit);
+                });
+              }
+              return _SplitLayout(
+                key: ValueKey('split-exit:$_exitMode'),
+                exiting: true,
+                exitFirst: _exitFirst,
+                exitSecond: _exitSecond,
+                exitMode: _exitMode,
+              );
+            }
+            _clearExit();
+          }
+
+          return ExplorerBody(key: ValueKey(tabs.activeTab.id));
+        }(),
+      );
+    });
   }
 }
 
@@ -222,7 +317,37 @@ class ExplorerBody extends StatelessWidget {
 /// between the active tab and its partner tab. The tab strip, sidebar and
 /// preview panel stay shared above / beside the two panes.
 class _SplitLayout extends StatelessWidget {
-  const _SplitLayout({super.key});
+  const _SplitLayout({
+    super.key,
+    this.exiting = false,
+    this.exitFirst,
+    this.exitSecond,
+    this.exitMode,
+  });
+
+  /// When true, this instance is a snapshot animating shut after split view
+  /// was turned off: the second pane glides closed and the shared top bar
+  /// collapses before the single body takes over.
+  final bool exiting;
+
+  /// Panes and orientation captured at exit time — the tabs controller has
+  /// already undocked the partner by then, so the snapshot pins them.
+  final ExplorerTab? exitFirst;
+  final ExplorerTab? exitSecond;
+  final ExplorerSplitMode? exitMode;
+
+  /// Shared instances keep a stable identity across rebuilds. TweenAnimation
+  /// Builder restarts from [Tween.begin] whenever it receives a different
+  /// tween, so a fresh instance here would snap the glide back to its start
+  /// on every parent rebuild (the topbar "pop back" glitch).
+  static final Tween<double> _enterGlide = Tween<double>(
+    begin: 0.0,
+    end: 1.0,
+  );
+  static final Tween<double> _exitGlide = Tween<double>(
+    begin: 1.0,
+    end: 0.0,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -230,62 +355,98 @@ class _SplitLayout extends StatelessWidget {
     final ExplorerTab? partner = tabs.partnerTab;
 
     // Defensive: split mode without a live partner renders a single body.
-    if (partner == null) {
+    if (!exiting && partner == null) {
       return ExplorerBody(key: ValueKey(tabs.activeTab.id));
     }
 
-    final bool vertical =
-        tabs.splitMode.value == ExplorerSplitMode.vertical;
+    final ExplorerTab first = exiting
+        ? (exitFirst ?? tabs.activeTab)
+        : tabs.activeTab;
+    final ExplorerTab second = exiting
+        ? (exitSecond ?? tabs.activeTab)
+        : partner!;
+    final bool vertical = exiting
+        ? (exitMode ?? ExplorerSplitMode.horizontal) ==
+              ExplorerSplitMode.vertical
+        : tabs.splitMode.value == ExplorerSplitMode.vertical;
 
-    final Widget panes = LayoutBuilder(
-      builder: (context, paneConstraints) {
-        final double totalDimension = vertical
-            ? paneConstraints.maxHeight
-            : paneConstraints.maxWidth;
+    // Entrance glide: the second pane eases open from its collapsed minimum
+    // to the saved ratio. Exit glide: it eases shut the same way. Real layout
+    // motion — the same movement as dragging the divider — so it stays smooth
+    // on this heavy widget tree (no opacity repaints).
+    final Duration glide = Get.isRegistered<ThemeService>()
+        ? Get.find<ThemeService>().animationDuration * 1.4
+        : Duration.zero;
 
-        return Obx(() {
-          final double ratio = tabs.splitRatio.value;
-          final int flex1 = (ratio * 1000).toInt().clamp(150, 850);
-          final int flex2 = (1000 - flex1).clamp(150, 850);
+    Widget panes(double t) {
+      return LayoutBuilder(
+        builder: (context, paneConstraints) {
+          final double totalDimension = vertical
+              ? paneConstraints.maxHeight
+              : paneConstraints.maxWidth;
 
-          final Widget firstPane = Flexible(
-            flex: flex1,
-            child: _SplitPane(tab: tabs.activeTab, second: false),
-          );
+          return Obx(() {
+            final double ratio = tabs.splitRatio.value;
+            // 0.998 keeps the second pane alive at a sliver, so the exit ends
+            // flush with the single-body layout instead of a hard cut.
+            final double shownRatio = 0.998 + (ratio - 0.998) * t;
+            final int flex1 = exiting
+                ? (shownRatio * 1000).round().clamp(2, 998)
+                : (shownRatio * 1000).toInt().clamp(150, 850);
+            final int flex2 = 1000 - flex1;
 
-          final Widget divider = _PaneDivider(
-            axis: vertical ? Axis.vertical : Axis.horizontal,
-            onDrag: (delta) {
-              if (totalDimension > 0) {
-                tabs.updateSplitRatio(delta / totalDimension);
-              }
-            },
-            onDoubleTap: tabs.resetSplitRatio,
-          );
+            final Widget firstPane = Flexible(
+              flex: flex1,
+              child: _SplitPane(
+                tab: first,
+                second: false,
+                forceVertical: vertical,
+              ),
+            );
 
-          final Widget secondPane = Flexible(
-            flex: flex2,
-            child: _SplitPane(tab: partner, second: true),
-          );
+            final Widget divider = _PaneDivider(
+              axis: vertical ? Axis.vertical : Axis.horizontal,
+              onDrag: (delta) {
+                if (totalDimension > 0) {
+                  tabs.updateSplitRatio(delta / totalDimension);
+                }
+              },
+              onDoubleTap: tabs.resetSplitRatio,
+            );
 
-          return vertical
-              ? Column(
-                  children: [
-                    firstPane,
-                    divider,
-                    secondPane,
-                  ],
-                )
-              : Row(
-                  children: [
-                    firstPane,
-                    divider,
-                    secondPane,
-                  ],
-                );
-        });
-      },
-    );
+            final Widget secondPane = Flexible(
+              flex: flex2,
+              child: _SplitPane(
+                tab: second,
+                second: true,
+                forceVertical: vertical,
+              ),
+            );
+
+            // Small gutter so each pane's focus frame has room at the outer
+            // edges instead of being clipped by the window / tab strip.
+            return Padding(
+              padding: const EdgeInsets.all(2.5),
+              child: vertical
+                  ? Column(
+                      children: [
+                        firstPane,
+                        divider,
+                        secondPane,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        firstPane,
+                        divider,
+                        secondPane,
+                      ],
+                    ),
+            );
+          });
+        },
+      );
+    }
 
     return Scaffold(
       body: Row(
@@ -298,12 +459,25 @@ class _SplitLayout extends StatelessWidget {
             color: context.colors.divider,
           ),
           Expanded(
-            child: Column(
-              children: [
-                const ExplorerSplitTopBar(),
-                const ExplorerTabBar(),
-                Expanded(child: panes),
-              ],
+            child: TweenAnimationBuilder<double>(
+              tween: exiting ? _exitGlide : _enterGlide,
+              duration: glide,
+              curve: Curves.easeOutCubic,
+              builder: (context, double t, _) => Column(
+                children: [
+                  // Shared top bar grows in on the way in and collapses with
+                  // the exit glide instead of popping.
+                  ClipRect(
+                    child: Align(
+                      heightFactor: t.clamp(0.0, 1.0),
+                      alignment: Alignment.topCenter,
+                      child: const ExplorerSplitTopBar(),
+                    ),
+                  ),
+                  const ExplorerTabBar(),
+                  Expanded(child: panes(t)),
+                ],
+              ),
             ),
           ),
         ],
@@ -315,10 +489,15 @@ class _SplitLayout extends StatelessWidget {
 /// One pane of the split area: its own toolbar, entry content and status bar,
 /// all bound to the pane's tab controller. Shows an accent frame when focused.
 class _SplitPane extends StatelessWidget {
-  const _SplitPane({required this.tab, required this.second});
+  const _SplitPane({required this.tab, required this.second, this.forceVertical});
 
   final ExplorerTab tab;
   final bool second;
+
+  /// Pins the pane layout orientation. The exit snapshot passes the mode
+  /// captured at exit time because the tabs controller has already dropped
+  /// back to [ExplorerSplitMode.none] by then.
+  final bool? forceVertical;
 
   @override
   Widget build(BuildContext context) {
@@ -331,7 +510,7 @@ class _SplitPane extends StatelessWidget {
         onPointerDown: (_) => tabs.focusPane(second: second),
         child: Obx(() {
           final bool isFocused = tabs.splitFocusSecond.value == second;
-          final bool vertical =
+          final bool vertical = forceVertical ??
               tabs.splitMode.value == ExplorerSplitMode.vertical;
 
           // Own preview per pane: below the content in side-by-side split,
@@ -356,8 +535,10 @@ class _SplitPane extends StatelessWidget {
             ],
           );
 
+          // foregroundDecoration so pane content (toolbars, status bar) can
+          // never paint over the focus frame.
           return Container(
-            decoration: BoxDecoration(
+            foregroundDecoration: BoxDecoration(
               border: Border.all(
                 color: isFocused
                     ? context.colors.accent.withValues(alpha: 0.38)
