@@ -407,6 +407,15 @@ extension _SettingsSections on _SettingsDialogState {
   // ==========================================
   // Files and Links Section
   // ==========================================
+  String _defaultManagerSubtitle() {
+    if (_checkingDefaultManager) return 'Checking the current handler…';
+    if (_isDefaultFileManager == true) {
+      return 'Defile handles folders — xdg-open opens them here.';
+    }
+    final String current = _currentDefaultManager ?? 'system default';
+    return 'Folders currently open with: $current';
+  }
+
   Widget _buildFilesAndLinksSection() {
     final controller = _explorerController;
 
@@ -418,6 +427,21 @@ extension _SettingsSections on _SettingsDialogState {
 
         _CustomSectionCard(
           children: [
+            if (_defaultFileManagerService.isSupported) ...[
+              _CustomSettingRow(
+                title: 'Default file manager',
+                subtitle: _defaultManagerSubtitle(),
+                control: _CustomButton(
+                  label: _isDefaultFileManager == true
+                      ? 'Default'
+                      : 'Set as default',
+                  onTap: _isDefaultFileManager == true
+                      ? () {}
+                      : _setDefaultFileManager,
+                ),
+              ),
+              _CustomDivider(),
+            ],
             _CustomSettingRow(
               title: 'Confirm before moving to trash',
               subtitle: 'Show a confirmation alert before moving selected files to trash.',
