@@ -44,13 +44,20 @@ class DefaultFileManagerService {
   Future<void> setAsDefault() async {
     final File file = File(desktopFilePath);
     await file.parent.create(recursive: true);
-    await file.writeAsString(entryContents(Platform.resolvedExecutable));
+    await file.writeAsString(entryContents(_executableForEntry()));
 
     final File dbusServiceFile = File(fileManager1ServiceFilePath);
     await dbusServiceFile.parent.create(recursive: true);
     await dbusServiceFile.writeAsString(
-      fileManager1ServiceContents(Platform.resolvedExecutable),
+      fileManager1ServiceContents(_executableForEntry()),
     );
+
+    // GLib resolves handlers through mimeinfo.cache; without regenerating it
+    // defile.desktop stays invisible and the lookup falls through to the
+    // previous handler even though the mimeapps.list entry is correct.
+    await Process.run('update-desktop-database', <String>[
+      file.parent.path,
+    ]);
 
     final ProcessResult result = await Process.run('xdg-mime', <String>[
       'default',
@@ -69,6 +76,20 @@ class DefaultFileManagerService {
       '/org/freedesktop/DBus',
       'org.freedesktop.DBus.ReloadConfig',
     ]);
+
+    // Verify the association actually took. When it did not, surface the
+    // handler that is still owning folders instead of a false success.
+    final String? current = await queryDefault();
+    if (current != desktopFileName) {
+      throw Exception('still handled by ${current ?? 'no handler'}');
+    }
+  }
+
+  /// The launcher path written into the desktop entry. AppImage sets $APPIMAGE
+  /// to the .AppImage file itself — the mount-point binary inside /tmp dies
+  /// with the squashfs, so prefer the persistent AppImage path.
+  String _executableForEntry() {
+    return Platform.environment['APPIMAGE'] ?? Platform.resolvedExecutable;
   }
 
   /// D-Bus activation file for the FileManager1 interface. The user-level
