@@ -40,6 +40,11 @@ class ExplorerTabsController extends GetxService {
 
   final FileSystemService _fileSystemService;
 
+  /// Directory (or file → parent directory) handed over on the command line
+  /// by the launcher / xdg-open. Set once in `main()` before the binding
+  /// runs; the first tab opens here instead of Home when non-null.
+  static String? launchPath;
+
   final RxList<ExplorerTab> tabs = <ExplorerTab>[].obs;
   final RxInt activeIndex = 0.obs;
 
@@ -97,7 +102,7 @@ class ExplorerTabsController extends GetxService {
     super.onInit();
 
     if (tabs.isEmpty) {
-      addTab();
+      addTab(path: launchPath);
     }
   }
 

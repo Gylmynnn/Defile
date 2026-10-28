@@ -5,6 +5,7 @@ import '../../../../theme/app_theme.dart';
 import '../../../../theme/theme_palette.dart';
 import '../../controllers/explorer_tabs_controller.dart';
 import '../../controllers/file_explorer_controller.dart';
+import '../../services/default_file_manager_service.dart';
 import '../../services/font_service.dart';
 import '../../services/icon_theme_service.dart';
 import '../../services/theme_service.dart';
@@ -130,6 +131,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
   // Setting states
   bool _confirmTrash = true;
 
+  // Default file manager state (Linux). Null = unknown / unsupported.
+  final DefaultFileManagerService _defaultFileManagerService =
+      DefaultFileManagerService();
+  bool _checkingDefaultManager = false;
+  bool? _isDefaultFileManager;
+  String? _currentDefaultManager;
+
   IconThemeService get _iconService => Get.find<IconThemeService>();
   FontService get _fontService => Get.find<FontService>();
   ThemeService get _themeService => Get.find<ThemeService>();
@@ -153,7 +161,42 @@ class _SettingsDialogState extends State<SettingsDialog> {
       if (Get.isRegistered<FontService>() && _fontService.fonts.isEmpty) {
         _fontService.refreshFonts();
       }
+      _refreshDefaultFileManagerStatus();
     });
+  }
+
+  Future<void> _refreshDefaultFileManagerStatus() async {
+    if (!_defaultFileManagerService.isSupported) return;
+
+    _update(() => _checkingDefaultManager = true);
+    final String? current = await _defaultFileManagerService.queryDefault();
+    _update(() {
+      _checkingDefaultManager = false;
+      _currentDefaultManager = current;
+      _isDefaultFileManager =
+          current == DefaultFileManagerService.desktopFileName;
+    });
+  }
+
+  Future<void> _setDefaultFileManager() async {
+    try {
+      await _defaultFileManagerService.setAsDefault();
+      _update(() => _isDefaultFileManager = true);
+      showAppToast(
+        title: 'Default file manager',
+        message:
+            'Defile now handles folders — xdg-open will open them here.',
+        variant: AppToastVariant.success,
+      );
+    } catch (error) {
+      showAppToast(
+        title: 'Default file manager',
+        message: 'Could not set Defile as default: $error',
+        variant: AppToastVariant.error,
+      );
+    } finally {
+      await _refreshDefaultFileManagerStatus();
+    }
   }
 
   @override
