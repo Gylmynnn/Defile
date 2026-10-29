@@ -100,36 +100,41 @@ class DefaultFileManagerService {
     return '$home/.local/share/dbus-1/services/org.freedesktop.FileManager1.service';
   }
 
-  String fileManager1ServiceContents(String executablePath) {
-    final String escaped = executablePath
-        .replaceAll(r'\', r'\\')
-        .replaceAll('"', r'\"');
-
-    return '''
+  String fileManager1ServiceContents(String executablePath) =>
+      '''
 [D-BUS Service]
 Name=org.freedesktop.FileManager1
-Exec="$escaped" --dbus-file-manager1
+Exec=${_execValue(executablePath)} --dbus-file-manager1
 ''';
+
+  /// Quotes an Exec value only when the path contains characters that would
+  /// otherwise split it (spaces, shell-ish glyphs). Plain paths must stay
+  /// bare: xdg-open's generic resolver (used on minimal WMs like Hyprland)
+  /// takes the first word of the Exec line literally and cannot strip
+  /// quotes, so a quoted path makes it report "no method available".
+  String _execValue(String path) {
+    final RegExp needsQuoting = RegExp(r'''[\s"'<>|;#$&`()\\*?]''');
+    if (!needsQuoting.hasMatch(path)) {
+      return path;
+    }
+    final String escaped = path
+        .replaceAll(r'\', r'\\')
+        .replaceAll('"', r'\"');
+    return '"$escaped"';
   }
 
   /// The desktop entry handed to `xdg-mime`. `%u` forwards the opened path
   /// (URI or plain) to Defile's CLI arguments.
-  String entryContents(String executablePath) {
-    final String escaped = executablePath
-        .replaceAll(r'\', r'\\')
-        .replaceAll('"', r'\"');
-
-    return '''
+  String entryContents(String executablePath) => '''
 [Desktop Entry]
 Type=Application
 Name=Defile
 GenericName=File Manager
 Comment=Browse and manage files and folders
-Exec="$escaped" %u
+Exec=${_execValue(executablePath)} %u
 Terminal=false
 Categories=System;FileTools;FileManager;
 MimeType=inode/directory;
 StartupWMClass=defile
 ''';
-  }
 }
