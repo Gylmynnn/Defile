@@ -41,6 +41,7 @@ dependencies:
   dbus: ^0.7.10
   path: ^1.9.1
   freezed_annotation: ^3.1.0
+  package_info_plus: ^9.0.1
   window_manager: ^0.5.2
   media_kit: ^1.2.6
   media_kit_video: ^2.0.1

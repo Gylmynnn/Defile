@@ -13,23 +13,18 @@ extension _SettingsSections on _SettingsDialogState {
         _CustomSectionCard(
           children: [
             _CustomSettingRow(
-              title: 'Version 0.6.8',
-              subtitle: 'Installer version: 0.6.8',
+              title: 'Version ${_appVersion ?? '…'}',
+              subtitle: 'AppImage build — releases are published on GitHub.',
               linkText: 'Read the changelog.',
               onLinkTap: () {
-                _showInfoMessage(
-                  'Changelog',
-                  'Defile 0.6.8 introduces custom themes, and lightning-fast file navigation.',
+                Process.run(
+                  'xdg-open',
+                  <String>['https://github.com/Gylmynnn/Defile/releases'],
                 );
               },
               control: _CustomButton(
-                label: 'Check for updates',
-                onTap: () {
-                  _showInfoMessage(
-                    'Update Check',
-                    'You are running the latest version of Defile.',
-                  );
-                },
+                label: _checkingUpdate ? 'Checking…' : 'Check for updates',
+                onTap: _checkingUpdate ? () {} : _checkForUpdates,
               ),
             ),
 

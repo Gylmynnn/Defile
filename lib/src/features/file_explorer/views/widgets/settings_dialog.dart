@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../../../theme/theme_palette.dart';
@@ -10,6 +13,7 @@ import '../../services/font_service.dart';
 import '../../services/icon_theme_service.dart';
 import '../../services/portal_file_chooser_service.dart';
 import '../../services/theme_service.dart';
+import '../../services/update_check_service.dart';
 import '../../utils/app_toast.dart';
 import 'app_button.dart';
 import 'entry_glyphs.dart';
@@ -145,6 +149,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
   bool _portalBusy = false;
   bool _isPortalRegistered = false;
 
+  // About section state. The version comes from pubspec.yaml via
+  // package_info_plus, so bumping the build keeps the dialog honest.
+  final UpdateCheckService _updateCheckService = UpdateCheckService();
+  String? _appVersion;
+  bool _checkingUpdate = false;
+
   IconThemeService get _iconService => Get.find<IconThemeService>();
   FontService get _fontService => Get.find<FontService>();
   ThemeService get _themeService => Get.find<ThemeService>();
@@ -170,7 +180,49 @@ class _SettingsDialogState extends State<SettingsDialog> {
       }
       _refreshDefaultFileManagerStatus();
       _isPortalRegistered = _portalChooserService.isRegisteredAsPortal;
+      _loadAppVersion();
     });
+  }
+
+  /// Reads the pubspec version the binary was built with. Plugin-less
+  /// environments (tests) simply keep the placeholder.
+  Future<void> _loadAppVersion() async {
+    try {
+      final PackageInfo info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      _update(() => _appVersion = info.version);
+    } catch (_) {
+      // Keep "…" until a real environment provides the version.
+    }
+  }
+
+  /// Queries GitHub for the latest release and reports the outcome.
+  Future<void> _checkForUpdates() async {
+    if (_checkingUpdate) return;
+    _update(() => _checkingUpdate = true);
+    final UpdateCheckResult result = await _updateCheckService.checkForUpdate(
+      currentVersion: _appVersion ?? 'unknown',
+    );
+    if (!mounted) return;
+    _update(() => _checkingUpdate = false);
+
+    if (!result.succeeded) {
+      _showInfoMessage(
+        'Update check',
+        'Could not check for updates: ${result.error}.',
+      );
+    } else if (result.hasUpdate) {
+      _showInfoMessage(
+        'Update available',
+        'Defile ${result.latestVersion} is available — you are running '
+        '$_appVersion.\n${result.releaseUrl ?? ''}',
+      );
+    } else {
+      _showInfoMessage(
+        'Update check',
+        'You are running the latest version of Defile ($_appVersion).',
+      );
+    }
   }
 
   Future<void> _refreshDefaultFileManagerStatus() async {

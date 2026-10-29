@@ -45,9 +45,10 @@ void main() {
       expect(find.text('Files and links'), findsOneWidget);
       expect(find.text('Hotkeys'), findsOneWidget);
       expect(find.text('About'), findsWidgets);
-      // Right Content default is About. Version string is bumped by hand in
-      // settings_sections.dart, so match the prefix rather than an exact one.
-      expect(find.textContaining('Version 0.'), findsWidgets);
+      // Right Content default is About. The version now comes from pubspec
+      // (package_info_plus) and stays at the loading placeholder in tests,
+      // so match the prefix only.
+      expect(find.textContaining('Version'), findsWidgets);
       expect(find.text('Check for updates'), findsOneWidget);
       expect(find.text('Read the changelog.'), findsOneWidget);
 
