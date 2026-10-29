@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:dbus/dbus.dart';
 import 'package:get/get.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../controllers/explorer_tabs_controller.dart';
 import '../controllers/file_explorer_controller.dart';
@@ -20,19 +21,24 @@ class FileManager1Service {
   bool _started = false;
 
   /// Connects to the session bus, claims the name and exports the object.
-  /// Failures degrade silently — xdg-open based flows keep working without
-  /// D-Bus.
-  Future<void> start() async {
-    if (_started || !Platform.isLinux) return;
+  /// Returns true when this instance owns the name; false when another
+  /// instance already does (or startup failed). Failures degrade silently —
+  /// xdg-open based flows keep working without D-Bus.
+  Future<bool> start() async {
+    if (_started || !Platform.isLinux) return false;
     _started = true;
 
     try {
       final DBusClient client = DBusClient.session();
       _client = client;
-      await client.requestName(busName);
+      // Same ordering as the portal service: object first, name second, so
+      // the activation-time introspection always sees the interface.
       await client.registerObject(_FileManager1Object());
+      final DBusRequestNameReply reply = await client.requestName(busName);
+      return reply == DBusRequestNameReply.primaryOwner;
     } catch (_) {
       _client = null;
+      return false;
     }
   }
 
@@ -85,6 +91,7 @@ class _FileManager1Object extends DBusObject {
       return DBusMethodSuccessResponse([]);
     }
     final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
+    bool opened = false;
 
     for (final String uri in uris) {
       String path;
@@ -98,9 +105,18 @@ class _FileManager1Object extends DBusObject {
         // "Show in folder": open the parent directory, highlight the file.
         final ExplorerTab tab = tabs.addTab(path: File(path).parent.path);
         unawaited(_selectWhenLoaded(tab.controller, path));
+        opened = true;
       } else if (Directory(path).existsSync()) {
         tabs.addTab(path: path);
+        opened = true;
       }
+    }
+
+    // The instance serving this call may be the hidden portal backend;
+    // reveal it so the user actually sees the tabs that just opened.
+    if (opened) {
+      unawaited(windowManager.show());
+      unawaited(windowManager.focus());
     }
 
     return DBusMethodSuccessResponse([]);

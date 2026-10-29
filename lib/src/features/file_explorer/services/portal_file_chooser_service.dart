@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dbus/dbus.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:get/get.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../controllers/portal_pick_controller.dart';
 
@@ -31,17 +33,28 @@ class PortalFileChooserService {
   /// Connects to the session bus, claims the backend name and exports the
   /// FileChooser interface. Failures degrade silently — the rest of the
   /// app keeps working without the portal.
-  Future<void> start() async {
-    if (_started || !Platform.isLinux) return;
+  ///
+  /// Returns true when this instance owns the backend bus name; false when
+  /// another instance already does (or startup failed) — the caller decides
+  /// whether that is fatal (portal mode) or harmless (normal window).
+  Future<bool> start() async {
+    if (_started || !Platform.isLinux) return false;
     _started = true;
 
     try {
       final DBusClient client = DBusClient.session();
       _client = client;
-      await client.requestName(busName);
+      // Export the object BEFORE claiming the name: the daemon introspects
+      // the backend as soon as the name appears on the bus. Registering in
+      // the other order races — when introspection wins, it sees no
+      // interfaces and never exports FileChooser for the whole session.
       await client.registerObject(_PortalFileChooserObject(this));
-    } catch (_) {
+      final DBusRequestNameReply reply = await client.requestName(busName);
+      return reply == DBusRequestNameReply.primaryOwner;
+    } catch (e) {
+      debugPrint('Portal FileChooser backend failed to start: $e');
       _client = null;
+      return false;
     }
   }
 
@@ -55,6 +68,10 @@ class PortalFileChooserService {
   void present(PendingFileChooser pending) {
     _pending[pending.request.handlePath] = pending;
     _picker.present(pending.request);
+    // Reveal the window when running as the hidden D-Bus-activated portal
+    // backend; harmless (already visible) in a normal session.
+    unawaited(windowManager.show());
+    unawaited(windowManager.focus());
   }
 
   /// Replies to the daemon with the chosen files and tears the request down.
@@ -155,6 +172,10 @@ class PortalFileChooserService {
     await activationFile.parent.create(recursive: true);
     await activationFile.writeAsString(_dbusActivationContents);
 
+    // Supervised backend unit: every future D-Bus activation starts (and
+    // restarts, and cleanly stops at logout) through systemd.
+    await _installPortalUnit();
+
     for (final String confPath in _portalConfPaths) {
       await File(confPath).parent.create(recursive: true);
       await File(confPath).writeAsString(
@@ -173,6 +194,8 @@ class PortalFileChooserService {
 
     final File activationFile = File(dbusActivationFilePath);
     if (activationFile.existsSync()) await activationFile.delete();
+
+    await _removePortalUnit();
 
     for (final String confPath in _portalConfPaths) {
       final File conf = File(confPath);
@@ -227,15 +250,109 @@ class PortalFileChooserService {
     return buffer.toString();
   }
 
+  /// Self-healing for the one portal failure mode that survives everything
+  /// else: the daemon introspects backends only during its own startup, and
+  /// a cold AppImage start (squashfs page-in under disk load) can exceed its
+  /// ~25 s activation budget — the daemon then gives up and never exports
+  /// FileChooser even though this backend owns the name seconds later. When
+  /// that state is detected, bounce the daemon once: it re-introspects the
+  /// now-warm backend and the interface comes up in under a second.
+  Future<void> ensureFrontendWired() async {
+    if (!Platform.isLinux || _client == null) return;
+
+    Future<bool> chooserExported() async {
+      try {
+        final DBusRemoteObject frontend = DBusRemoteObject(
+          _client!,
+          name: 'org.freedesktop.portal.Desktop',
+          path: DBusObjectPath('/org/freedesktop/portal/desktop'),
+        );
+        final DBusIntrospectNode node = await frontend.introspect();
+        return node.interfaces.any(
+          (DBusIntrospectInterface interface) =>
+              interface.name == 'org.freedesktop.portal.FileChooser',
+        );
+      } catch (_) {
+        return false;
+      }
+    }
+
+    // Give a daemon that started before us time to finish its startup
+    // introspection, which completes right after our name claim.
+    await Future<void>.delayed(const Duration(seconds: 10));
+    if (await chooserExported()) return;
+
+    await _restartPortalDaemon();
+    await Future<void>.delayed(const Duration(seconds: 8));
+    debugPrint(
+      await chooserExported()
+          ? 'Portal daemon was missing FileChooser; restarted and wired it.'
+          : 'Portal daemon still lacks FileChooser after a restart.',
+    );
+  }
+
+  /// Restarting the portal daemon reliably takes two steps: after a session
+  /// crash the daemon can end up running OUTSIDE any systemd unit (spawned
+  /// directly by dbus-daemon), and `systemctl --user restart` then only
+  /// starts a second instance that loses the name race and exits while the
+  /// stale one stays. Kill the process first, then start the unit fresh.
+  /// The anchored pattern spares xdg-desktop-portal-gtk / -hyprland.
   Future<void> _restartPortalDaemon() async {
+    await Process.run('pkill', <String>[
+      '-f',
+      '^/usr/lib/xdg-desktop-portal\$',
+    ]);
+    await Future<void>.delayed(const Duration(milliseconds: 800));
     final ProcessResult result = await Process.run('systemctl', <String>[
       '--user',
-      'restart',
+      'start',
       'xdg-desktop-portal.service',
     ]);
     if (result.exitCode != 0) {
-      await Process.run('pkill', <String>['-f', 'xdg-desktop-portal']);
+      debugPrint('xdg-desktop-portal failed to start: ${result.stderr}');
     }
+  }
+
+  /// Supervised backend unit, bound to D-Bus activation through
+  /// `SystemdService=` in the activation file: whenever the daemon needs the
+  /// backend, systemd starts this unit — so crashes are restarted and a
+  /// session logout stops it cleanly (SIGTERM → our exit handler). No
+  /// [Install] section on purpose: it is started on demand, never at boot.
+  String get _portalUnitPath => '$_configDir/systemd/user/defile-portal.service';
+
+  String get _portalUnitContents {
+    return '''
+[Unit]
+Description=Defile portal backend (headless file chooser)
+# xdg-desktop-portal only wires its FileChooser interface while the backend
+# stays reachable, so this unit must never die mid-session; its window stays
+# hidden and closing that window merely hides it.
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart="$_escapedLauncherExecutable" --dbus-portal
+Restart=on-failure
+RestartSec=2s
+''';
+  }
+
+  Future<void> _installPortalUnit() async {
+    final File unit = File(_portalUnitPath);
+    await unit.parent.create(recursive: true);
+    await unit.writeAsString(_portalUnitContents);
+    await Process.run('systemctl', <String>['--user', 'daemon-reload']);
+  }
+
+  Future<void> _removePortalUnit() async {
+    final File unit = File(_portalUnitPath);
+    if (!unit.existsSync()) return;
+    await Process.run(
+      'systemctl',
+      <String>['--user', 'stop', 'defile-portal.service'],
+    );
+    await unit.delete();
+    await Process.run('systemctl', <String>['--user', 'daemon-reload']);
   }
 
   static const String _portalFileContents = '''
@@ -252,20 +369,22 @@ Interfaces=org.freedesktop.impl.portal.FileChooser;
 
   /// Lets xdg-desktop-portal auto-start Defile when a dialog is requested
   /// and no instance is running. `$APPIMAGE` is the persistent launcher
-  /// path (the /tmp mount point dies with the squashfs).
+  /// path (the /tmp mount point dies with the squashfs). `SystemdService=`
+  /// routes the activation through [_portalUnitPath] so the backend is
+  /// supervised instead of an untracked transient process.
   String get _dbusActivationContents {
-    final String executable = Platform.environment['APPIMAGE'] ??
-        Platform.resolvedExecutable;
-    final String escaped = executable
-        .replaceAll(r'\', r'\\')
-        .replaceAll('"', r'\"');
-
     return '''
 [D-BUS Service]
 Name=$busName
-Exec="$escaped" --dbus-portal
+Exec="$_escapedLauncherExecutable" --dbus-portal
+SystemdService=defile-portal.service
 ''';
   }
+
+  static final String _escapedLauncherExecutable =
+      (Platform.environment['APPIMAGE'] ?? Platform.resolvedExecutable)
+          .replaceAll(r'\', r'\\')
+          .replaceAll('"', r'\"');
 }
 
 /// One in-flight request: the caller's data plus the machinery to hold the

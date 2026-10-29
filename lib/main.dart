@@ -17,7 +17,26 @@ import 'package:window_manager/window_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+/// Launched by D-Bus activation (xdg-desktop-portal). Runs without a visible
+/// window: xdg-desktop-portal only wires the FileChooser interface while the
+/// activated backend stays alive, so a closed window would silently kill the
+/// portal for the whole session. The window appears when a picker request
+/// arrives and closing it merely hides it again.
+class _PortalBackendWindowListener extends WindowListener {
+  @override
+  void onWindowClose() async {
+    await windowManager.hide();
+  }
+}
+
 Future<void> main(List<String> args) async {
+  // systemd stops D-Bus-activated units (and the whole session cgroup at
+  // logout) with SIGTERM. Relying on the default disposition has been
+  // observed to leave the process alive ("remains running after unit
+  // stopped"), still holding the bus name and blocking the next activation —
+  // so exit explicitly instead.
+  ProcessSignal.sigterm.watch().listen((_) => exit(0));
+
   WidgetsFlutterBinding.ensureInitialized();
 
   // Claim the D-Bus names before anything slow: xdg-desktop-portal and
@@ -26,11 +45,21 @@ Future<void> main(List<String> args) async {
   // AppImage start (squashfs mount, engine, fonts, theme, first frame) can
   // exceed it — the daemon then gives up and never exports the FileChooser
   // interface for the rest of the session. Requests that arrive while the
-  // UI is still booting simply queue up in [PortalPickController].
-  unawaited(FileManager1Service().start());
+  // UI is still booting simply queue up in [PortalPickController]. The
+  // claims finish in milliseconds; awaiting them lets a portal backend that
+  // lost the name race (e.g. the systemd unit racing a D-Bus activation)
+  // bow out immediately instead of lurking as an invisible duplicate.
+  final bool portalBackend = args.contains('--dbus-portal');
+  final PortalFileChooserService fileChooser = PortalFileChooserService();
+  final List<bool> claimed = await Future.wait(<Future<bool>>[
+    FileManager1Service().start(),
+    fileChooser.start(),
+  ]);
   Get.put(PortalPickController());
-  Get.put(PortalFileChooserService());
-  unawaited(Get.find<PortalFileChooserService>().start());
+  Get.put(fileChooser);
+  if (portalBackend && !claimed.every((bool owned) => owned)) {
+    exit(0);
+  }
 
   await RustLib.init();
   await windowManager.ensureInitialized();
@@ -54,12 +83,29 @@ Future<void> main(List<String> args) async {
     skipTaskbar: true,
   );
 
+  if (portalBackend) {
+    windowManager.addListener(_PortalBackendWindowListener());
+  }
+
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
+    if (portalBackend) {
+      // Headless until a picker request reveals the window; closing it must
+      // never take the backend process (and the claimed D-Bus name) down.
+      await windowManager.setPreventClose(true);
+      await windowManager.hide();
+      return;
+    }
     await windowManager.show();
     await windowManager.focus();
   });
 
   runApp(const RootApp());
+
+  // Portal backend only: verify the daemon actually wired us up, and bounce
+  // it once if its startup introspection raced our cold start.
+  if (portalBackend) {
+    unawaited(fileChooser.ensureFrontendWired());
+  }
 }
 
 /// Resolves the first positional CLI argument into the directory the first
