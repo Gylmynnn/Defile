@@ -8,6 +8,7 @@ import '../../controllers/file_explorer_controller.dart';
 import '../../services/default_file_manager_service.dart';
 import '../../services/font_service.dart';
 import '../../services/icon_theme_service.dart';
+import '../../services/portal_file_chooser_service.dart';
 import '../../services/theme_service.dart';
 import '../../utils/app_toast.dart';
 import 'app_button.dart';
@@ -138,6 +139,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
   bool? _isDefaultFileManager;
   String? _currentDefaultManager;
 
+  // Portal file chooser state (Linux).
+  final PortalFileChooserService _portalChooserService =
+      PortalFileChooserService();
+  bool _portalBusy = false;
+  bool _isPortalRegistered = false;
+
   IconThemeService get _iconService => Get.find<IconThemeService>();
   FontService get _fontService => Get.find<FontService>();
   ThemeService get _themeService => Get.find<ThemeService>();
@@ -162,6 +169,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         _fontService.refreshFonts();
       }
       _refreshDefaultFileManagerStatus();
+      _isPortalRegistered = _portalChooserService.isRegisteredAsPortal;
     });
   }
 
@@ -196,6 +204,38 @@ class _SettingsDialogState extends State<SettingsDialog> {
       );
     } finally {
       await _refreshDefaultFileManagerStatus();
+    }
+  }
+
+  Future<void> _togglePortalChooser(bool enable) async {
+    _update(() => _portalBusy = true);
+    try {
+      if (enable) {
+        await _portalChooserService.registerAsPortal();
+        showAppToast(
+          title: 'File dialogs',
+          message:
+              'Defile will draw the open dialogs of portal-aware apps after '
+              'they request one.',
+          variant: AppToastVariant.success,
+        );
+      } else {
+        await _portalChooserService.unregisterPortal();
+        showAppToast(
+          title: 'File dialogs',
+          message: 'Defile no longer handles portal open dialogs.',
+          variant: AppToastVariant.success,
+        );
+      }
+      _update(() => _isPortalRegistered = enable);
+    } catch (error) {
+      showAppToast(
+        title: 'File dialogs',
+        message: 'Could not update the portal registration: $error',
+        variant: AppToastVariant.error,
+      );
+    } finally {
+      _update(() => _portalBusy = false);
     }
   }
 

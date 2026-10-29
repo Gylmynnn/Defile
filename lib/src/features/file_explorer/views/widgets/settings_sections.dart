@@ -441,6 +441,20 @@ extension _SettingsSections on _SettingsDialogState {
                 ),
               ),
               _CustomDivider(),
+              _CustomSettingRow(
+                title: 'Open dialogs via Defile',
+                subtitle:
+                    'Apps that use the XDG portal file chooser get their '
+                    'Open dialog drawn by Defile. Takes effect the next time '
+                    'an app opens a dialog.',
+                control: _CustomSwitch(
+                  value: _isPortalRegistered,
+                  onChanged: (val) {
+                    if (!_portalBusy) _togglePortalChooser(val);
+                  },
+                ),
+              ),
+              _CustomDivider(),
             ],
             _CustomSettingRow(
               title: 'Confirm before moving to trash',

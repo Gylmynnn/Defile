@@ -3,11 +3,14 @@ import 'dart:io';
 
 import 'package:defile/src/features/file_explorer/bindings/file_explorer_binding.dart';
 import 'package:defile/src/features/file_explorer/controllers/explorer_tabs_controller.dart';
+import 'package:defile/src/features/file_explorer/controllers/portal_pick_controller.dart';
 import 'package:defile/src/features/file_explorer/services/file_manager1_service.dart';
 import 'package:defile/src/features/file_explorer/services/font_service.dart';
 import 'package:defile/src/features/file_explorer/services/icon_theme_service.dart';
+import 'package:defile/src/features/file_explorer/services/portal_file_chooser_service.dart';
 import 'package:defile/src/features/file_explorer/services/theme_service.dart';
 import 'package:defile/src/features/file_explorer/views/file_explorer_page.dart';
+import 'package:defile/src/features/file_explorer/views/widgets/portal_pick_bar.dart';
 import 'package:defile/src/rust/frb_generated.dart';
 import 'package:defile/src/theme/app_theme.dart';
 import 'package:window_manager/window_manager.dart';
@@ -46,6 +49,11 @@ Future<void> main(List<String> args) async {
   // Serve the org.freedesktop.FileManager1 interface so browsers'
   // "Show in folder" actions land in this instance. Never blocks startup.
   unawaited(FileManager1Service().start());
+
+  // Serve the portal FileChooser backend so other applications' open
+  // dialogs can be drawn by Defile. Never blocks startup.
+  Get.put(PortalPickController());
+  unawaited(PortalFileChooserService().start());
 
   runApp(const RootApp());
 }
@@ -102,7 +110,12 @@ class RootApp extends StatelessWidget {
         builder: (BuildContext context, Widget? child) => Obx(
           () => _UiScaler(
             scale: themeService.uiScale.value,
-            child: child ?? const SizedBox.shrink(),
+            child: Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                const PortalPickBar(),
+              ],
+            ),
           ),
         ),
         home: const FileExplorerPage(),
