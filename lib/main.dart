@@ -19,6 +19,19 @@ import 'package:get/get.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Claim the D-Bus names before anything slow: xdg-desktop-portal and
+  // browsers activate org.freedesktop.impl.portal.desktop.defile /
+  // org.freedesktop.FileManager1 with a ~25 s D-Bus timeout, and a cold
+  // AppImage start (squashfs mount, engine, fonts, theme, first frame) can
+  // exceed it — the daemon then gives up and never exports the FileChooser
+  // interface for the rest of the session. Requests that arrive while the
+  // UI is still booting simply queue up in [PortalPickController].
+  unawaited(FileManager1Service().start());
+  Get.put(PortalPickController());
+  Get.put(PortalFileChooserService());
+  unawaited(Get.find<PortalFileChooserService>().start());
+
   await RustLib.init();
   await windowManager.ensureInitialized();
 
@@ -45,15 +58,6 @@ Future<void> main(List<String> args) async {
     await windowManager.show();
     await windowManager.focus();
   });
-
-  // Serve the org.freedesktop.FileManager1 interface so browsers'
-  // "Show in folder" actions land in this instance. Never blocks startup.
-  unawaited(FileManager1Service().start());
-
-  // Serve the portal FileChooser backend so other applications' open
-  // dialogs can be drawn by Defile. Never blocks startup.
-  Get.put(PortalPickController());
-  unawaited(PortalFileChooserService().start());
 
   runApp(const RootApp());
 }

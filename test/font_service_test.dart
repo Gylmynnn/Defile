@@ -62,8 +62,9 @@ void main() {
     expect(find.text('Appearance'), findsOneWidget);
     expect(find.text('About'), findsWidgets);
 
-    // Default section is About
-    expect(find.text('Version 0.5.0'), findsOneWidget);
+    // Default section is About. Version string is bumped by hand in
+    // settings_sections.dart, so match the prefix rather than an exact one.
+    expect(find.textContaining('Version 0.'), findsWidgets);
 
     // Pindah ke section Appearance
     await tester.tap(find.text('Appearance'));
