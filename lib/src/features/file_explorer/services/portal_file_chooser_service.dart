@@ -172,15 +172,53 @@ class PortalFileChooserService {
     await activationFile.parent.create(recursive: true);
     await activationFile.writeAsString(_dbusActivationContents);
 
-    // Supervised backend unit: every future D-Bus activation starts (and
-    // restarts, and cleanly stops at logout) through systemd.
+    // Backend unit: the toggle starts it eagerly so the bus name is owned
+    // before the daemon re-introspects (warm = instant). Crash supervision
+    // comes from Restart=on-failure. The daemon must be up FIRST: the
+    // backend's GTK layer resolves its settings through
+    // org.freedesktop.portal.Settings at boot, and with the daemon down
+    // that call blocks for its full 25 s bus timeout — delaying the name
+    // claim past the daemon's own activation budget (a mutual wait that
+    // only ever resolves by timeouts).
     await _installPortalUnit();
+    await Process.run(
+      'systemctl',
+      <String>['--user', 'start', 'xdg-desktop-portal.service'],
+    );
+    await Process.run(
+      'systemctl',
+      <String>['--user', 'start', 'defile-portal.service'],
+    );
 
     for (final String confPath in _portalConfPaths) {
       await File(confPath).parent.create(recursive: true);
       await File(confPath).writeAsString(
         _mergedPortalConf(await _readConf(confPath)),
       );
+    }
+
+    // The daemon re-introspects implementations at startup. With our bus
+    // name already owned, introspection is warm and instant; without it,
+    // the daemon goes through StartServiceByName and blocks until the
+    // backend appears (or its 25 s budget expires). Wait for the claim so
+    // the bounce below always finds the backend alive.
+    for (int attempt = 0; attempt < 70; attempt++) {
+      final ProcessResult owner = await Process.run(
+        'gdbus',
+        <String>[
+          'call',
+          '--session',
+          '--dest',
+          'org.freedesktop.DBus',
+          '--object-path',
+          '/org/freedesktop/DBus',
+          '--method',
+          'org.freedesktop.DBus.GetNameOwner',
+          busName,
+        ],
+      );
+      if (owner.stdout.contains(':1.')) break;
+      await Future<void>.delayed(const Duration(milliseconds: 500));
     }
 
     await _restartPortalDaemon();
@@ -313,11 +351,12 @@ class PortalFileChooserService {
     }
   }
 
-  /// Supervised backend unit, bound to D-Bus activation through
-  /// `SystemdService=` in the activation file: whenever the daemon needs the
-  /// backend, systemd starts this unit — so crashes are restarted and a
-  /// session logout stops it cleanly (SIGTERM → our exit handler). No
-  /// [Install] section on purpose: it is started on demand, never at boot.
+  /// Supervised backend unit: the settings toggle starts it eagerly (warm
+  /// name claim before the daemon re-introspects) and Restart=on-failure
+  /// revives it after crashes; session logout stops it cleanly (SIGTERM →
+  /// our exit handler). No [Install] section: at login the daemon's own
+  /// D-Bus activation covers the first start (transient units survive its
+  /// 25 s timeout — a bound unit would get stopped with it).
   String get _portalUnitPath => '$_configDir/systemd/user/defile-portal.service';
 
   String get _portalUnitContents {
@@ -369,15 +408,17 @@ Interfaces=org.freedesktop.impl.portal.FileChooser;
 
   /// Lets xdg-desktop-portal auto-start Defile when a dialog is requested
   /// and no instance is running. `$APPIMAGE` is the persistent launcher
-  /// path (the /tmp mount point dies with the squashfs). `SystemdService=`
-  /// routes the activation through [_portalUnitPath] so the backend is
-  /// supervised instead of an untracked transient process.
+  /// path (the /tmp mount point dies with the squashfs). Deliberately
+  /// WITHOUT `SystemdService=`: when a cold start exceeds the daemon's 25 s
+  /// activation budget, dbus cancels the activation — a bound unit would be
+  /// stopped with it, while a transient one survives and the in-app
+  /// self-heal ([ensureFrontendWired]) wires everything up once it claims
+  /// the name.
   String get _dbusActivationContents {
     return '''
 [D-BUS Service]
 Name=$busName
 Exec="$_escapedLauncherExecutable" --dbus-portal
-SystemdService=defile-portal.service
 ''';
   }
 

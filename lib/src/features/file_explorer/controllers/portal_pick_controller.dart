@@ -23,23 +23,41 @@ class PortalPickController extends GetxController {
   /// itself, the queue is.
   PortalPickRequest? get visible => queue.isEmpty ? null : queue.last;
 
+  /// Whether this window was revealed by a portal request rather than by a
+  /// FileManager1 (xdg-open) reveal: only a portal-revealed picker window
+  /// hides itself again once the queue drains — an xdg-open reveal belongs
+  /// to the user, not to the dialog.
+  bool _revealedByPortal = false;
+
   /// Shows the picker for [request], opening its start folder as a new tab.
   void present(PortalPickRequest request) {
     queue.add(request);
+    _revealedByPortal = true;
 
     if (request.currentFolder != null &&
         Get.isRegistered<ExplorerTabsController>()) {
       Get.find<ExplorerTabsController>().addTab(path: request.currentFolder!);
     }
-    windowManager.setTitle('${request.title} — Defile');
+    // Keep the "File Chooser" token stable — the compositor float rule
+    // matches on it.
+    windowManager.setTitle('${request.title} — File Chooser');
   }
 
   /// Removes a settled request from the UI and restores the window title.
   void dismiss(PortalPickRequest request) {
     queue.remove(request);
     windowManager.setTitle(
-      queue.isEmpty ? 'Defile' : '${queue.last.title} — Defile',
+      queue.isEmpty
+          ? 'Defile — File Chooser'
+          : '${queue.last.title} — File Chooser',
     );
+    // Auto-close the dedicated picker window once the last request is
+    // settled (confirmed or cancelled); the backend process itself stays
+    // alive for the next one.
+    if (queue.isEmpty && _revealedByPortal) {
+      _revealedByPortal = false;
+      windowManager.hide();
+    }
   }
 
   /// Confirms the visible request with the selection of the focused tab.

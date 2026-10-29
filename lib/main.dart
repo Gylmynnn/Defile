@@ -53,7 +53,13 @@ Future<void> main(List<String> args) async {
   final PortalFileChooserService fileChooser = PortalFileChooserService();
   final List<bool> claimed = await Future.wait(<Future<bool>>[
     FileManager1Service().start(),
-    fileChooser.start(),
+    // Only the dedicated backend claims the portal name: a request must
+    // never land inside a file manager window the user opened themselves —
+    // it always gets its own floating picker window instead.
+    if (portalBackend)
+      fileChooser.start()
+    else
+      Future<bool>.value(false),
   ]);
   Get.put(PortalPickController());
   Get.put(fileChooser);
@@ -91,6 +97,9 @@ Future<void> main(List<String> args) async {
     if (portalBackend) {
       // Headless until a picker request reveals the window; closing it must
       // never take the backend process (and the claimed D-Bus name) down.
+      // The stable "File Chooser" title token is what the compositor float
+      // rule matches, so the picker always opens as a floating dialog.
+      await windowManager.setTitle('Defile — File Chooser');
       await windowManager.setPreventClose(true);
       await windowManager.hide();
       return;

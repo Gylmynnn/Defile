@@ -38,43 +38,111 @@ class PortalPickBar extends StatelessWidget {
           color: colors.panel,
           child: Container(
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: colors.accent, width: 1.5)),
+              border: Border(top: BorderSide(color: colors.divider)),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                Icon(Icons.upload_file_outlined, size: 18, color: colors.accent),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Defile is choosing ${request.isDirectoryMode ? 'a folder' : 'file(s)'}'
-                    '${selected > 0 ? '  ·  $selected selected' : ''}'
-                    '${request.appId.isEmpty ? '' : '  ·  ${request.appId}'}'
-                    '${count > 1 ? '  ·  $count requests waiting' : ''}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: colors.textStrong, fontSize: 12.5),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: colors.accent.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    request.isDirectoryMode
+                        ? Icons.folder_open_outlined
+                        : Icons.upload_file_outlined,
+                    size: 19,
+                    color: colors.accent,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        request.appId.isEmpty
+                            ? 'Choosing ${request.isDirectoryMode ? 'a folder' : 'file(s)'}'
+                            : 'Choosing ${request.isDirectoryMode ? 'a folder' : 'file(s)'} for ${request.appId}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colors.textStrong,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          if (selected > 0) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 1.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.accent.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '$selected selected',
+                                style: TextStyle(
+                                  color: colors.accent,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Flexible(
+                            child: Text(
+                              <String>[
+                                request.title,
+                                if (count > 1) '$count requests waiting',
+                              ].join('  ·  '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: colors.textSecondary,
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
                 TextButton(
                   onPressed: picker.cancelVisible,
-                  child: Text(
-                    'Cancel',
-                    style: TextStyle(color: colors.textStrong, fontSize: 12.5),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.textSecondary,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
                   ),
+                  child: const Text('Cancel', style: TextStyle(fontSize: 12.5)),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
+                ElevatedButton.icon(
                   onPressed: picker.confirm,
+                  icon: const Icon(Icons.check_rounded, size: 16),
+                  label: Text(
+                    request.isDirectoryMode ? 'Select Folder' : 'Open',
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.accent,
-                    foregroundColor: colors.window,
+                    foregroundColor: colors.accentContent,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                  child: Text(
-                    request.title,
-                    style: const TextStyle(fontSize: 12.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],
