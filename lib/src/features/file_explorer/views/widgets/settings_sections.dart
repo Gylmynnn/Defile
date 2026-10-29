@@ -369,7 +369,9 @@ extension _SettingsSections on _SettingsDialogState {
               Obx(() {
                 return _CustomSettingRow(
                   title: 'Show sidebar',
-                  subtitle: 'Show quick access folders, places, and disk drives on the left.',
+                  subtitle:
+                      'Show quick access folders, places, and disk drives on '
+                      'the left. When off, it collapses to an icon rail.',
                   control: _CustomSwitch(
                     value: controller.showSidebar.value,
                     onChanged: (_) => controller.toggleSidebar(),

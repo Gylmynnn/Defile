@@ -12,9 +12,13 @@ import 'explorer_scope.dart';
 import 'hover_region.dart';
 
 class AppSidebar extends StatelessWidget {
-  const AppSidebar({super.key, this.controller});
+  const AppSidebar({super.key, this.controller, this.collapsed = false});
 
   final FileExplorerController? controller;
+
+  /// Icon-rail mode: entries render as bare icons (tooltips carry the
+  /// labels) so collapsing the sidebar keeps quick access reachable.
+  final bool collapsed;
 
   FileExplorerController _getController(BuildContext context) =>
       controller ?? ExplorerScope.of(context);
@@ -59,12 +63,12 @@ class AppSidebar extends StatelessWidget {
     final c = _getController(context);
 
     return Container(
-      width: 178,
+      width: collapsed ? 52 : 178,
       color: context.colors.sidebar,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SidebarHeader(),
+          _SidebarHeader(collapsed: collapsed),
           Expanded(
             child: Obx(() {
               return ListView(
@@ -73,18 +77,24 @@ class AppSidebar extends StatelessWidget {
                   for (final place in c.quickPlaces)
                     _placeTile(context, c, place, icon: _iconFor(place)),
                   if (c.folderPlaces.isNotEmpty) ...[
-                    const _SidebarGroupLabel('Places'),
+                    if (collapsed)
+                      const _RailGroupDivider()
+                    else
+                      const _SidebarGroupLabel('Places'),
                     for (final place in c.folderPlaces)
                       _placeTile(
                         context,
                         c,
                         place,
-                        icon: CupertinoIcons.folder,
-                        iconColor: context.colors.folder,
+                        icon: _folderIcon(place),
+                        // iconColor: context.colors.folder,
                       ),
                   ],
                   if (c.drivePlaces.isNotEmpty) ...[
-                    const _SidebarGroupLabel('Drives'),
+                    if (collapsed)
+                      const _RailGroupDivider()
+                    else
+                      const _SidebarGroupLabel('Drives'),
                     for (final place in c.drivePlaces)
                       _driveTile(context, c, place),
                   ],
@@ -114,6 +124,43 @@ class AppSidebar extends StatelessWidget {
     }
   }
 
+  /// Cupertino glyph for a well-known XDG folder, matched on the directory
+  /// basename so localized homes ("Dokumen", "Unduhan", …) still resolve.
+  IconData _folderIcon(rust_system.Place place) {
+    final List<String> parts = place.path
+        .split('/')
+        .where((String segment) => segment.isNotEmpty)
+        .toList();
+    final String name = parts.isEmpty ? '' : parts.last.toLowerCase();
+    switch (name) {
+      case 'documents':
+      case 'dokumen':
+        return Icons.folder_open;
+      case 'downloads':
+      case 'unduhan':
+        return CupertinoIcons.cloud_download;
+      case 'pictures':
+      case 'gambar':
+        return CupertinoIcons.photo;
+      case 'music':
+      case 'musik':
+        return CupertinoIcons.tv_music_note;
+      case 'videos':
+      case 'video':
+        return CupertinoIcons.film;
+      case 'desktop':
+        return CupertinoIcons.device_laptop;
+      case 'public':
+      case 'publik':
+        return CupertinoIcons.person_2;
+      case 'templates':
+      case 'templat':
+        return CupertinoIcons.doc_on_doc;
+      default:
+        return CupertinoIcons.folder;
+    }
+  }
+
   Widget _placeTile(
     BuildContext context,
     FileExplorerController c,
@@ -125,6 +172,7 @@ class AppSidebar extends StatelessWidget {
       place: place,
       icon: icon,
       iconColor: iconColor,
+      collapsed: collapsed,
       active: c.isPlaceActive(place),
       dropping: dropping,
       onTap: () => c.openPlace(place),
@@ -149,6 +197,7 @@ class AppSidebar extends StatelessWidget {
       (dropping) => _DriveTile(
         place: place,
         usage: c.driveUsages[place.path],
+        collapsed: collapsed,
         active: c.isPlaceActive(place),
         dropping: dropping,
         onTap: () => c.openPlace(place),
@@ -189,27 +238,38 @@ class AppSidebar extends StatelessWidget {
 }
 
 class _SidebarHeader extends StatelessWidget {
-  const _SidebarHeader();
+  const _SidebarHeader({this.collapsed = false});
+
+  final bool collapsed;
 
   @override
   Widget build(BuildContext context) {
+    final Widget logo = Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        color: context.colors.folder,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Icon(
+        Icons.folder_copy_outlined,
+        size: 12,
+        color: context.colors.windowDeep,
+      ),
+    );
+
+    if (collapsed) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+        child: Center(child: logo),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
       child: Row(
         children: [
-          Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              color: context.colors.folder,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Icon(
-              Icons.folder_copy_outlined,
-              size: 12,
-              color: context.colors.windowDeep,
-            ),
-          ),
+          logo,
           const SizedBox(width: 9),
           Text(
             'Defile',
@@ -221,6 +281,20 @@ class _SidebarHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Thin separator standing in for a group label while the sidebar is a
+/// collapsed icon rail.
+class _RailGroupDivider extends StatelessWidget {
+  const _RailGroupDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Divider(height: 1, color: context.colors.divider),
     );
   }
 }
@@ -259,6 +333,7 @@ class _PlaceTile extends StatelessWidget {
     required this.icon,
     required this.active,
     required this.onTap,
+    this.collapsed = false,
     this.onMiddleClick,
     this.onSecondaryTap,
     this.iconColor,
@@ -268,6 +343,7 @@ class _PlaceTile extends StatelessWidget {
   final rust_system.Place place;
   final IconData icon;
   final Color? iconColor;
+  final bool collapsed;
   final bool active;
   final bool dropping;
   final VoidCallback onTap;
@@ -284,7 +360,7 @@ class _PlaceTile extends StatelessWidget {
             ? context.colors.hover
             : Colors.transparent;
 
-        return GestureDetector(
+        Widget tile = GestureDetector(
           onTap: onTap,
           onTertiaryTapUp: (_) => onMiddleClick?.call(),
           onSecondaryTapDown: (details) =>
@@ -302,36 +378,52 @@ class _PlaceTile extends StatelessWidget {
                     : Colors.transparent,
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 14,
-                  color: dropping || active
-                      ? context.colors.textPrimary
-                      : (iconColor ?? context.colors.textSecondary),
-                ),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    place.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
+            child: collapsed
+                ? Center(
+                    child: Icon(
+                      icon,
+                      size: 15,
                       color: dropping || active
                           ? context.colors.textPrimary
-                          : context.colors.textSecondary,
-                      fontWeight: dropping || active
-                          ? FontWeight.w500
-                          : FontWeight.w400,
+                          : (iconColor ?? context.colors.textSecondary),
                     ),
+                  )
+                : Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: 14,
+                        color: dropping || active
+                            ? context.colors.textPrimary
+                            : (iconColor ?? context.colors.textSecondary),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          place.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: dropping || active
+                                ? context.colors.textPrimary
+                                : context.colors.textSecondary,
+                            fontWeight: dropping || active
+                                ? FontWeight.w500
+                                : FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         );
+
+        // The rail drops the label, so the tooltip carries it instead.
+        if (collapsed) {
+          tile = Tooltip(message: place.label, child: tile);
+        }
+        return tile;
       },
     );
   }
@@ -343,6 +435,7 @@ class _DriveTile extends StatelessWidget {
     required this.usage,
     required this.active,
     required this.onTap,
+    this.collapsed = false,
     this.onMiddleClick,
     this.onSecondaryTap,
     this.dropping = false,
@@ -350,6 +443,7 @@ class _DriveTile extends StatelessWidget {
 
   final rust_system.Place place;
   final rust_system.DiskUsage? usage;
+  final bool collapsed;
   final bool active;
   final bool dropping;
   final VoidCallback onTap;
@@ -365,7 +459,13 @@ class _DriveTile extends StatelessWidget {
 
     return HoverRegion(
       builder: (context, hovered) {
-        return GestureDetector(
+        final Color background = dropping || active
+            ? context.colors.selection
+            : hovered
+            ? context.colors.hover
+            : Colors.transparent;
+
+        Widget tile = GestureDetector(
           onTap: onTap,
           onTertiaryTapUp: (_) => onMiddleClick?.call(),
           onSecondaryTapDown: (details) =>
@@ -374,11 +474,7 @@ class _DriveTile extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 7),
             decoration: BoxDecoration(
-              color: dropping || active
-                  ? context.colors.selection
-                  : hovered
-                  ? context.colors.hover
-                  : Colors.transparent,
+              color: background,
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
                 color: dropping || active
@@ -386,55 +482,77 @@ class _DriveTile extends StatelessWidget {
                     : Colors.transparent,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
+            child: collapsed
+                ? Center(
+                    child: Icon(
                       CupertinoIcons.device_desktop,
-                      size: 14,
+                      size: 15,
                       color: dropping || active
                           ? context.colors.textPrimary
                           : context.colors.textSecondary,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        place.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: dropping || active
-                              ? context.colors.textPrimary
-                              : context.colors.textSecondary,
-                          fontWeight: dropping || active
-                              ? FontWeight.w500
-                              : FontWeight.w400,
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            CupertinoIcons.device_desktop,
+                            size: 14,
+                            color: dropping || active
+                                ? context.colors.textPrimary
+                                : context.colors.textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              place.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: dropping || active
+                                    ? context.colors.textPrimary
+                                    : context.colors.textSecondary,
+                                fontWeight: dropping || active
+                                    ? FontWeight.w500
+                                    : FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (ratio != null) ...[
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: ratio,
+                            minHeight: 3,
+                            backgroundColor: context.colors.divider,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              context.colors.accent,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (ratio != null) ...[
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(
-                      value: ratio,
-                      minHeight: 3,
-                      backgroundColor: context.colors.divider,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        context.colors.accent,
-                      ),
-                    ),
+                      ],
+                    ],
                   ),
-                ],
-              ],
-            ),
           ),
         );
+
+        // The rail drops the label and usage bar; the tooltip carries them.
+        if (collapsed) {
+          final String usageText = ratio == null
+              ? ''
+              : ' · ${(ratio * 100).round()}% used';
+          tile = Tooltip(
+            message: '${place.label}$usageText',
+            child: tile,
+          );
+        }
+        return tile;
       },
     );
   }

@@ -17,11 +17,6 @@ import 'package:window_manager/window_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-/// Launched by D-Bus activation (xdg-desktop-portal). Runs without a visible
-/// window: xdg-desktop-portal only wires the FileChooser interface while the
-/// activated backend stays alive, so a closed window would silently kill the
-/// portal for the whole session. The window appears when a picker request
-/// arrives and closing it merely hides it again.
 class _PortalBackendWindowListener extends WindowListener {
   @override
   void onWindowClose() async {
@@ -30,32 +25,12 @@ class _PortalBackendWindowListener extends WindowListener {
 }
 
 Future<void> main(List<String> args) async {
-  // systemd stops D-Bus-activated units (and the whole session cgroup at
-  // logout) with SIGTERM. Relying on the default disposition has been
-  // observed to leave the process alive ("remains running after unit
-  // stopped"), still holding the bus name and blocking the next activation —
-  // so exit explicitly instead.
   ProcessSignal.sigterm.watch().listen((_) => exit(0));
-
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Claim the D-Bus names before anything slow: xdg-desktop-portal and
-  // browsers activate org.freedesktop.impl.portal.desktop.defile /
-  // org.freedesktop.FileManager1 with a ~25 s D-Bus timeout, and a cold
-  // AppImage start (squashfs mount, engine, fonts, theme, first frame) can
-  // exceed it — the daemon then gives up and never exports the FileChooser
-  // interface for the rest of the session. Requests that arrive while the
-  // UI is still booting simply queue up in [PortalPickController]. The
-  // claims finish in milliseconds; awaiting them lets a portal backend that
-  // lost the name race (e.g. the systemd unit racing a D-Bus activation)
-  // bow out immediately instead of lurking as an invisible duplicate.
   final bool portalBackend = args.contains('--dbus-portal');
   final PortalFileChooserService fileChooser = PortalFileChooserService();
   final List<bool> claimed = await Future.wait(<Future<bool>>[
     FileManager1Service().start(),
-    // Only the dedicated backend claims the portal name: a request must
-    // never land inside a file manager window the user opened themselves —
-    // it always gets its own floating picker window instead.
     if (portalBackend)
       fileChooser.start()
     else
@@ -69,10 +44,6 @@ Future<void> main(List<String> args) async {
 
   await RustLib.init();
   await windowManager.ensureInitialized();
-
-  // xdg-open hands us the target as a CLI argument (plain path or file://
-  // URI from the %u desktop entry field). Directories open as the first
-  // tab; files open their parent directory.
   ExplorerTabsController.launchPath = _resolveLaunchPath(args);
 
   final fontService = Get.put(FontService());
@@ -95,10 +66,6 @@ Future<void> main(List<String> args) async {
 
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
     if (portalBackend) {
-      // Headless until a picker request reveals the window; closing it must
-      // never take the backend process (and the claimed D-Bus name) down.
-      // The stable "File Chooser" title token is what the compositor float
-      // rule matches, so the picker always opens as a floating dialog.
       await windowManager.setTitle('Defile — File Chooser');
       await windowManager.setPreventClose(true);
       await windowManager.hide();
@@ -109,18 +76,13 @@ Future<void> main(List<String> args) async {
   });
 
   runApp(const RootApp());
-
-  // Portal backend only: verify the daemon actually wired us up, and bounce
-  // it once if its startup introspection raced our cold start.
   if (portalBackend) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      windowManager.hide();
+    });
     unawaited(fileChooser.ensureFrontendWired());
   }
 }
-
-/// Resolves the first positional CLI argument into the directory the first
-/// tab should open. Accepts plain paths and `file://` URIs; a file argument
-/// opens its parent directory. Returns null when nothing valid is given and
-/// the app falls back to Home.
 String? _resolveLaunchPath(List<String> args) {
   for (final String arg in args) {
     if (arg.startsWith('-')) continue; // ignore flags

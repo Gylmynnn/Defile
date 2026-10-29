@@ -50,8 +50,8 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
               () => _ToolbarIconButton(
                 icon: CupertinoIcons.sidebar_right,
                 tooltip: controller.showSidebar.value
-                    ? 'Hide sidebar'
-                    : 'Show sidebar',
+                    ? 'Collapse sidebar'
+                    : 'Expand sidebar',
                 active: controller.showSidebar.value,
                 onTap: controller.toggleSidebar,
               ),
@@ -589,8 +589,8 @@ class ExplorerSplitTopBar extends StatelessWidget {
             () => _ToolbarIconButton(
               icon: CupertinoIcons.sidebar_right,
               tooltip: controller.showSidebar.value
-                  ? 'Hide sidebar'
-                  : 'Show sidebar',
+                  ? 'Collapse sidebar'
+                  : 'Expand sidebar',
               active: controller.showSidebar.value,
               onTap: controller.toggleSidebar,
             ),

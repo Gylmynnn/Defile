@@ -248,19 +248,15 @@ class _SidebarRail extends StatelessWidget {
       final Duration duration = Get.isRegistered<ThemeService>()
           ? Get.find<ThemeService>().animationDuration
           : Duration.zero;
+      final bool expanded = controller.showSidebar.value;
 
       return AnimatedContainer(
         duration: duration,
         curve: Curves.easeOutCubic,
-        width: controller.showSidebar.value ? 178 : 0,
-        child: ClipRect(
-          child: OverflowBox(
-            alignment: Alignment.centerLeft,
-            minWidth: 178,
-            maxWidth: 178,
-            child: AppSidebar(),
-          ),
-        ),
+        // Collapsing keeps an icon rail instead of hiding the sidebar
+        // entirely, so quick access stays one click away.
+        width: expanded ? 178 : 52,
+        child: ClipRect(child: AppSidebar(collapsed: !expanded)),
       );
     });
   }
