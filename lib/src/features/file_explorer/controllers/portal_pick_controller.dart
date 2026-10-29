@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -83,6 +84,25 @@ class PortalPickController extends GetxController {
       request,
       request.multiple ? paths : paths.sublist(0, 1),
     );
+  }
+
+  /// Double-click on an entry while a picker is open acts as the dialog's
+  /// confirm button: a file confirms an open-file request, a folder
+  /// confirms a choose-folder request. Returns false when no picker is
+  /// active or the entry type does not match the request, so the caller
+  /// falls back to normal navigation.
+  Future<bool> tryConfirmWithEntry(rust.FileEntry entry) async {
+    final PortalPickRequest? request = visible;
+    if (request == null) return false;
+
+    final bool isDir = Directory(entry.path).existsSync();
+    if (request.isDirectoryMode != isDir) return false;
+
+    await Get.find<PortalFileChooserService>().completeRequest(
+      request,
+      <String>[entry.path],
+    );
+    return true;
   }
 
   /// Cancels the visible request.

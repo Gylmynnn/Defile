@@ -11,6 +11,7 @@ import 'package:get/get.dart';
 import '../../../theme/app_theme.dart';
 import '../controllers/explorer_tabs_controller.dart';
 import '../controllers/file_explorer_controller.dart';
+import '../controllers/portal_pick_controller.dart';
 import '../services/theme_service.dart';
 import '../utils/app_dialog_route.dart';
 import '../utils/app_toast.dart';
@@ -1227,6 +1228,16 @@ class _EntryContentState extends State<_EntryContentArea> {
     _notifyPaneFocus();
     _pendingOpenPath = null;
     controller.selectOnly(entry);
+    // In portal-picker mode a double-click acts as the dialog's confirm.
+    if (Get.isRegistered<PortalPickController>()) {
+      final PortalPickController picker = Get.find<PortalPickController>();
+      unawaited(
+        picker.tryConfirmWithEntry(entry).then((bool confirmed) {
+          if (!confirmed) controller.openFile(entry);
+        }),
+      );
+      return;
+    }
     controller.openFile(entry);
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../controllers/explorer_tabs_controller.dart';
 import '../../controllers/portal_pick_controller.dart';
 import '../../services/portal_file_chooser_service.dart';
 
@@ -21,6 +22,16 @@ class PortalPickBar extends StatelessWidget {
       final PortalPickRequest request = picker.queue.last;
       final colors = context.colors;
 
+      // Live selection count of the focused tab (updates as rows are
+      // picked) so the user can see what would be confirmed.
+      int selected = 0;
+      if (Get.isRegistered<ExplorerTabsController>()) {
+        selected = Get.find<ExplorerTabsController>()
+            .focusedController
+            .selection
+            .length;
+      }
+
       return Align(
         alignment: Alignment.bottomCenter,
         child: Material(
@@ -37,7 +48,8 @@ class PortalPickBar extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Defile is choosing ${request.isDirectoryMode ? 'a folder' : 'file(s)'}'
-                    '${request.appId.isEmpty ? '' : ' for ${request.appId}'}'
+                    '${selected > 0 ? '  ·  $selected selected' : ''}'
+                    '${request.appId.isEmpty ? '' : '  ·  ${request.appId}'}'
                     '${count > 1 ? '  ·  $count requests waiting' : ''}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

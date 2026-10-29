@@ -13,13 +13,13 @@ extension _SettingsSections on _SettingsDialogState {
         _CustomSectionCard(
           children: [
             _CustomSettingRow(
-              title: 'Version 0.5.0',
-              subtitle: 'Installer version: 0.5.0',
+              title: 'Version 0.6.8',
+              subtitle: 'Installer version: 0.6.8',
               linkText: 'Read the changelog.',
               onLinkTap: () {
                 _showInfoMessage(
                   'Changelog',
-                  'Defile 0.5.0 introduces custom themes, and lightning-fast file navigation.',
+                  'Defile 0.6.8 introduces custom themes, and lightning-fast file navigation.',
                 );
               },
               control: _CustomButton(

@@ -1,9 +1,13 @@
-import 'dart:collection';
+import 'dart:io';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:path/path.dart' as p;
+import 'package:super_clipboard/super_clipboard.dart'
+    show SimplePlatformCodec, SimpleValueFormat;
+import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../services/theme_service.dart';
@@ -30,30 +34,6 @@ typedef EntryDropCallback = void Function(
   List<rust.FileEntry> entries,
   String destinationDirectory,
 );
-
-class _LazyEntries extends ListBase<rust.FileEntry> {
-  _LazyEntries(this._resolve);
-
-  final List<rust.FileEntry> Function() _resolve;
-  List<rust.FileEntry>? _value;
-
-  void reset() => _value = null;
-
-  List<rust.FileEntry> get _entries => _value ??= _resolve();
-
-  @override
-  int get length => _entries.length;
-
-  @override
-  set length(int value) => throw UnsupportedError('read-only');
-
-  @override
-  rust.FileEntry operator [](int index) => _entries[index];
-
-  @override
-  void operator []=(int index, rust.FileEntry value) =>
-      throw UnsupportedError('read-only');
-}
 
 final Map<String, GlobalKey> _entryKeys = <String, GlobalKey>{};
 
@@ -609,7 +589,7 @@ class _CompactRow extends StatelessWidget {
   }
 }
 
-class _EntryDragWrapper extends StatelessWidget {
+class _EntryDragWrapper extends StatefulWidget {
   const _EntryDragWrapper({
     required this.entry,
     required this.child,
@@ -625,48 +605,146 @@ class _EntryDragWrapper extends StatelessWidget {
   final EntryDropCallback? onDrop;
 
   @override
+  State<_EntryDragWrapper> createState() => _EntryDragWrapperState();
+}
+
+/// text/uri-list carrying the whole selection in a single item so external
+/// applications receive every dragged file in one drop.
+const SimpleValueFormat<List<Uri>> _fileUriListFormat =
+    SimpleValueFormat<List<Uri>>(
+  linux: SimplePlatformCodec<List<Uri>>(
+    formats: ['text/uri-list'],
+    onEncode: _uriListToSystem,
+  ),
+  fallback: SimplePlatformCodec<List<Uri>>(
+    formats: ['text/uri-list'],
+    onEncode: _uriListToSystem,
+  ),
+);
+
+String _uriListToSystem(List<Uri> uris, PlatformFormat format) =>
+    uris.map((Uri uri) => uri.toString()).join('\r\n');
+
+/// Builds the native drag payload for a selection. The full path list rides
+/// along as [DragItem.localData] so an in-app drop target can reconstruct the
+/// entries without touching the filesystem. Returns null for an empty
+/// selection, which cancels the drag before it starts.
+Future<DragItem?> buildEntryDragItem(List<rust.FileEntry> entries) async {
+  if (entries.isEmpty) return null;
+
+  final List<String> paths = entries
+      .map((rust.FileEntry entry) => entry.path)
+      .toList();
+
+  final DragItem item = DragItem(localData: paths);
+  // text/uri-list is what other applications read on drop; plain text is
+  // a readable fallback for apps that don't handle uri lists.
+  item.add(_fileUriListFormat(paths.map(Uri.file).toList()));
+  item.add(Formats.plainText(paths.join('\n')));
+  return item;
+}
+
+/// Reconstructs dropped entries from an in-app drag session's local data.
+/// Size/mtime are not needed for move/copy decisions, only paths.
+List<rust.FileEntry> entriesFromLocalData(Object? localData) {
+  if (localData is! List) return const <rust.FileEntry>[];
+  return localData
+      .whereType<String>()
+      .map(entryFromPath)
+      .toList(growable: false);
+}
+
+rust.FileEntry entryFromPath(String path) {
+  final bool isDirectory = Directory(path).existsSync();
+  return rust.FileEntry(
+    name: p.basename(path),
+    path: path,
+    isDirectory: isDirectory,
+    isFile: !isDirectory,
+    sizeBytes: BigInt.zero,
+    modifiedSeconds: 0,
+  );
+}
+
+class _EntryDragWrapperState extends State<_EntryDragWrapper> {
+  bool _dropHovering = false;
+
+  List<rust.FileEntry> _resolveEntries() =>
+      widget.dragEntries?.call(widget.entry) ?? <rust.FileEntry>[widget.entry];
+
+  Future<DragItem?> _provideDragItem(DragItemRequest request) =>
+      buildEntryDragItem(_resolveEntries());
+
+  List<rust.FileEntry> _internalEntries(DropSession session) =>
+      entriesFromLocalData(
+        session.items.isEmpty ? null : session.items.first.localData,
+      );
+
+  @override
   Widget build(BuildContext context) {
-    final _LazyEntries dragged = _LazyEntries(
-      () => dragEntries?.call(entry) ?? <rust.FileEntry>[entry],
+    final Widget source = DragItemWidget(
+      dragItemProvider: _provideDragItem,
+      allowedOperations: () => const <DropOperation>[
+        DropOperation.copy,
+        DropOperation.move,
+      ],
+      // Native drag image: the same "N items" chip the old Flutter
+      // Draggable used as feedback.
+      dragBuilder: (BuildContext context, Widget child) =>
+          _EntryDragFeedback(entries: _resolveEntries()),
+      child: DraggableWidget(child: widget.child),
     );
 
-    final Widget source = Draggable<List<rust.FileEntry>>(
-      data: dragged,
-      dragAnchorStrategy: pointerDragAnchorStrategy,
-      feedback: _EntryDragFeedback(entries: dragged),
-      childWhenDragging: Opacity(opacity: 0.45, child: child),
-      onDragStarted: dragged.reset,
-      child: child,
-    );
+    if (!widget.entry.isDirectory ||
+        widget.canDrop == null ||
+        widget.onDrop == null) {
+      return source;
+    }
 
-    if (!entry.isDirectory || canDrop == null || onDrop == null) return source;
-
-    return DragTarget<List<rust.FileEntry>>(
-      onWillAcceptWithDetails: (details) => canDrop!(details.data, entry.path),
-      onAcceptWithDetails: (details) => onDrop!(details.data, entry.path),
-      builder: (context, candidateData, rejectedData) {
-        final bool hovering = candidateData.any(
-          (data) => data != null && canDrop!(data, entry.path),
-        );
-
-        return Stack(
-          children: [
-            source,
-            if (hovering)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: context.colors.selection.withValues(alpha: 0.32),
-                      borderRadius: BorderRadius.circular(7),
-                      border: Border.all(color: context.colors.selectionBorder),
-                    ),
+    // Empty formats = only accept drag sessions started inside this app,
+    // same behavior as the previous Flutter-internal Draggable/DragTarget.
+    return DropRegion(
+      formats: const <DataFormat>[],
+      hitTestBehavior: HitTestBehavior.opaque,
+      onDropOver: (DropOverEvent event) {
+        final List<rust.FileEntry> entries = _internalEntries(event.session);
+        final bool accept = entries.isNotEmpty &&
+            widget.canDrop!(entries, widget.entry.path);
+        if (accept != _dropHovering) {
+          setState(() => _dropHovering = accept);
+        }
+        return accept ? DropOperation.move : DropOperation.none;
+      },
+      onDropLeave: (DropEvent event) {
+        if (_dropHovering) setState(() => _dropHovering = false);
+      },
+      onPerformDrop: (PerformDropEvent event) async {
+        if (!_dropHovering) return;
+        final List<rust.FileEntry> entries = _internalEntries(event.session);
+        if (entries.isEmpty ||
+            !widget.canDrop!(entries, widget.entry.path)) {
+          return;
+        }
+        setState(() => _dropHovering = false);
+        widget.onDrop!(entries, widget.entry.path);
+      },
+      child: Stack(
+        children: [
+          source,
+          if (_dropHovering)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: context.colors.selection.withValues(alpha: 0.32),
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(color: context.colors.selectionBorder),
                   ),
                 ),
               ),
-          ],
-        );
-      },
+            ),
+        ],
+      ),
     );
   }
 }

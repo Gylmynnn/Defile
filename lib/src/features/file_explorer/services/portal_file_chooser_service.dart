@@ -365,7 +365,7 @@ class _PortalFileChooserObject extends DBusObject {
     return DBusMethodErrorResponse.unknownMethod();
   }
 
-  /// OpenFile (o handle, s app_id, s parent_window, a{sv} options)
+  /// OpenFile (o handle, s app_id, s parent_window, s title, a{sv} options)
   ///   → (u response, a{sv} results)   [reply held open]
   ///
   /// The handle IS the frontend request path; we export a Close() object
@@ -373,17 +373,27 @@ class _PortalFileChooserObject extends DBusObject {
   Future<DBusMethodResponse> _openFile(DBusMethodCall call) async {
     final String handlePath =
         (call.values[0] as DBusObjectPath).value;
-    final String appId = call.values.length > 1
-        ? (call.values[1] as DBusString).value
-        : '';
 
-    final Map<DBusString, DBusVariant> options = call.values.length > 3
-        ? (call.values[3] as DBusDict).children.cast<DBusString, DBusVariant>()
-        : <DBusString, DBusVariant>{};
+    String stringArg(int index) {
+      if (call.values.length <= index) return '';
+      final DBusValue value = call.values[index];
+      return value is DBusString ? value.value : '';
+    }
+
+    // (handle, app_id, parent_window, title, options)
+    final String appId = stringArg(1);
+    final String title = stringArg(3);
+
+    final Map<DBusString, DBusVariant> options =
+        call.values.length > 4 && call.values[4] is DBusDict
+            ? (call.values[4] as DBusDict)
+                  .children
+                  .cast<DBusString, DBusVariant>()
+            : <DBusString, DBusVariant>{};
 
     bool multiple = false;
     bool directoryMode = false;
-    String acceptLabel = '';
+    String acceptLabel = title;
     String? currentFolder;
 
     final DBusVariant? mode = options[const DBusString('mode')];
