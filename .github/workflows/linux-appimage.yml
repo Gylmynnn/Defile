@@ -2,6 +2,7 @@ name: Linux packages
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -115,7 +116,9 @@ jobs:
           chmod +x scripts/build_deb.sh
           SKIP_BUILD=1 scripts/build_deb.sh
           dpkg-deb --info build/deb/*.deb
-          dpkg-deb --contents build/deb/*.deb | head -30
+          # head closes the pipe early (SIGPIPE) which fails under `pipefail`,
+          # so don't let the preview pipe fail the job.
+          dpkg-deb --contents build/deb/*.deb | head -n 30 || true
 
       - name: Build .rpm
         shell: bash
@@ -124,7 +127,8 @@ jobs:
         run: |
           chmod +x scripts/build_rpm.sh
           SKIP_BUILD=1 scripts/build_rpm.sh
-          rpm -qlp build/rpm/RPMS/*/*.rpm | head -30
+          # See above: preview pipe must not fail the job on SIGPIPE.
+          rpm -qlp build/rpm/RPMS/*/*.rpm | head -n 30 || true
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
