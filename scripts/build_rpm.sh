@@ -17,6 +17,10 @@ DISPLAY_NAME="${DISPLAY_NAME:-Defile}"
 VERSION="${VERSION:-$(grep -m1 '^version:' pubspec.yaml | cut -d':' -f2 | cut -d'+' -f1 | tr -d ' ')}"
 RELEASE="${RELEASE:-1}"
 SUMMARY="${SUMMARY:-Minimalist modern file manager for Linux}"
+# RPM `Version:` may not contain '-'. CI dev versions look like
+# 0.0.0-<sha>; map them to 0.0.0_<sha>. Tagged releases (e.g. 0.6.12)
+# are unaffected.
+VERSION="${VERSION//-/_}"
 
 HOST_ARCH="$(uname -m)"
 case "$HOST_ARCH" in
