@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Defile
+Comment=Minimalist modern file manager for Linux
+Exec=/usr/bin/defile
+Icon=defile
+Categories=Utility;FileManager;
+Terminal=false
+StartupWMClass=defile

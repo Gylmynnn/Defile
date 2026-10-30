@@ -1,4 +1,4 @@
-name: Linux AppImage
+name: Linux packages
 
 on:
   push:
@@ -12,7 +12,7 @@ env:
 
 jobs:
   build:
-    name: AppImage (${{ matrix.arch }})
+    name: Linux packages (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -38,7 +38,8 @@ jobs:
             liblzma-dev \
             libstdc++-12-dev \
             libmpv-dev \
-            libepoxy-dev
+            libepoxy-dev \
+            rpm
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -106,11 +107,33 @@ jobs:
           chmod +x scripts/build_appimage.sh
           SKIP_BUILD=1 scripts/build_appimage.sh
 
-      - name: Upload AppImage artifact
+      - name: Build .deb
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          chmod +x scripts/build_deb.sh
+          SKIP_BUILD=1 scripts/build_deb.sh
+          dpkg-deb --info build/deb/*.deb
+          dpkg-deb --contents build/deb/*.deb | head -30
+
+      - name: Build .rpm
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          chmod +x scripts/build_rpm.sh
+          SKIP_BUILD=1 scripts/build_rpm.sh
+          rpm -qlp build/rpm/RPMS/*/*.rpm | head -30
+
+      - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: defile-appimage-${{ matrix.arch }}
-          path: build/appimage/Defile-*-${{ matrix.arch }}.AppImage
+          name: defile-linux-${{ matrix.arch }}
+          path: |
+            build/appimage/Defile-*-${{ matrix.arch }}.AppImage
+            build/deb/*.deb
+            build/rpm/RPMS/*/*.rpm
           if-no-files-found: error
 
   release:
@@ -121,19 +144,22 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download AppImages
+      - name: Download Linux packages
         uses: actions/download-artifact@v4
         with:
-          pattern: defile-appimage-*
+          pattern: defile-linux-*
           path: dist
           merge-multiple: true
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.AppImage
+          files: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
           generate_release_notes: true
           fail_on_unmatched_files: true
 
   # Builds run on every push. Pushing a tag (e.g. v0.6.0) additionally creates
-  # a GitHub release and uploads both AppImages to it.
+  # a GitHub release and uploads AppImages, .debs, and .rpms to it.

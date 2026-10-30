@@ -1,0 +1,50 @@
+# Maintainer: Defile Maintainers <https://github.com/Gylmynnn/Defile>
+# Binary repackaging of the official GitHub release AppImage.
+# To update for a new release:
+#   1. bump pkgver below to the release version (without leading 'v')
+#   2. run `updpkgsums && makepkg --printsrcinfo > .SRCINFO`
+#   3. test with `makepkg -si`
+pkgname=defile-bin
+pkgver=0.6.12
+pkgrel=1
+pkgdesc="Minimalist modern file manager for Linux"
+arch=('x86_64' 'aarch64')
+url="https://github.com/Gylmynnn/Defile"
+license=('custom:unknown')
+depends=('gtk3' 'mpv' 'libepoxy' 'hicolor-icon-theme')
+optdepends=('fuse2: run the AppImage directly (not needed for the installed app)')
+provides=('defile')
+conflicts=('defile')
+options=('!strip')
+
+source_x86_64=("Defile-${pkgver}-x86_64.AppImage::https://github.com/Gylmynnn/Defile/releases/download/v${pkgver}/Defile-${pkgver}-x86_64.AppImage")
+sha256sums_x86_64=('SKIP')
+
+source_aarch64=("Defile-${pkgver}-aarch64.AppImage::https://github.com/Gylmynnn/Defile/releases/download/v${pkgver}/Defile-${pkgver}-aarch64.AppImage")
+sha256sums_aarch64=('SKIP')
+
+package() {
+  local appimage="Defile-${pkgver}-${CARCH}.AppImage"
+  install -Dm755 "${srcdir}/${appimage}" "${pkgdir}/opt/defile/Defile.AppImage"
+
+  # Extract the AppImage payload (squashfs) and install the Flutter bundle
+  # as regular files so the app runs without FUSE.
+  chmod +x "${srcdir}/${appimage}"
+  rm -rf "${srcdir}/squashfs-root"
+  (cd "${srcdir}" && ./"${appimage}" --appimage-extract >/dev/null)
+
+  mkdir -p "${pkgdir}/opt/defile"
+  cp -a "${srcdir}/squashfs-root/usr/bin/." "${pkgdir}/opt/defile/"
+  chmod 755 "${pkgdir}/opt/defile/defile"
+
+  install -dm755 "${pkgdir}/usr/bin"
+  ln -s /opt/defile/defile "${pkgdir}/usr/bin/defile"
+
+  install -Dm644 "${srcdir}/squashfs-root/defile.desktop" "${pkgdir}/usr/share/applications/defile.desktop"
+  # Point the launcher at the installed binary, not the AppImage mount.
+  sed -i 's|^Exec=.*|Exec=/usr/bin/defile|' "${pkgdir}/usr/share/applications/defile.desktop"
+
+  if [ -f "${srcdir}/squashfs-root/defile.png" ]; then
+    install -Dm644 "${srcdir}/squashfs-root/defile.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/defile.png"
+  fi
+}

@@ -14,16 +14,30 @@
 #   make check          flutter analyze only
 #   make clean          remove AppImage artifacts (keeps the debug bundle —
 #                       widget tests load its .so)
+#   make deb            build .deb from the Flutter bundle (SKIP_BUILD=1 to
+#                       reuse the last bundle)
+#   make rpm            build .rpm from the Flutter bundle
+#   make packages       build AppImage + .deb + .rpm (reuses bundle)
 
 VERSION ?= $(shell grep -m1 '^version:' pubspec.yaml | cut -d':' -f2 | cut -d'+' -f1 | tr -d ' ')
 ARCH ?= x86_64
 APPIMAGE := build/appimage/Defile-$(VERSION)-$(ARCH).AppImage
+ifeq ($(ARCH),x86_64)
+DEB_ARCH := amd64
+else ifeq ($(ARCH),aarch64)
+DEB_ARCH := arm64
+else
+DEB_ARCH := $(ARCH)
+endif
+DEB := build/deb/defile_$(VERSION)_$(DEB_ARCH).deb
+RPM_ARCH := $(ARCH)
+RPM := build/rpm/RPMS/$(RPM_ARCH)/defile-$(VERSION)-1.$(RPM_ARCH).rpm
 INSTALL_DIR ?= $(HOME)/.local/opt/defile
 INSTALL_PATH := $(INSTALL_DIR)/Defile.AppImage
 PORTAL_UNIT := xdg-desktop-portal
 
 .DEFAULT_GOAL := install
-.PHONY: all build install run stop portal-restart test check clean
+.PHONY: all build install run stop portal-restart test check clean deb rpm packages
 
 all: install
 
@@ -68,6 +82,16 @@ install: build
 run:
 	"$(INSTALL_PATH)"
 
+deb:
+	VERSION="$(VERSION)" ARCH="$(ARCH)" SKIP_BUILD="$(SKIP_BUILD)" bash scripts/build_deb.sh
+
+rpm:
+	VERSION="$(VERSION)" ARCH="$(ARCH)" SKIP_BUILD="$(SKIP_BUILD)" bash scripts/build_rpm.sh
+
+packages: build
+	@$(MAKE) --no-print-directory deb SKIP_BUILD=1
+	@$(MAKE) --no-print-directory rpm SKIP_BUILD=1
+
 test:
 	flutter analyze
 	flutter test
@@ -76,4 +100,4 @@ check:
 	flutter analyze
 
 clean:
-	rm -rf build/appimage
+	rm -rf build/appimage build/deb build/rpm
