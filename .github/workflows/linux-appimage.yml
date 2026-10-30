@@ -158,10 +158,13 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          # Artifacts keep their upload-time nesting (appimage/, deb/,
+          # rpm/RPMS/) because upload-artifact roots multi-path uploads at
+          # the least common ancestor — so match recursively.
           files: |
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.rpm
+            dist/**/*.AppImage
+            dist/**/*.deb
+            dist/**/*.rpm
           generate_release_notes: true
           fail_on_unmatched_files: true
 
