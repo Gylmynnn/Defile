@@ -6,13 +6,15 @@
 # What it does (in order):
 #   Debian/Ubuntu and derivatives → installs the release .deb (system-wide)
 #   Fedora/RHEL/openSUSE          → installs the release .rpm (system-wide)
-#   Arch / CachyOS / Manjaro      → tries AUR helper (defile-bin), else AppImage
+#   Arch / CachyOS / Manjaro      → AUR (defile-bin) when it is published and an
+#                                  AUR helper exists; otherwise AppImage
 #   Anything else                 → installs the release AppImage to
 #                                  ~/.local/opt/defile + ~/.local/bin/defile
 #
 # Options / env overrides:
 #   bash install.sh [--appimage|--deb|--rpm|--aur] [--version X.Y.Z]
 #   DEFIlE_METHOD=appimage|deb|rpm|aur  DEFIlE_VERSION=X.Y.Z  REPO=owner/name
+#   AUR_PACKAGE=defile-bin  (package name to probe on the AUR)
 set -euo pipefail
 
 REPO="${REPO:-Gylmynnn/Defile}"
@@ -182,22 +184,51 @@ install_rpm() {
   msg "installed: /usr/bin/$APP"
 }
 
+# Is the package published to the AUR yet? The recipe ships from this repo but
+# publishing to aur.archlinux.org is a separate manual step, so the package may
+# legitimately not exist. Returns non-zero when it cannot be confirmed.
+aur_available() {
+  local pkg="${AUR_PACKAGE:-defile-bin}"
+  local body
+  body="$(curl -fsSL --max-time 15 \
+    "https://aur.archlinux.org/rpc/v5/info/$pkg" 2>/dev/null || true)"
+  case "$body" in
+    *'"resultcount":0'* | "") return 1 ;;
+    *'"Name":"'"$pkg"'"'*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 install_aur() {
-  if have yay; then
-    msg "installing defile-bin via yay"
-    yay -S --noconfirm defile-bin
-    return
+  local ver="$1"
+
+  # AUR not ready → fall back to the AppImage (same files, no system package).
+  if ! aur_available; then
+    msg "defile-bin is not published on the AUR yet"
+    msg "falling back to AppImage install"
+    install_appimage "$ver"
+    return 0
   fi
-  if have paru; then
-    msg "installing defile-bin via paru"
-    paru -S --noconfirm defile-bin
-    return
+
+  local helper=""
+  if have yay; then helper="yay"
+  elif have paru; then helper="paru"
   fi
-  echo "No AUR helper (yay/paru) found. Install manually:" >&2
-  echo "  git clone https://aur.archlinux.org/defile-bin.git" >&2
-  echo "  cd defile-bin && makepkg -si" >&2
-  echo "Falling back to AppImage install." >&2
-  install_appimage "$1"
+
+  if [ -z "$helper" ]; then
+    msg "no AUR helper (yay/paru) found — falling back to AppImage install"
+    install_appimage "$ver"
+    return 0
+  fi
+
+  msg "installing defile-bin via $helper"
+  # A failed helper run (helper itself broken, user aborted, PKGBUILD error)
+  # must not leave the machine without Defile: fall through to AppImage.
+  if "$helper" -S --noconfirm "${AUR_PACKAGE:-defile-bin}"; then
+    return 0
+  fi
+  msg "AUR install via $helper failed — falling back to AppImage install"
+  install_appimage "$ver"
 }
 
 detect_method() {
@@ -216,7 +247,13 @@ detect_method() {
       echo "rpm"
       ;;
     *"arch"* | *"cachyos"* | *"manjaro"* | *"endeavouros"*)
-      if have yay || have paru; then echo "aur"; else echo "appimage"; fi
+      # Arch only uses the AUR path once defile-bin is actually published;
+      # until then the AppImage install is the supported route.
+      if { have yay || have paru; } && aur_available; then
+        echo "aur"
+      else
+        echo "appimage"
+      fi
       ;;
     *)
       if have apt-get; then echo "deb"
