@@ -29,6 +29,14 @@ git push
    ```
 3. Push the same two files to the AUR repo.
 
+## Before the first publish
+
+`scripts/install.sh` probes the AUR registry (`rpc/v5/info/defile-bin`) before
+choosing a method. While the package is unpublished, Arch users get the
+AppImage install automatically — so the installer is safe to ship ahead of the
+AUR import. Once the push above lands, Arch users with `yay`/`paru` switch to
+the AUR path with no installer change.
+
 ## Notes
 
 - `defile-bin` repackages the official release AppImage and installs the

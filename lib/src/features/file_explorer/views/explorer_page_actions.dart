@@ -194,7 +194,16 @@ extension _ExplorerPageActions on _EntryContentState {
             label: 'New Folder',
             shortcut: 'Ctrl+Shift+N',
             enabled: inDirectory && !inTrash,
-            onSelected: () => _showCreateFolderDialog(context),
+            onSelected: () => _showCreateEntryDialog(context, directory: true),
+          ),
+        ),
+        ContextMenuActionEntry(
+          ContextMenuAction(
+            icon: Icons.note_add_outlined,
+            label: 'New File',
+            shortcut: 'Ctrl+N',
+            enabled: inDirectory && !inTrash,
+            onSelected: () => _showCreateEntryDialog(context, directory: false),
           ),
         ),
         ContextMenuSeparator(),
@@ -457,25 +466,30 @@ extension _ExplorerPageActions on _EntryContentState {
     return fileName;
   }
 
-  void _showCreateFolderDialog(BuildContext context) {
+  void _showCreateEntryDialog(
+    BuildContext context, {
+    required bool directory,
+  }) {
     final TextEditingController textController = TextEditingController();
 
     showAppDialog(
       builder: (_) => AppDialog(
-        title: 'New folder',
+        title: directory ? 'New folder' : 'New file',
         width: 360,
         content: Padding(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
           child: TextField(
             controller: textController,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Folder name',
-              hintText: 'Example: Projects',
+            decoration: InputDecoration(
+              labelText: directory ? 'Folder name' : 'File name',
+              hintText: directory ? 'Example: Projects' : 'Example: notes.txt',
             ),
             onSubmitted: (value) {
               Get.back();
-              controller.createDirectory(value);
+              directory
+                  ? controller.createDirectory(value)
+                  : controller.createFile(value);
             },
           ),
         ),
@@ -487,7 +501,9 @@ extension _ExplorerPageActions on _EntryContentState {
             onTap: () {
               final String name = textController.text;
               Get.back();
-              controller.createDirectory(name);
+              directory
+                  ? controller.createDirectory(name)
+                  : controller.createFile(name);
             },
           ),
         ],

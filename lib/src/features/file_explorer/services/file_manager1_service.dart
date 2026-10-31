@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../controllers/explorer_tabs_controller.dart';
 import '../controllers/file_explorer_controller.dart';
+import '../controllers/portal_pick_controller.dart';
 
 /// Owns the `org.freedesktop.FileManager1` session-bus name and serves the
 /// methods browsers and desktop environments call for "Show in folder" /
@@ -113,8 +114,13 @@ class _FileManager1Object extends DBusObject {
     }
 
     // The instance serving this call may be the hidden portal backend;
-    // reveal it so the user actually sees the tabs that just opened.
+    // reveal it so the user actually sees the tabs that just opened. Mark
+    // the window wanted first — the backend listener re-hides stray
+    // mappings and must not swallow this reveal.
     if (opened) {
+      if (Get.isRegistered<PortalPickController>()) {
+        Get.find<PortalPickController>().markWindowWanted();
+      }
       unawaited(windowManager.show());
       unawaited(windowManager.focus());
     }

@@ -29,10 +29,26 @@ class PortalPickController extends GetxController {
   /// to the user, not to the dialog.
   bool _revealedByPortal = false;
 
+  /// Whether the window is wanted on screen right now: a pending picker
+  /// request or a user-facing FileManager1 reveal. The backend window
+  /// listener puts the window back to sleep whenever the GTK embedder
+  /// remaps it while this is false (its first frame beats the early
+  /// hide() calls depending on boot timing).
+  bool _windowWanted = false;
+
+  bool get windowWanted => _windowWanted;
+
+  /// Marks the window as intentionally visible (FileManager1 reveal path).
+  void markWindowWanted() => _windowWanted = true;
+
+  /// Marks the window as headless again (picker settled or user closed it).
+  void markWindowUnwanted() => _windowWanted = false;
+
   /// Shows the picker for [request], opening its start folder as a new tab.
   void present(PortalPickRequest request) {
     queue.add(request);
     _revealedByPortal = true;
+    _windowWanted = true;
 
     if (request.currentFolder != null &&
         Get.isRegistered<ExplorerTabsController>()) {
@@ -56,6 +72,7 @@ class PortalPickController extends GetxController {
     // alive for the next one.
     if (queue.isEmpty && _revealedByPortal) {
       _revealedByPortal = false;
+      _windowWanted = false;
       windowManager.hide();
     }
   }

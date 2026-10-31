@@ -20,7 +20,23 @@ import 'package:get/get.dart';
 class _PortalBackendWindowListener extends WindowListener {
   @override
   void onWindowClose() async {
+    if (Get.isRegistered<PortalPickController>()) {
+      Get.find<PortalPickController>().markWindowUnwanted();
+    }
     await windowManager.hide();
+  }
+
+  @override
+  void onWindowEvent(String eventName) {
+    if (eventName != 'show') return;
+    // The GTK embedder maps the window on its first frame no matter how
+    // early main() hid it (the race is boot-timing dependent), so re-hide
+    // whenever it resurfaces with nothing to show. A pending picker request
+    // or a FileManager1 reveal marks the window wanted and stays visible.
+    if (!Get.isRegistered<PortalPickController>()) return;
+    final PortalPickController picker = Get.find<PortalPickController>();
+    if (picker.queue.isNotEmpty || picker.windowWanted) return;
+    windowManager.hide();
   }
 }
 

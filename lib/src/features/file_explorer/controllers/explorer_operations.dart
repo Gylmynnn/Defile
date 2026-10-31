@@ -581,6 +581,35 @@ extension ExplorerOperations on FileExplorerController {
     }
   }
 
+  Future<void> createFile(String name) async {
+    final String trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      showAppToast(
+        title: 'Empty file name',
+        message: 'Enter a file name first',
+        variant: AppToastVariant.error,
+      );
+      return;
+    }
+
+    try {
+      await fileSystemService.createFile(currentPath.value, trimmedName);
+      await refreshDirectory();
+
+      showAppToast(
+        title: 'Success',
+        message: 'File "$trimmedName" created',
+        variant: AppToastVariant.success,
+      );
+    } catch (error) {
+      showAppToast(
+        title: 'Failed to create file',
+        message: error.toString(),
+        variant: AppToastVariant.error,
+      );
+    }
+  }
+
   Future<void> openDirectory(rust.FileEntry entry) async {
     if (!entry.isDirectory) return;
     await navigateTo(entry.path);

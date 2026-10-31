@@ -52,6 +52,38 @@ class _MediaPreview extends StatefulWidget {
   State<_MediaPreview> createState() => _MediaPreviewState();
 }
 
+/// Pooled libmpv instance shared across media previews. Building a [Player]
+/// is by far the most expensive part of a video preview (native init), and
+/// it currently re-runs on every switch into a media file. Parking the
+/// player when a different file kind is selected — and picking it back up
+/// later — keeps repeated media previews instant. The video controller
+/// travels with its player (it owns the texture); recreating it per
+/// selection would pile up native video outputs.
+Player? _pooledPlayer;
+VideoController? _pooledVideoController;
+
+(Player, VideoController?) _takePooled() {
+  final Player? player = _pooledPlayer;
+  final VideoController? controller = _pooledVideoController;
+  _pooledPlayer = null;
+  _pooledVideoController = null;
+  if (player != null) return (player, controller);
+  MediaKit.ensureInitialized();
+  return (Player(), null);
+}
+
+void _parkPlayer(Player player, VideoController? controller) {
+  // Single slot: one live media preview is the normal flow. With two at
+  // once (split panes) the surplus player is torn down as before — its
+  // controller dies with it.
+  if (_pooledPlayer == null) {
+    _pooledPlayer = player;
+    _pooledVideoController = controller;
+    return;
+  }
+  player.dispose();
+}
+
 class _MediaPreviewState extends State<_MediaPreview> {
   Player? _player;
   VideoController? _videoController;
@@ -64,11 +96,10 @@ class _MediaPreviewState extends State<_MediaPreview> {
     super.initState();
 
     try {
-      MediaKit.ensureInitialized();
-      final player = Player();
+      final (player, controller) = _takePooled();
       _player = player;
       if (widget.showVideo) {
-        _videoController = VideoController(player);
+        _videoController = controller ?? VideoController(player);
       }
       _errorSubscription = player.stream.error.listen((_) {
         if (!mounted) return;
@@ -97,7 +128,10 @@ class _MediaPreviewState extends State<_MediaPreview> {
   @override
   void dispose() {
     _errorSubscription?.cancel();
-    _player?.dispose();
+    final player = _player;
+    if (player != null) _parkPlayer(player, _videoController);
+    _player = null;
+    _videoController = null;
     super.dispose();
   }
 

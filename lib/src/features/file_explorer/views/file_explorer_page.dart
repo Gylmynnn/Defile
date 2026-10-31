@@ -680,6 +680,14 @@ class _EntryContentState extends State<_EntryContentArea> {
   bool _entryPressActive = false;
   String? _pendingOpenPath;
 
+  /// Whether the click that is currently in flight started with a selection
+  /// modifier held (Ctrl/Meta/Shift), captured at pointer-down. The gesture
+  /// handlers must trust this instead of re-reading the keyboard at
+  /// pointer-up: the user may release Ctrl before letting go of the mouse
+  /// button, and a live read would demote the Ctrl-click to a plain click
+  /// and collapse the whole multi-selection.
+  bool _pressWasModifier = false;
+
   bool _bandCandidate = false;
   bool _bandActive = false;
   Offset? _bandStart;
@@ -722,6 +730,10 @@ class _EntryContentState extends State<_EntryContentArea> {
           shift: true,
         ): () =>
             _newFolder(context),
+        const SingleActivator(
+          LogicalKeyboardKey.keyN,
+          control: true,
+        ): () => _newFile(context),
         const SingleActivator(LogicalKeyboardKey.f6): _switchPaneFocus,
         const SingleActivator(LogicalKeyboardKey.tab): _switchPaneFocus,
       },
@@ -1069,7 +1081,12 @@ class _EntryContentState extends State<_EntryContentArea> {
 
   void _newFolder(BuildContext context) {
     if (_keyboardBlocked) return;
-    _showCreateFolderDialog(context);
+    _showCreateEntryDialog(context, directory: true);
+  }
+
+  void _newFile(BuildContext context) {
+    if (_keyboardBlocked) return;
+    _showCreateEntryDialog(context, directory: false);
   }
 
   Widget _buildContent(BuildContext context) {
@@ -1157,6 +1174,9 @@ class _EntryContentState extends State<_EntryContentArea> {
     _entryPressActive = true;
 
     final HardwareKeyboard keyboard = HardwareKeyboard.instance;
+    _pressWasModifier = keyboard.isControlPressed ||
+        keyboard.isMetaPressed ||
+        keyboard.isShiftPressed;
 
     if (keyboard.isControlPressed || keyboard.isMetaPressed) {
       controller.toggleSelection(entry);
@@ -1180,13 +1200,10 @@ class _EntryContentState extends State<_EntryContentArea> {
   }
 
   void _handleEntryTap(rust.FileEntry entry) {
-    final HardwareKeyboard keyboard = HardwareKeyboard.instance;
-
-    if (keyboard.isControlPressed ||
-        keyboard.isMetaPressed ||
-        keyboard.isShiftPressed) {
-      return;
-    }
+    // Modifier handling already happened at press time (see
+    // [_handleEntryPress]); re-reading the keyboard here races the user
+    // releasing Ctrl mid-click and would collapse the selection.
+    if (_pressWasModifier) return;
 
     if (_pendingOpenPath == entry.path) {
       _pendingOpenPath = null;

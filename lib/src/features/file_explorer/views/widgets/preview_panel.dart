@@ -13,6 +13,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import '../../../../theme/app_theme.dart';
 import '../../services/font_service.dart';
 import '../../services/theme_service.dart';
+import '../../utils/code_highlighter.dart';
 import '../../utils/file_types.dart';
 import '../../utils/formatters.dart';
 import 'explorer_scope.dart';

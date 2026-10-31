@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -44,11 +45,10 @@ final Map<String, GlobalKey> _entryKeys = <String, GlobalKey>{};
 // The optional [owner] (the pane's controller) namespaces the keys because
 // split view can show the very same file in two panes at once, and a GlobalKey
 // must never appear on two widgets simultaneously.
-GlobalKey entryTileKey(String path, {Object? owner}) =>
-    _entryKeys.putIfAbsent(
-      '${identityHashCode(owner)}\u001f$path',
-      GlobalKey.new,
-    );
+GlobalKey entryTileKey(String path, {Object? owner}) => _entryKeys.putIfAbsent(
+  '${identityHashCode(owner)}\u001f$path',
+  GlobalKey.new,
+);
 
 Duration get _selectionAnimationDuration {
   if (!Get.isRegistered<ThemeService>()) {
@@ -113,7 +113,9 @@ class EntryGridView extends StatelessWidget {
             onTap: () => onTap(entry),
             onOpen: () => onOpen(entry),
             onMenu: (position) => onMenu(entry, position),
-            onMiddleClick: onMiddleClick == null ? null : () => onMiddleClick!(entry),
+            onMiddleClick: onMiddleClick == null
+                ? null
+                : () => onMiddleClick!(entry),
             paneOwner: paneOwner,
           ),
         );
@@ -170,8 +172,13 @@ class _GridTile extends StatelessWidget {
     return HoverRegion(
       key: entryTileKey(entry.path, owner: paneOwner),
       builder: (context, hovered) {
+        // A slow frame can stretch a plain left-click past the long-press
+        // deadline; hold-to-menu is meant for touch/stylus only, so remember
+        // which kind of pointer went down and ignore mouse long-presses.
+        PointerDeviceKind? pressKind;
         return Listener(
           onPointerDown: (event) {
+            pressKind = event.kind;
             if (event.buttons == kPrimaryButton) onPress();
           },
           child: GestureDetector(
@@ -179,7 +186,10 @@ class _GridTile extends StatelessWidget {
             onDoubleTap: onOpen,
             onTertiaryTapUp: (_) => onMiddleClick?.call(),
             onSecondaryTapDown: (details) => onMenu(details.globalPosition),
-            onLongPressStart: (details) => onMenu(details.globalPosition),
+            onLongPressStart: (details) {
+              if (pressKind == PointerDeviceKind.mouse) return;
+              onMenu(details.globalPosition);
+            },
             child: Obx(() {
               final bool selected = selectedPaths.contains(entry.path);
 
@@ -612,15 +622,15 @@ class _EntryDragWrapper extends StatefulWidget {
 /// applications receive every dragged file in one drop.
 const SimpleValueFormat<List<Uri>> _fileUriListFormat =
     SimpleValueFormat<List<Uri>>(
-  linux: SimplePlatformCodec<List<Uri>>(
-    formats: ['text/uri-list'],
-    onEncode: _uriListToSystem,
-  ),
-  fallback: SimplePlatformCodec<List<Uri>>(
-    formats: ['text/uri-list'],
-    onEncode: _uriListToSystem,
-  ),
-);
+      linux: SimplePlatformCodec<List<Uri>>(
+        formats: ['text/uri-list'],
+        onEncode: _uriListToSystem,
+      ),
+      fallback: SimplePlatformCodec<List<Uri>>(
+        formats: ['text/uri-list'],
+        onEncode: _uriListToSystem,
+      ),
+    );
 
 String _uriListToSystem(List<Uri> uris, PlatformFormat format) =>
     uris.map((Uri uri) => uri.toString()).join('\r\n');
@@ -708,8 +718,8 @@ class _EntryDragWrapperState extends State<_EntryDragWrapper> {
       hitTestBehavior: HitTestBehavior.opaque,
       onDropOver: (DropOverEvent event) {
         final List<rust.FileEntry> entries = _internalEntries(event.session);
-        final bool accept = entries.isNotEmpty &&
-            widget.canDrop!(entries, widget.entry.path);
+        final bool accept =
+            entries.isNotEmpty && widget.canDrop!(entries, widget.entry.path);
         if (accept != _dropHovering) {
           setState(() => _dropHovering = accept);
         }
@@ -721,8 +731,7 @@ class _EntryDragWrapperState extends State<_EntryDragWrapper> {
       onPerformDrop: (PerformDropEvent event) async {
         if (!_dropHovering) return;
         final List<rust.FileEntry> entries = _internalEntries(event.session);
-        if (entries.isEmpty ||
-            !widget.canDrop!(entries, widget.entry.path)) {
+        if (entries.isEmpty || !widget.canDrop!(entries, widget.entry.path)) {
           return;
         }
         setState(() => _dropHovering = false);
@@ -754,53 +763,29 @@ class _EntryDragFeedback extends StatelessWidget {
 
   final List<rust.FileEntry> entries;
 
+  /// Badge height is fixed so the preview never jumps between files and
+  /// folders or between one item and many; only the width follows the label.
+  // static const double _height = 8;
+
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final String label = entries.length == 1
         ? entries.single.name
         : '${entries.length} items';
 
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 220),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        decoration: BoxDecoration(
-          color: context.colors.surfaceHigh,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: context.colors.selectionBorder),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.28),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              entries.length == 1 && entries.single.isDirectory
-                  ? Icons.folder_outlined
-                  : Icons.insert_drive_file_outlined,
-              size: 15,
-              color: context.colors.textSecondary,
-            ),
-            const SizedBox(width: 7),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: context.colors.textPrimary,
-                ),
-              ),
-            ),
-          ],
-        ),
+    // Outline in the sidebar-divider tone over a themed surface fill, so the
+    // chip follows the active palette (and its light/dark variant) instead of
+    // floating transparently over whatever is underneath.
+    return Center(
+      child: Column(
+        children: [
+        Icon(CupertinoIcons.book_solid, size: 40,),
+          Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -26,6 +27,17 @@ class ImageThumbnail extends StatelessWidget {
     final double devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final double radius = width < 24 ? 2.5 : 5;
 
+    // Decode at 2x the on-screen size, then let the GPU's mipmapped filter
+    // do the final downscale. Decoding straight to the display size forces
+    // the codec to shrink in one bilinear step, which is what makes
+    // thumbnails look blocky. 2x costs a few dozen KB per thumb — for a
+    // square box it also keeps portrait and landscape sources at or above
+    // the box size, so cover never has to upscale.
+    final int cacheWidth = math.min(
+      (math.max(width, height) * devicePixelRatio * 2).round(),
+      768,
+    );
+
     return Container(
       width: width,
       height: height,
@@ -41,7 +53,8 @@ class ImageThumbnail extends StatelessWidget {
           width: width,
           height: height,
           fit: fit,
-          cacheWidth: (width * devicePixelRatio).round(),
+          cacheWidth: cacheWidth,
+          filterQuality: FilterQuality.medium,
           gaplessPlayback: true,
           errorBuilder: (context, error, stackTrace) => Center(child: fallback),
         ),

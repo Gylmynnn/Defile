@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:defile/src/rust/api/archive.dart' as rust_archive;
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;
+import 'package:path/path.dart' as p;
 
 class FileSystemService {
   Future<List<rust.FileEntry>> listDirectory(String path) {
@@ -24,6 +27,16 @@ class FileSystemService {
       parentPath: parentPath,
       directoryName: directoryName,
     );
+  }
+
+  /// Empty files are plain IO — no dedicated Rust entry needed.
+  Future<String> createFile(String parentPath, String fileName) async {
+    final File file = File(p.join(parentPath, fileName));
+    if (file.existsSync()) {
+      throw StateError('a file with that name already exists');
+    }
+    await file.create();
+    return file.path;
   }
 
   Future<String> renameEntry(String sourcePath, String newName) {
