@@ -48,12 +48,6 @@ dependencies:
   media_kit_libs_video: ^1.0.7
   super_drag_and_drop: ^0.9.1
   super_clipboard: ^0.9.1
-dependency_overrides:
-  # Vendored copy: patches the Linux drag icon (no extra Rust-side shadow,
-  # full opacity) so the drag preview stays crisp — see
-  # third_party/super_native_extensions/rust/src/linux/drag.rs.
-  super_native_extensions:
-    path: third_party/super_native_extensions
 
 dev_dependencies:
   flutter_test:

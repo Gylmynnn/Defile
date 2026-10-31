@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -765,7 +764,7 @@ class _EntryDragFeedback extends StatelessWidget {
 
   /// Badge height is fixed so the preview never jumps between files and
   /// folders or between one item and many; only the width follows the label.
-  // static const double _height = 8;
+  static const double _height = 22;
 
   @override
   Widget build(BuildContext context) {
@@ -777,15 +776,37 @@ class _EntryDragFeedback extends StatelessWidget {
     // Outline in the sidebar-divider tone over a themed surface fill, so the
     // chip follows the active palette (and its light/dark variant) instead of
     // floating transparently over whatever is underneath.
-    return Center(
-      child: Column(
-        children: [
-        Icon(CupertinoIcons.book_solid, size: 40,),
-          Text(
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        height: _height,
+        constraints: const BoxConstraints(maxWidth: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        decoration: BoxDecoration(
+          color: colors.surfaceHigh,
+          borderRadius: BorderRadius.circular(_height / 2),
+          border: Border.all(color: colors.divider),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Center(
+          widthFactor: 1,
+          child: Text(
             label,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              color: colors.textPrimary,
+              height: 1.1,
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
