@@ -12,8 +12,10 @@ class IconThemeService extends GetxService {
   final Map<String, Uint8List?> _resolved = {};
 
   Future<void> init() async {
-    await refreshThemes();
-
+    // Only the active theme name is needed to resolve icons. The theme list
+    // (and its 16-theme preview warm-up, ~100 ms of Rust SVG rendering)
+    // belongs to the Settings appearance section, which refreshes on first
+    // open when the list is still empty.
     try {
       themeName.value = await rust.getIconTheme();
     } catch (_) {

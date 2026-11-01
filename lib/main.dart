@@ -43,16 +43,34 @@ class _PortalBackendWindowListener extends WindowListener {
 Future<void> main(List<String> args) async {
   ProcessSignal.sigterm.watch().listen((_) => exit(0));
   WidgetsFlutterBinding.ensureInitialized();
+  // Browsing photo-heavy folders decodes many 768px-class thumbnails; the
+  // default Flutter image cache budgets 100 MiB of decoded bitmaps, which
+  // lands directly in the RSS of the long-lived portal backend. 48 MiB
+  // still holds well over a hundred grid thumbnails.
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 48 << 20;
   final bool portalBackend = args.contains('--dbus-portal');
   final PortalFileChooserService fileChooser = PortalFileChooserService();
   final List<bool> claimed = await Future.wait(<Future<bool>>[
     FileManager1Service().start(),
-    if (portalBackend)
-      fileChooser.start()
-    else
-      Future<bool>.value(false),
+    if (portalBackend) fileChooser.start() else Future<bool>.value(false),
   ]);
-  Get.put(PortalPickController());
+  Get.put(
+    // Dedicated portal backends exit once nothing uses them; the next
+    // FileChooser call re-activates the process via D-Bus. GUI instances
+    // must never self-exit, so they pass null. The default can be
+    // overridden (or disabled with 0) for testing via the environment.
+    PortalPickController(
+      idleExitAfter: portalBackend
+          ? Duration(
+              seconds:
+                  int.tryParse(
+                    Platform.environment['DEFILE_PORTAL_IDLE_EXIT_SECS'] ?? '',
+                  ) ??
+                  300,
+            )
+          : null,
+    ),
+  );
   Get.put(fileChooser);
   if (portalBackend && !claimed.every((bool owned) => owned)) {
     exit(0);
@@ -99,6 +117,7 @@ Future<void> main(List<String> args) async {
     unawaited(fileChooser.ensureFrontendWired());
   }
 }
+
 String? _resolveLaunchPath(List<String> args) {
   for (final String arg in args) {
     if (arg.startsWith('-')) continue; // ignore flags
@@ -150,13 +169,36 @@ class RootApp extends StatelessWidget {
             child: Stack(
               children: [
                 child ?? const SizedBox.shrink(),
-                const PortalPickBar(),
+                // A pending FileChooser request must win over anything drawn
+                // beneath it (toasts, context menus), so it gets its own
+                // event-handling layer inside the scaled surface.
+                const _PortalLayer(),
               ],
             ),
           ),
         ),
         home: const FileExplorerPage(),
       );
+    });
+  }
+}
+
+/// Wraps [PortalPickBar] so only the bar's own widgets take part in hit
+/// testing: while no request is pending the layer is 'invisible' and clicks
+/// pass straight through to the app below it.
+class _PortalLayer extends StatelessWidget {
+  const _PortalLayer();
+
+  @override
+  Widget build(BuildContext context) {
+    final PortalPickController picker = Get.find<PortalPickController>();
+    return Obx(() {
+      if (picker.queue.isEmpty) {
+        return const Positioned.fill(
+          child: IgnorePointer(child: SizedBox.shrink()),
+        );
+      }
+      return const Positioned.fill(child: PortalPickBar());
     });
   }
 }

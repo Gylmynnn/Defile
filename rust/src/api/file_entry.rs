@@ -306,10 +306,19 @@ pub fn list_directory(path: std::string::String) -> Result<Vec<FileEntry>, std::
 
     let mut result = Vec::new();
     for entry in entries {
-        let entry = entry.map_err(|err| err.to_string())?;
+        // A single broken entry — a stale FUSE mount, a vanished file, a
+        // permission trap — must not fail the whole directory. Every other
+        // file manager shows the rest and skips the broken one.
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
 
         let item_path = entry.path();
-        let metadata = entry.metadata().map_err(|err| err.to_string())?;
+        let metadata = match entry.metadata() {
+            Ok(metadata) => metadata,
+            Err(_) => continue,
+        };
 
         let name = entry.file_name().to_string_lossy().into_owned();
         let path = item_path.to_string_lossy().into_owned();

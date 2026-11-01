@@ -30,6 +30,10 @@ void main() {
     final String originalFont = service.fontFamily.value;
     addTearDown(() => tester.runAsync(() => service.setFont(originalFont)));
 
+    // Startup only resolves the active family; the full list is loaded
+    // lazily by the Settings font picker (refreshFonts).
+    expect(service.fonts, isEmpty);
+    await tester.runAsync(service.refreshFonts);
     expect(service.fonts, isNotEmpty);
 
     await tester.runAsync(() => service.setFont('DejaVu Sans'));
@@ -51,6 +55,7 @@ void main() {
 
     await tester.runAsync(iconService.init);
     await tester.runAsync(fontService.init);
+    await tester.runAsync(fontService.refreshFonts);
 
     final String originalFont = fontService.fontFamily.value;
     addTearDown(() => tester.runAsync(() => fontService.setFont(originalFont)));

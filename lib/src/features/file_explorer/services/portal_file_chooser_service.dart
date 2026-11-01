@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:dbus/dbus.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:get/get.dart';
+import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
 import '../controllers/portal_pick_controller.dart';
@@ -462,6 +463,8 @@ class PortalPickRequest {
     required this.multiple,
     required this.acceptLabel,
     this.currentFolder,
+    this.saveMode = false,
+    this.suggestedName,
   });
 
   /// The frontend request object path — also the path of the Close()
@@ -481,6 +484,21 @@ class PortalPickRequest {
 
   /// Directory the caller wants the dialog to start in.
   final String? currentFolder;
+
+  /// True for SaveFile requests: the picker must produce one file path that
+  /// does not have to exist yet (typically current folder + typed name).
+  final bool saveMode;
+
+  /// File name the caller suggests for SaveFile (`current_name`, or the
+  /// basename of `current_file`).
+  final String? suggestedName;
+
+  /// Id of the explorer tab opened to serve this request. Set by
+  /// [PortalPickController.present] so the tab can be closed again when the
+  /// request settles — the backend process lives for the whole session and
+  /// would otherwise accumulate one tab (and its listing/thumbnails) per
+  /// request.
+  int? tabId;
 
   String get title => acceptLabel.isEmpty
       ? (isDirectoryMode ? 'Select Folder' : 'Open File')
@@ -518,11 +536,25 @@ class _PortalFileChooserObject extends DBusObject {
       case 'OpenFile':
         return _openFile(call);
       case 'SaveFile':
-        return DBusMethodErrorResponse.notSupported(
-          'Saving through the portal is not implemented yet',
-        );
+        return _saveFile(call);
     }
     return DBusMethodErrorResponse.unknownMethod();
+  }
+
+  /// Decodes an `ay` (byte array) option holding a NUL-terminated UTF-8
+  /// filesystem path — the encoding the portal spec uses for
+  /// `current_folder` and `current_file`.
+  String? _decodeAyPath(DBusVariant? option) {
+    if (option == null) return null;
+    final DBusValue inner = option.value;
+    if (inner is! DBusArray) return null;
+    try {
+      final String path =
+          utf8.decode(inner.mapByte().toList()).replaceAll('\x00', '');
+      return path.isEmpty ? null : path;
+    } on FormatException {
+      return null;
+    }
   }
 
   /// OpenFile (o handle, s app_id, s parent_window, s title, a{sv} options)
@@ -569,13 +601,9 @@ class _PortalFileChooserObject extends DBusObject {
       acceptLabel = (label.value as DBusString).value;
     }
     final DBusVariant? folder = options[const DBusString('current_folder')];
-    if (folder != null) {
-      final DBusValue inner = folder.value;
-      final List<int> bytes = inner is DBusArray
-          ? inner.mapByte().toList()
-          : const <int>[];
-      final String path = utf8.decode(bytes).replaceAll('\x00', '');
-      if (Directory(path).existsSync()) currentFolder = path;
+    final String? folderPath = _decodeAyPath(folder);
+    if (folderPath != null && Directory(folderPath).existsSync()) {
+      currentFolder = folderPath;
     }
 
     final PortalPickRequest request = PortalPickRequest(
@@ -608,6 +636,88 @@ class _PortalFileChooserObject extends DBusObject {
 
     // Hold the D-Bus reply open — completing this future later sends the
     // actual (response, results) back to the portal daemon.
+    return pending.completer.future;
+  }
+
+  /// SaveFile (o handle, s app_id, s parent_window, s title, a{sv} options)
+  ///   → (u response, a{sv} results)   [reply held open]
+  ///
+  /// Options read: `current_name` (s), `current_folder` (ay),
+  /// `current_file` (ay), `accept_label` (s). The picker resolves one target
+  /// path (an existing file selection wins, else start folder + typed
+  /// name); the reply carries it as `uris`.
+  Future<DBusMethodResponse> _saveFile(DBusMethodCall call) async {
+    final String handlePath =
+        (call.values[0] as DBusObjectPath).value;
+
+    String stringArg(int index) {
+      if (call.values.length <= index) return '';
+      final DBusValue value = call.values[index];
+      return value is DBusString ? value.value : '';
+    }
+
+    final String appId = stringArg(1);
+
+    final Map<DBusString, DBusVariant> options =
+        call.values.length > 4 && call.values[4] is DBusDict
+            ? (call.values[4] as DBusDict)
+                  .children
+                  .cast<DBusString, DBusVariant>()
+            : <DBusString, DBusVariant>{};
+
+    String? suggested;
+    String? currentFolder;
+
+    final DBusVariant? name = options[const DBusString('current_name')];
+    if (name != null && name.value is DBusString) {
+      suggested = (name.value as DBusString).value;
+    }
+
+    final String? existingFile = _decodeAyPath(
+      options[const DBusString('current_file')],
+    );
+    if (existingFile != null) {
+      suggested ??= p.basename(existingFile);
+      currentFolder = p.dirname(existingFile);
+    }
+
+    final String? folderPath = _decodeAyPath(
+      options[const DBusString('current_folder')],
+    );
+    if (folderPath != null && Directory(folderPath).existsSync()) {
+      currentFolder = folderPath;
+    }
+
+    final PortalPickRequest request = PortalPickRequest(
+      handlePath: handlePath,
+      appId: appId,
+      isDirectoryMode: false,
+      multiple: false,
+      acceptLabel: stringArg(3),
+      currentFolder: currentFolder,
+      saveMode: true,
+      suggestedName: suggested,
+    );
+
+    final _PortalRequestObject object = _PortalRequestObject(
+      DBusObjectPath(handlePath),
+      request,
+      _service,
+    );
+
+    final DBusClient? client = _service._client;
+    if (client == null) {
+      return DBusMethodErrorResponse.failed('No session bus connection');
+    }
+    await client.registerObject(object);
+
+    final PendingFileChooser pending = PendingFileChooser(
+      request: request,
+      completer: Completer<DBusMethodResponse>(),
+      object: object,
+    );
+    _service.present(pending);
+
     return pending.completer.future;
   }
 }

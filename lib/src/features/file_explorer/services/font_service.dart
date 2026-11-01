@@ -13,7 +13,9 @@ class FontService extends GetxService {
       fontFamily.value = '';
     }
 
-    await refreshFonts();
+    // The full font list is only needed by the Settings font picker, which
+    // refreshes it on first open when the list is still empty — enumerating
+    // every system font here would slow each startup for nothing.
   }
 
   Future<void> refreshFonts() async {

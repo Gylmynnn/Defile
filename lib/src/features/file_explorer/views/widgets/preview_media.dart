@@ -12,29 +12,46 @@ class _ImagePreview extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.file(
-            File(file.path),
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.broken_image,
-                    size: 48,
-                    color: context.colors.textFaint,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Decode at the panel's display size (2x for crispness,
+              // capped) instead of the source resolution: a 24 MP photo
+              // decoded raw costs ~96 MiB of bitmap that then sits in the
+              // image cache long after the file is deselected.
+              final double dpr = MediaQuery.devicePixelRatioOf(context);
+              final double box = math.max(
+                constraints.maxWidth,
+                constraints.maxHeight,
+              );
+              final int cacheWidth = box.isFinite
+                  ? math.min((box * dpr * 2).round(), 2048)
+                  : 1024;
+              return Image.file(
+                File(file.path),
+                cacheWidth: cacheWidth,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.broken_image,
+                        size: 48,
+                        color: context.colors.textFaint,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Failed to load image',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: context.colors.textFaint,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Failed to load image',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: context.colors.textFaint,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -61,8 +78,18 @@ class _MediaPreview extends StatefulWidget {
 /// selection would pile up native video outputs.
 Player? _pooledPlayer;
 VideoController? _pooledVideoController;
+Timer? _pooledDisposeTimer;
+
+/// A parked player holds live native mpv state (decoder, demuxer cache,
+/// video output) worth tens of MB in the long-lived backend process, so it
+/// is only worth keeping while another preview is likely to follow. Drop
+/// it after this idle time — re-previewing then pays the native init
+/// again, which is exactly the tradeoff the pool makes on purpose.
+const Duration _poolIdleLifetime = Duration(minutes: 2);
 
 (Player, VideoController?) _takePooled() {
+  _pooledDisposeTimer?.cancel();
+  _pooledDisposeTimer = null;
   final Player? player = _pooledPlayer;
   final VideoController? controller = _pooledVideoController;
   _pooledPlayer = null;
@@ -79,6 +106,13 @@ void _parkPlayer(Player player, VideoController? controller) {
   if (_pooledPlayer == null) {
     _pooledPlayer = player;
     _pooledVideoController = controller;
+    _pooledDisposeTimer?.cancel();
+    _pooledDisposeTimer = Timer(_poolIdleLifetime, () {
+      _pooledDisposeTimer = null;
+      _pooledPlayer?.dispose();
+      _pooledPlayer = null;
+      _pooledVideoController = null;
+    });
     return;
   }
   player.dispose();

@@ -22,6 +22,9 @@ void main() {
     final service = Get.find<IconThemeService>();
 
     await tester.runAsync(service.init);
+    // Startup no longer enumerates icon themes; the list belongs to the
+    // Settings appearance section. Load it explicitly here.
+    await tester.runAsync(service.refreshThemes);
 
     final String originalTheme = service.themeName.value;
     addTearDown(() => tester.runAsync(() => service.setTheme(originalTheme)));
@@ -96,6 +99,8 @@ void main() {
     final service = Get.find<IconThemeService>();
 
     await tester.runAsync(service.init);
+    // Startup no longer enumerates icon themes; load the list explicitly.
+    await tester.runAsync(service.refreshThemes);
 
     if (service.themes.isEmpty) {
       markTestSkipped('Needs at least one usable icon theme');
