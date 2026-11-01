@@ -10,16 +10,16 @@
 #     --define "_summary Minimalist modern file manager for Linux" \
 #     --define "_bundle $PWD/build/linux/x64/release/bundle" \
 #     --define "_icon $PWD/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png" \
-#     --define "_desktop $PWD/packaging/defile.desktop"
+#     --define "_desktop $PWD/packaging/defile.desktop" \
+#     --define "_license $PWD/LICENSE"
 #
-# Upstream publishes no SPDX license identifier yet; keep the tag honest
-# until one is chosen (see https://github.com/Gylmynnn/Defile).
+# Upstream is licensed GPL-3.0-or-later (see LICENSE in the source tree).
 
 Name:           %{?_appname}%{!?_appname:defile}
 Version:        %{?_version}%{!?_version:0.0.0}
 Release:        %{?_release}%{!?_release:1}%{?dist}
 Summary:        %{?_summary}%{!?_summary:Minimalist modern file manager for Linux}
-License:        Unknown
+License:        GPL-3.0-or-later
 URL:            https://github.com/Gylmynnn/Defile
 ExclusiveArch:  x86_64 aarch64
 
@@ -69,11 +69,19 @@ if [ -n "%{_icon}" ] && [ -f "%{_icon}" ]; then
   chmod 644 "%{buildroot}/usr/share/icons/hicolor/512x512/apps/%{name}.png"
 fi
 
+# Ship the upstream GPL text under the FHS license directory when available.
+if [ -n "%{_license}" ] && [ -f "%{_license}" ]; then
+  mkdir -p "%{buildroot}/usr/share/licenses/%{name}"
+  cp "%{_license}" "%{buildroot}/usr/share/licenses/%{name}/LICENSE"
+  chmod 644 "%{buildroot}/usr/share/licenses/%{name}/LICENSE"
+fi
+
 %files
 /opt/%{name}/
 /usr/bin/%{name}
 /usr/share/applications/%{name}.desktop
 /usr/share/icons/hicolor/512x512/apps/%{name}.png
+%license /usr/share/licenses/%{name}/LICENSE
 
 %changelog
 * Fri Oct 30 2026 Defile Maintainers <https://github.com/Gylmynnn/Defile> - 0.6.12-1

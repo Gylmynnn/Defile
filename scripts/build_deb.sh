@@ -11,6 +11,7 @@
 #   /usr/bin/defile                 symlink -> /opt/defile/defile
 #   /usr/share/applications/defile.desktop
 #   /usr/share/icons/hicolor/512x512/apps/defile.png
+#   /usr/share/doc/defile/copyright     GPL-3.0-or-later notice and full text
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -114,11 +115,40 @@ chmod 644 "$STAGEDIR/usr/share/applications/$APP_NAME.desktop"
 
 INSTALLED_SIZE="$(du -sk "$STAGEDIR/opt/$APP_NAME" | cut -f1)"
 
+# Debian policy wants the license notice under /usr/share/doc/<pkg>/copyright.
+DOC_DIR="$STAGEDIR/usr/share/doc/$APP_NAME"
+mkdir -p "$DOC_DIR"
+cat > "$DOC_DIR/copyright" <<EOF
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: $APP_NAME
+Source: https://github.com/Gylmynnn/Defile
+
+Files: *
+Copyright: 2026 Gylmynnn
+License: GPL-3.0-or-later
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the Free
+ Software Foundation, either version 3 of the License, or (at your option)
+ any later version.
+ .
+ This program is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+ .
+ On Debian systems the complete text of the GNU General Public License
+ version 3 can be found in /usr/share/common-licenses/GPL-3.
+EOF
+if [ -f "$ROOT/LICENSE" ]; then
+  cp "$ROOT/LICENSE" "$DOC_DIR/LICENSE"
+fi
+
 cat > "$STAGEDIR/DEBIAN/control" <<EOF
 Package: $APP_NAME
 Version: $VERSION
 Section: utils
 Priority: optional
+License: GPL-3.0-or-later
 Architecture: $DEB_ARCH
 Maintainer: $MAINTAINER
 Description: $DESCRIPTION

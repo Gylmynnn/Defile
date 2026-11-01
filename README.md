@@ -80,3 +80,24 @@ make packages       # AppImage + .deb + .rpm (reuses the bundle)
 CI (`.github/workflows/linux-appimage.yml`) builds all three artifacts on
 every push for `x86_64` and `aarch64`; pushing a tag (e.g. `v0.6.12`)
 publishes them to the GitHub release.
+
+## License
+
+Defile is free software: you can redistribute it and/or modify it under the
+terms of the **GNU General Public License, version 3 or (at your option) any
+later version** (GPL-3.0-or-later), as published by the Free Software
+Foundation.
+
+Copyright (C) 2026 Gylmynnn
+
+This program is distributed in the hope that it will be useful, but **WITHOUT
+ANY WARRANTY**; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+details.
+
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/>. The full text is
+also included in the [`LICENSE`](LICENSE) file.
+
+Third-party components keep their own licenses (all permissive:
+MIT/Apache-2.0/BSD), so they remain compatible with GPL-3.0.

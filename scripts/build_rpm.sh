@@ -95,6 +95,10 @@ DESKTOP_ABS=""
 if [ -f "$DESKTOP_SRC" ]; then
   DESKTOP_ABS="$(cd "$(dirname "$DESKTOP_SRC")" && pwd)/$(basename "$DESKTOP_SRC")"
 fi
+LICENSE_ABS=""
+if [ -f "$ROOT/LICENSE" ]; then
+  LICENSE_ABS="$ROOT/LICENSE"
+fi
 
 mkdir -p "$RPM_TOPDIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS,BUILDROOT}
 
@@ -109,6 +113,7 @@ rpmbuild -bb "$SPEC" \
   --define "_bundle $BUNDLE_ABS" \
   --define "_icon $ICON_ABS" \
   --define "_desktop $DESKTOP_ABS" \
+  --define "_license $LICENSE_ABS" \
   --target "$RPM_ARCH"
 
 # rpmbuild appends %{dist} to the release in the filename; resolve the real artifact.
