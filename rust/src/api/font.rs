@@ -25,7 +25,7 @@ pub fn list_system_fonts() -> Vec<std::string::String> {
     }
 
     let mut result: Vec<std::string::String> = families.into_iter().collect();
-    result.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    result.sort_by_cached_key(|a| a.to_lowercase());
     result
 }
 

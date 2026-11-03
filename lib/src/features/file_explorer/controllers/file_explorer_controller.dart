@@ -207,8 +207,7 @@ class FileExplorerController extends GetxController {
 
     if (_visibleCache != null &&
         _visibleCacheRevision == _entriesRevision &&
-        _visibleCacheQuery == query &&
-        _visibleCache!.length == entries.length) {
+        _visibleCacheQuery == query) {
       return _visibleCache!;
     }
 

@@ -326,11 +326,7 @@ pub fn list_directory(path: std::string::String) -> Result<Vec<FileEntry>, std::
         result.push(entry_from_metadata(name, path, &metadata));
     }
 
-    result.sort_by(|a, b| {
-        b.is_directory
-            .cmp(&a.is_directory)
-            .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
-    });
+    result.sort_by_cached_key(|entry| (!entry.is_directory, entry.name.to_lowercase()));
 
     Ok(result)
 }

@@ -37,17 +37,26 @@ typedef EntryDropCallback = void Function(
 
 final Map<String, GlobalKey> _entryKeys = <String, GlobalKey>{};
 
-// ponytail: keys cached per path to avoid re-allocating a GlobalKey on every
-// tile build. Never pruned; harmless for typical sessions. Add pruning keyed on
-// the live entry set if enormous unique trees get visited.
+// Keys cached per path to avoid re-allocating a GlobalKey on every tile build.
+// When the registry grows large, keys with unmounted contexts are pruned to
+// prevent memory leaks as different directories are browsed.
 //
 // The optional [owner] (the pane's controller) namespaces the keys because
 // split view can show the very same file in two panes at once, and a GlobalKey
 // must never appear on two widgets simultaneously.
-GlobalKey entryTileKey(String path, {Object? owner}) => _entryKeys.putIfAbsent(
-  '${identityHashCode(owner)}\u001f$path',
-  GlobalKey.new,
-);
+GlobalKey entryTileKey(String path, {Object? owner}) {
+  final String key = '${identityHashCode(owner)}\u001f$path';
+  final GlobalKey? existing = _entryKeys[key];
+  if (existing != null) return existing;
+
+  if (_entryKeys.length > 256) {
+    _entryKeys.removeWhere((_, k) => k.currentContext == null);
+  }
+
+  final GlobalKey created = GlobalKey();
+  _entryKeys[key] = created;
+  return created;
+}
 
 Duration get _selectionAnimationDuration {
   if (!Get.isRegistered<ThemeService>()) {

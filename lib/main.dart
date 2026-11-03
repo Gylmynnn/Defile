@@ -50,10 +50,18 @@ Future<void> main(List<String> args) async {
   PaintingBinding.instance.imageCache.maximumSizeBytes = 48 << 20;
   final bool portalBackend = args.contains('--dbus-portal');
   final PortalFileChooserService fileChooser = PortalFileChooserService();
-  final List<bool> claimed = await Future.wait(<Future<bool>>[
-    FileManager1Service().start(),
+  final FileManager1Service fileManager = FileManager1Service();
+
+  final List<dynamic> initResults = await Future.wait<dynamic>(<Future<dynamic>>[
+    RustLib.init(),
+    windowManager.ensureInitialized(),
+    fileManager.start(),
     if (portalBackend) fileChooser.start() else Future<bool>.value(false),
   ]);
+
+  final bool fileManagerClaimed = initResults[2] as bool;
+  final bool fileChooserClaimed = initResults[3] as bool;
+
   Get.put(
     // Dedicated portal backends exit once nothing uses them; the next
     // FileChooser call re-activates the process via D-Bus. GUI instances
@@ -72,22 +80,21 @@ Future<void> main(List<String> args) async {
     ),
   );
   Get.put(fileChooser);
-  if (portalBackend && !claimed.every((bool owned) => owned)) {
+  if (portalBackend && (!fileManagerClaimed || !fileChooserClaimed)) {
     exit(0);
   }
 
-  await RustLib.init();
-  await windowManager.ensureInitialized();
   ExplorerTabsController.launchPath = _resolveLaunchPath(args);
 
   final fontService = Get.put(FontService());
-  await fontService.init();
-
   final themeService = Get.put(ThemeService());
-  await themeService.init();
-
   final iconThemeService = Get.put(IconThemeService());
-  await iconThemeService.init();
+
+  await Future.wait(<Future<void>>[
+    fontService.init(),
+    themeService.init(),
+    iconThemeService.init(),
+  ]);
 
   final windowOptions = WindowOptions(
     titleBarStyle: TitleBarStyle.hidden,

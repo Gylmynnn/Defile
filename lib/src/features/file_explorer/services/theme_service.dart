@@ -29,26 +29,32 @@ class ThemeService extends GetxService {
   AccentPreset get accent => AppAccents.byId(accentId.value);
 
   Future<void> init() async {
-    try {
-      final String storedTheme = await rust.getBaseTheme();
-      if (AppPalettes.all.any((palette) => palette.id == storedTheme)) {
-        baseThemeId.value = storedTheme;
-      }
-    } catch (_) {}
-
-    try {
-      final String storedAccent = await rust.getAccentColor();
-      if (AppAccents.all.any((accent) => accent.id == storedAccent)) {
-        accentId.value = storedAccent;
-      }
-    } catch (_) {}
-
-    try {
-      final double storedScale = await rust.getUiScale();
-      if (storedScale.isFinite && storedScale > 0) {
-        uiScale.value = storedScale.clamp(minScale, maxScale);
-      }
-    } catch (_) {}
+    await Future.wait(<Future<void>>[
+      () async {
+        try {
+          final String storedTheme = await rust.getBaseTheme();
+          if (AppPalettes.all.any((palette) => palette.id == storedTheme)) {
+            baseThemeId.value = storedTheme;
+          }
+        } catch (_) {}
+      }(),
+      () async {
+        try {
+          final String storedAccent = await rust.getAccentColor();
+          if (AppAccents.all.any((accent) => accent.id == storedAccent)) {
+            accentId.value = storedAccent;
+          }
+        } catch (_) {}
+      }(),
+      () async {
+        try {
+          final double storedScale = await rust.getUiScale();
+          if (storedScale.isFinite && storedScale > 0) {
+            uiScale.value = storedScale.clamp(minScale, maxScale);
+          }
+        } catch (_) {}
+      }(),
+    ]);
   }
 
   Future<void> setBaseTheme(String id) async {

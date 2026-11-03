@@ -33,7 +33,7 @@ class ImageThumbnail extends StatelessWidget {
     // thumbnails look blocky. 2x costs a few dozen KB per thumb — for a
     // square box it also keeps portrait and landscape sources at or above
     // the box size, so cover never has to upscale.
-    final int cacheWidth = math.min(
+    final int cacheDimension = math.min(
       (math.max(width, height) * devicePixelRatio * 2).round(),
       768,
     );
@@ -53,7 +53,8 @@ class ImageThumbnail extends StatelessWidget {
           width: width,
           height: height,
           fit: fit,
-          cacheWidth: cacheWidth,
+          cacheWidth: cacheDimension,
+          cacheHeight: cacheDimension,
           filterQuality: FilterQuality.medium,
           gaplessPlayback: true,
           errorBuilder: (context, error, stackTrace) => Center(child: fallback),

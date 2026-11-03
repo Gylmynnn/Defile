@@ -48,14 +48,17 @@ String codeLanguageLabel(String fileName) {
 class CodeHighlighter {
   CodeHighlighter._(this._lang);
 
+  static final Map<_Lang, CodeHighlighter> _instances =
+      <_Lang, CodeHighlighter>{};
+
   /// Returns a highlighter for [fileName], or null when the file should be
   /// rendered as plain text (unknown type, logs, data dumps).
   static CodeHighlighter? forFileName(String fileName) {
     final String lower = fileName.toLowerCase();
 
     if (kTextFileNames.contains(lower)) {
-      if (lower == 'makefile') return CodeHighlighter._(_makefileLang);
-      if (lower == 'dockerfile') return CodeHighlighter._(_dockerfileLang);
+      if (lower == 'makefile') return _cached(_makefileLang);
+      if (lower == 'dockerfile') return _cached(_dockerfileLang);
       // LICENSE, CHANGELOG, .gitignore ... — plain text is fine.
       return null;
     }
@@ -68,8 +71,11 @@ class CodeHighlighter {
       _ => _codeFamilies[ext],
     };
     if (lang == null) return null;
-    return CodeHighlighter._(lang);
+    return _cached(lang);
   }
+
+  static CodeHighlighter _cached(_Lang lang) =>
+      _instances.putIfAbsent(lang, () => CodeHighlighter._(lang));
 
   /// Tokenizes [content] into per-line token lists. Constructs that span
   /// lines (block comments, docstrings, fences) carry state between lines.

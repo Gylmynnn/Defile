@@ -144,6 +144,18 @@ fn locate_theme(roots: &[PathBuf], name: &str) -> Option<PathBuf> {
 }
 
 fn theme_chain(roots: &[PathBuf], theme: &str) -> Vec<PathBuf> {
+    type ChainCache = HashMap<(Vec<PathBuf>, std::string::String), Vec<PathBuf>>;
+    static CACHE: OnceLock<Mutex<ChainCache>> = OnceLock::new();
+
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let cache_key = (roots.to_vec(), theme.to_string());
+    {
+        let guard = cache.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(chain) = guard.get(&cache_key) {
+            return chain.clone();
+        }
+    }
+
     let mut visited: HashSet<std::string::String> = HashSet::new();
     let mut queue: VecDeque<std::string::String> = VecDeque::new();
 
@@ -174,6 +186,8 @@ fn theme_chain(roots: &[PathBuf], theme: &str) -> Vec<PathBuf> {
         chain.push(theme_path);
     }
 
+    let mut guard = cache.lock().unwrap_or_else(|e| e.into_inner());
+    guard.insert(cache_key, chain.clone());
     chain
 }
 
@@ -183,6 +197,19 @@ fn find_icon_candidates_in_roots(
     name: &str,
     size: u32,
 ) -> Vec<PathBuf> {
+    type CandidateCache =
+        HashMap<(Vec<PathBuf>, std::string::String, std::string::String, u32), Vec<PathBuf>>;
+    static CACHE: OnceLock<Mutex<CandidateCache>> = OnceLock::new();
+
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let cache_key = (roots.to_vec(), theme.to_string(), name.to_string(), size);
+    {
+        let guard = cache.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(candidates) = guard.get(&cache_key) {
+            return candidates.clone();
+        }
+    }
+
     let file_names = [format!("{name}.png"), format!("{name}.svg")];
     let mut candidates: Vec<(u32, usize, PathBuf)> = Vec::new();
 
@@ -208,7 +235,10 @@ fn find_icon_candidates_in_roots(
 
     candidates.sort_by(|a, b| a.1.cmp(&b.1).then(a.0.cmp(&b.0)));
 
-    candidates.into_iter().map(|(_, _, path)| path).collect()
+    let result: Vec<PathBuf> = candidates.into_iter().map(|(_, _, path)| path).collect();
+    let mut guard = cache.lock().unwrap_or_else(|e| e.into_inner());
+    guard.insert(cache_key, result.clone());
+    result
 }
 
 fn find_icon_in_roots(roots: &[PathBuf], theme: &str, name: &str, size: u32) -> Option<PathBuf> {
@@ -260,7 +290,7 @@ fn list_icon_themes_in_roots(roots: &[PathBuf]) -> Vec<IconThemeEntry> {
         }
     }
 
-    themes.sort_by_key(|theme| theme.name.to_lowercase());
+    themes.sort_by_cached_key(|theme| theme.name.to_lowercase());
     themes
 }
 
@@ -287,6 +317,18 @@ pub fn find_icon(
 }
 
 fn render_svg(path: &Path, size: u32) -> Option<Vec<u8>> {
+    type SvgCache = HashMap<(PathBuf, u32), Vec<u8>>;
+    static CACHE: OnceLock<Mutex<SvgCache>> = OnceLock::new();
+
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let cache_key = (path.to_path_buf(), size);
+    {
+        let guard = cache.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(png_bytes) = guard.get(&cache_key) {
+            return Some(png_bytes.clone());
+        }
+    }
+
     let data = fs::read(path).ok()?;
     let tree = resvg::usvg::Tree::from_data(&data, &resvg::usvg::Options::default()).ok()?;
 
@@ -299,7 +341,10 @@ fn render_svg(path: &Path, size: u32) -> Option<Vec<u8>> {
     let transform = resvg::tiny_skia::Transform::from_scale(scale, scale).post_translate(dx, dy);
     resvg::render(&tree, transform, &mut pixmap.as_mut());
 
-    pixmap.encode_png().ok()
+    let png = pixmap.encode_png().ok()?;
+    let mut guard = cache.lock().unwrap_or_else(|e| e.into_inner());
+    guard.insert(cache_key, png.clone());
+    Some(png)
 }
 
 const PNG_SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];

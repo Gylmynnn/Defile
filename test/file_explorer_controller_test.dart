@@ -44,6 +44,8 @@ void main() {
 
     controller.searchQuery.value = 'beta';
     expect(names(), ['beta']);
+    final List<rust.FileEntry> searchCached = controller.visibleEntries;
+    expect(identical(controller.visibleEntries, searchCached), isTrue);
 
     controller.searchQuery.value = '';
     expect(names(), ['alpha', 'beta']);
