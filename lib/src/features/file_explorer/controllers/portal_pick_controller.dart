@@ -161,43 +161,37 @@ class PortalPickController extends GetxController {
       final explorer = Get.find<ExplorerTabsController>().focusedController;
 
       if (request.saveMode) {
-        // GTK convention: a selected existing file is saved over as-is;
-        // otherwise the typed name on the browsed folder is the target.
-        final String? selectedFile = explorer.selectedPaths
-            .cast<String?>()
-            .firstWhere(
-              (String? path) =>
-                  path != null &&
-                  File(path).existsSync() &&
-                  !Directory(path).existsSync(),
-              orElse: () => null,
-            );
-        if (selectedFile != null) {
-          paths.add(selectedFile);
-        } else {
-          final String name = saveName.value.trim();
-          if (name.isEmpty ||
-              name == '.' ||
-              name == '..' ||
-              name.contains('/')) {
-            showAppToast(
-              title: request.title,
-              message: 'Enter a file name first.',
-              variant: AppToastVariant.info,
-            );
-            return;
-          }
-          final String target = p.join(explorer.currentPath.value, name);
-          if (Directory(target).existsSync()) {
-            showAppToast(
-              title: request.title,
-              message: '"$name" is a folder — pick a file name.',
-              variant: AppToastVariant.info,
-            );
-            return;
-          }
-          paths.add(target);
+        String currentDir = explorer.currentPath.value;
+        if (currentDir.isEmpty || !Directory(currentDir).existsSync()) {
+          currentDir = request.currentFolder ?? explorer.homePath.value;
         }
+        if (currentDir.isEmpty || !Directory(currentDir).existsSync()) {
+          currentDir = Platform.environment['HOME'] ?? '/';
+        }
+
+        final String name = saveName.value.trim();
+        if (name.isEmpty ||
+            name == '.' ||
+            name == '..' ||
+            name.contains('/') ||
+            name.contains('\\')) {
+          showAppToast(
+            title: request.title,
+            message: 'Enter a valid file name first.',
+            variant: AppToastVariant.info,
+          );
+          return;
+        }
+        final String target = p.join(currentDir, name);
+        if (Directory(target).existsSync()) {
+          showAppToast(
+            title: request.title,
+            message: '"$name" is a folder — pick a file name.',
+            variant: AppToastVariant.info,
+          );
+          return;
+        }
+        paths.add(target);
       } else if (request.isDirectoryMode) {
         final List<String> dirs = explorer.selectedPaths
             .where((String path) => Directory(path).existsSync())
@@ -206,6 +200,9 @@ class PortalPickController extends GetxController {
           paths.addAll(dirs);
         } else if (Directory(explorer.currentPath.value).existsSync()) {
           paths.add(explorer.currentPath.value);
+        } else if (request.currentFolder != null &&
+            Directory(request.currentFolder!).existsSync()) {
+          paths.add(request.currentFolder!);
         }
       } else {
         paths.addAll(
@@ -236,16 +233,24 @@ class PortalPickController extends GetxController {
   }
 
   /// Double-click on an entry while a picker is open acts as the dialog's
-  /// confirm button: a file confirms an open-file request, a folder
-  /// confirms a choose-folder request. Returns false when no picker is
-  /// active or the entry type does not match the request, so the caller
-  /// falls back to normal navigation.
+  /// confirm button: a file confirms an open-file request or a save-as
+  /// overwrite. Double-clicking a folder always navigates into it. Returns
+  /// false when no picker is active or the entry type does not match the
+  /// request, so the caller falls back to normal navigation.
   Future<bool> tryConfirmWithEntry(rust.FileEntry entry) async {
     final PortalPickRequest? request = visible;
     if (request == null) return false;
 
     final bool isDir = Directory(entry.path).existsSync();
-    if (request.isDirectoryMode != isDir) return false;
+    // Double-clicking a directory should always navigate into it.
+    if (isDir) return false;
+
+    // A file cannot confirm a directory-picker request.
+    if (request.isDirectoryMode) return false;
+
+    if (request.saveMode) {
+      saveName.value = entry.name;
+    }
 
     await Get.find<PortalFileChooserService>().completeRequest(
       request,

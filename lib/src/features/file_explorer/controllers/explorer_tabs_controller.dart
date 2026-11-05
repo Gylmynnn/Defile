@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:get/get.dart';
 
 import '../services/file_system_service.dart';
 import 'file_explorer_controller.dart';
+import 'portal_pick_controller.dart';
 
 /// Layout mode of the content area: single pane or two panes side by side
 /// (horizontal) / stacked (vertical).
@@ -102,7 +105,26 @@ class ExplorerTabsController extends GetxService {
     super.onInit();
 
     if (tabs.isEmpty) {
-      addTab(path: launchPath);
+      String? initialPath = launchPath;
+      if (initialPath == null && Get.isRegistered<PortalPickController>()) {
+        final PortalPickController picker = Get.find<PortalPickController>();
+        if (picker.queue.isNotEmpty) {
+          final request = picker.queue.last;
+          if (request.currentFolder != null &&
+              Directory(request.currentFolder!).existsSync()) {
+            initialPath = request.currentFolder;
+          }
+        }
+      }
+
+      final tab = addTab(path: initialPath);
+
+      if (Get.isRegistered<PortalPickController>()) {
+        final PortalPickController picker = Get.find<PortalPickController>();
+        if (picker.queue.isNotEmpty) {
+          picker.queue.last.tabId ??= tab.id;
+        }
+      }
     }
   }
 

@@ -1051,7 +1051,16 @@ class _EntryContentState extends State<_EntryContentArea> {
   void _clearSelection() {
     if (_keyboardBlocked) return;
     _pendingOpenPath = null;
-    controller.clearSelection();
+    if (controller.selection.isNotEmpty) {
+      controller.clearSelection();
+      return;
+    }
+    if (Get.isRegistered<PortalPickController>()) {
+      final PortalPickController picker = Get.find<PortalPickController>();
+      if (picker.queue.isNotEmpty) {
+        picker.cancelVisible();
+      }
+    }
   }
 
   void _refresh() {
@@ -1193,10 +1202,20 @@ class _EntryContentState extends State<_EntryContentArea> {
     if (!controller.isSelected(entry)) {
       controller.selectOnly(entry);
       _pendingOpenPath = null;
+      _updatePortalSaveNameOnSelection(entry);
       return;
     }
 
     _pendingOpenPath = controller.selection.length == 1 ? entry.path : null;
+  }
+
+  void _updatePortalSaveNameOnSelection(rust.FileEntry entry) {
+    if (entry.isFile && Get.isRegistered<PortalPickController>()) {
+      final PortalPickController picker = Get.find<PortalPickController>();
+      if (picker.visible?.saveMode == true) {
+        picker.saveName.value = entry.name;
+      }
+    }
   }
 
   void _handleEntryTap(rust.FileEntry entry) {

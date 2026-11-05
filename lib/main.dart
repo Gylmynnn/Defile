@@ -52,14 +52,15 @@ Future<void> main(List<String> args) async {
   final PortalFileChooserService fileChooser = PortalFileChooserService();
   final FileManager1Service fileManager = FileManager1Service();
 
-  final List<dynamic> initResults = await Future.wait<dynamic>(<Future<dynamic>>[
-    RustLib.init(),
-    windowManager.ensureInitialized(),
-    fileManager.start(),
-    if (portalBackend) fileChooser.start() else Future<bool>.value(false),
-  ]);
+  final List<dynamic> initResults = await Future.wait<dynamic>(
+    <Future<dynamic>>[
+      RustLib.init(),
+      windowManager.ensureInitialized(),
+      fileManager.start(),
+      fileChooser.start(),
+    ],
+  );
 
-  final bool fileManagerClaimed = initResults[2] as bool;
   final bool fileChooserClaimed = initResults[3] as bool;
 
   Get.put(
@@ -80,7 +81,7 @@ Future<void> main(List<String> args) async {
     ),
   );
   Get.put(fileChooser);
-  if (portalBackend && (!fileManagerClaimed || !fileChooserClaimed)) {
+  if (portalBackend && !fileChooserClaimed) {
     exit(0);
   }
 

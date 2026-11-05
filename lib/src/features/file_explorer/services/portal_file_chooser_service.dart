@@ -500,9 +500,12 @@ class PortalPickRequest {
   /// request.
   int? tabId;
 
-  String get title => acceptLabel.isEmpty
-      ? (isDirectoryMode ? 'Select Folder' : 'Open File')
-      : acceptLabel;
+  String get title {
+    if (acceptLabel.isNotEmpty) return acceptLabel;
+    if (saveMode) return 'Save File';
+    if (isDirectoryMode) return 'Select Folder';
+    return 'Open File';
+  }
 }
 
 /// Exports `org.freedesktop.impl.portal.FileChooser` on the well-known
@@ -541,20 +544,26 @@ class _PortalFileChooserObject extends DBusObject {
     return DBusMethodErrorResponse.unknownMethod();
   }
 
-  /// Decodes an `ay` (byte array) option holding a NUL-terminated UTF-8
+  /// Decodes an `ay` (byte array) or `s` (string) option holding a UTF-8
   /// filesystem path — the encoding the portal spec uses for
   /// `current_folder` and `current_file`.
-  String? _decodeAyPath(DBusVariant? option) {
+  String? _decodePathOption(DBusVariant? option) {
     if (option == null) return null;
     final DBusValue inner = option.value;
-    if (inner is! DBusArray) return null;
-    try {
-      final String path =
-          utf8.decode(inner.mapByte().toList()).replaceAll('\x00', '');
+    if (inner is DBusString) {
+      final String path = inner.value.replaceAll('\x00', '');
       return path.isEmpty ? null : path;
-    } on FormatException {
-      return null;
     }
+    if (inner is DBusArray) {
+      try {
+        final String path =
+            utf8.decode(inner.mapByte().toList()).replaceAll('\x00', '');
+        return path.isEmpty ? null : path;
+      } on FormatException {
+        return null;
+      }
+    }
+    return null;
   }
 
   /// OpenFile (o handle, s app_id, s parent_window, s title, a{sv} options)
@@ -588,20 +597,24 @@ class _PortalFileChooserObject extends DBusObject {
     String acceptLabel = title;
     String? currentFolder;
 
+    final DBusVariant? dirOption = options[const DBusString('directory')];
+    if (dirOption != null && dirOption.value is DBusBoolean) {
+      directoryMode = (dirOption.value as DBusBoolean).value;
+    }
     final DBusVariant? mode = options[const DBusString('mode')];
-    if (mode != null) {
-      directoryMode = (mode.value as DBusString).value == 'opendirectory';
+    if (mode != null && mode.value is DBusString) {
+      directoryMode = directoryMode || (mode.value as DBusString).value == 'opendirectory';
     }
     final DBusVariant? multi = options[const DBusString('multiple')];
-    if (multi != null) {
+    if (multi != null && multi.value is DBusBoolean) {
       multiple = (multi.value as DBusBoolean).value;
     }
     final DBusVariant? label = options[const DBusString('accept_label')];
-    if (label != null) {
+    if (label != null && label.value is DBusString) {
       acceptLabel = (label.value as DBusString).value;
     }
     final DBusVariant? folder = options[const DBusString('current_folder')];
-    final String? folderPath = _decodeAyPath(folder);
+    final String? folderPath = _decodePathOption(folder);
     if (folderPath != null && Directory(folderPath).existsSync()) {
       currentFolder = folderPath;
     }
@@ -673,7 +686,7 @@ class _PortalFileChooserObject extends DBusObject {
       suggested = (name.value as DBusString).value;
     }
 
-    final String? existingFile = _decodeAyPath(
+    final String? existingFile = _decodePathOption(
       options[const DBusString('current_file')],
     );
     if (existingFile != null) {
@@ -681,11 +694,17 @@ class _PortalFileChooserObject extends DBusObject {
       currentFolder = p.dirname(existingFile);
     }
 
-    final String? folderPath = _decodeAyPath(
+    final String? folderPath = _decodePathOption(
       options[const DBusString('current_folder')],
     );
     if (folderPath != null && Directory(folderPath).existsSync()) {
       currentFolder = folderPath;
+    }
+
+    String acceptLabel = stringArg(3);
+    final DBusVariant? label = options[const DBusString('accept_label')];
+    if (label != null && label.value is DBusString) {
+      acceptLabel = (label.value as DBusString).value;
     }
 
     final PortalPickRequest request = PortalPickRequest(
@@ -693,7 +712,7 @@ class _PortalFileChooserObject extends DBusObject {
       appId: appId,
       isDirectoryMode: false,
       multiple: false,
-      acceptLabel: stringArg(3),
+      acceptLabel: acceptLabel,
       currentFolder: currentFolder,
       saveMode: true,
       suggestedName: suggested,
