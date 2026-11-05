@@ -1092,8 +1092,8 @@ class _EntryContentState extends State<_EntryContentArea> {
 
   /// `/` toggles search: opens and focuses the field when search is off; if
   /// search is active but the list stole keyboard focus, `/` returns focus to
-  /// the field instead of ending the search. With the field focused, `/` is
-  /// intercepted by the field's own key handler and closes the search.
+  /// the field. With the field focused, `/` is left to the text input so path
+  /// queries (`.config/nvim`) can be typed; `Esc` ends the search.
   void _toggleSearch() {
     if (controller.isSearching.value) {
       if (controller.searchFocusNode.hasFocus) {

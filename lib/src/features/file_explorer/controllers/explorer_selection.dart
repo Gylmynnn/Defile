@@ -10,24 +10,28 @@ extension ExplorerSelection on FileExplorerController {
   void stopSearch() {
     isSearching.value = false;
     searchQuery.value = '';
+    resetPathSearch();
     searchFocusNode.unfocus();
     keyboardFocusNode.requestFocus();
   }
 
-  /// Key handler attached to [FileExplorerController.searchFocusNode]:
-  /// `/` and `Esc` leave search mode (unfocus, clear, return keyboard focus
-  /// to the file list) instead of reaching the text field below.
+  /// Key handler attached to [FileExplorerController.searchFocusNode]: `Esc`
+  /// leaves search mode (unfocus, clear, return keyboard focus to the file
+  /// list); `/` stays a normal character so path queries like
+  /// `.config/nvim` can be typed.
   KeyEventResult _handleSearchKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    if (event.logicalKey == LogicalKeyboardKey.slash ||
-        event.logicalKey == LogicalKeyboardKey.escape) {
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
       stopSearch();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
   }
 
-  void updateSearch(String value) => searchQuery.value = value;
+  void updateSearch(String value) {
+    searchQuery.value = value;
+    schedulePathSearch();
+  }
 
   bool isSelected(rust.FileEntry entry) => selectedPaths.contains(entry.path);
 

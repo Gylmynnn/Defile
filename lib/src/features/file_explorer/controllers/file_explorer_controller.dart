@@ -1,3 +1,4 @@
+import 'dart:async' show Timer;
 import 'dart:io' as io;
 
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
@@ -15,6 +16,7 @@ import 'explorer_tabs_controller.dart';
 
 part 'explorer_navigation.dart';
 part 'explorer_operations.dart';
+part 'explorer_search.dart';
 part 'explorer_selection.dart';
 
 enum ExplorerViewMode { grid, list, compact }
@@ -96,11 +98,27 @@ class FileExplorerController extends GetxController {
   final FocusNode searchFocusNode = FocusNode();
   final FocusNode keyboardFocusNode = FocusNode();
 
+  /// Path-like search (`.config/nvim`). Results resolve asynchronously; the
+  /// version counter lets `Obx` views rebuild when they land.
+  final RxInt _pathSearchVersion = 0.obs;
+  List<rust.FileEntry>? _pathSearchResults;
+  Timer? _pathSearchTimer;
+  int _pathSearchGeneration = 0;
+
+  /// Ancestor directories expanded per path-search level, and the result
+  /// ceiling, so a loose pattern (e.g. `e/t`) cannot explode into work.
+  static const int _pathSearchMaxExpand = 128;
+  static const int _pathSearchMaxResults = 500;
+  static const Duration _pathSearchDebounce = Duration(milliseconds: 120);
+
   @override
   void onInit() {
     super.onInit();
     searchFocusNode.onKeyEvent = _handleSearchKey;
-    ever(entries, (_) => _entriesRevision++);
+    ever(entries, (_) {
+      _entriesRevision++;
+      schedulePathSearch();
+    });
     ever(selection, (List<rust.FileEntry> selected) {
       _selectionSnapshot = List<rust.FileEntry>.unmodifiable(selected);
       selectedPaths.assignAll(selected.map((entry) => entry.path));
@@ -111,6 +129,7 @@ class FileExplorerController extends GetxController {
 
   @override
   void onClose() {
+    _pathSearchTimer?.cancel();
     searchFocusNode.dispose();
     keyboardFocusNode.dispose();
     super.onClose();
@@ -209,6 +228,14 @@ class FileExplorerController extends GetxController {
 
   List<rust.FileEntry> get visibleEntries {
     final String query = searchQuery.value.trim().toLowerCase();
+
+    // Path-like queries resolve asynchronously. Touching the version counter
+    // here keeps the surrounding Obx subscribed so the view refreshes when
+    // results land (or when a stale set is cleared).
+    if (planPathSearch(query) != null) {
+      _pathSearchVersion.value;
+      return _pathSearchResults ?? const <rust.FileEntry>[];
+    }
 
     if (_visibleCache != null &&
         _visibleCacheRevision == _entriesRevision &&
