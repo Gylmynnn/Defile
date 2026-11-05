@@ -352,21 +352,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 Container(width: 1, color: context.colors.divider),
 
                 // Right Content Panel
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Positioned.fill(child: _buildContentPanel()),
-                      // Close button at top right
-                      Positioned(
-                        top: 14,
-                        right: 18,
-                        child: _CloseButton(
-                          onTap: () => Navigator.of(context).pop(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                Expanded(child: _buildContentPanel()),
               ],
             ),
           ),
@@ -532,23 +518,74 @@ class _SettingsDialogState extends State<SettingsDialog> {
   // ==========================================
   // Right Content Panel
   // ==========================================
+
+  /// Heading shown in the sticky panel header, mirroring the sidebar labels.
+  String get _activeSectionTitle {
+    return switch (_activeSection) {
+      SettingsSection.appearance => 'Appearance',
+      SettingsSection.interface => 'Interface',
+      SettingsSection.filesAndLinks => 'Files and links',
+      SettingsSection.hotkeys => 'Hotkeys',
+      SettingsSection.about => 'About',
+    };
+  }
+
   Widget _buildContentPanel() {
     return Container(
       color: context.colors.panel,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(28, 22, 28, 36),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            switch (_activeSection) {
-              SettingsSection.appearance => _buildAppearanceSection(),
-              SettingsSection.interface => _buildInterfaceSection(),
-              SettingsSection.filesAndLinks => _buildFilesAndLinksSection(),
-              SettingsSection.hotkeys => _buildHotkeysSection(),
-              SettingsSection.about => _buildAboutSection(),
-            },
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Sticky header: the section title and the close button stay
+          // visible while the section scrolls beneath it; the bottom
+          // divider marks the seam so content clearly slides under.
+          _buildStickyHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(28, 20, 28, 36),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  switch (_activeSection) {
+                    SettingsSection.appearance => _buildAppearanceSection(),
+                    SettingsSection.interface => _buildInterfaceSection(),
+                    SettingsSection.filesAndLinks =>
+                      _buildFilesAndLinksSection(),
+                    SettingsSection.hotkeys => _buildHotkeysSection(),
+                    SettingsSection.about => _buildAboutSection(),
+                  },
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Title bar pinned above the scrolling settings content.
+  Widget _buildStickyHeader() {
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.fromLTRB(28, 0, 16, 0),
+      decoration: BoxDecoration(
+        color: context.colors.panel,
+        border: Border(bottom: BorderSide(color: context.colors.divider)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _activeSectionTitle,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: context.colors.textPrimary,
+              ),
+            ),
+          ),
+          _CloseButton(onTap: () => Navigator.of(context).pop()),
+        ],
       ),
     );
   }

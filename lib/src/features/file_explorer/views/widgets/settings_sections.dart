@@ -514,6 +514,11 @@ extension _SettingsSections on _SettingsDialogState {
     const shortcuts = [
       ('Toggle sidebar', 'Ctrl + B'),
       ('Search files in directory', 'Ctrl + F'),
+      ('Focus search with keyboard', '/'),
+      ('Close search', 'Esc'),
+      ('Layout: grid', 'Ctrl + 1'),
+      ('Layout: list', 'Ctrl + 2'),
+      ('Layout: compact', 'Ctrl + 3'),
       ('New directory', 'Ctrl + Shift + N'),
       ('Open terminal in current path', 'F4'),
       ('Refresh directory', 'F5 / Ctrl + R'),
@@ -525,6 +530,7 @@ extension _SettingsSections on _SettingsDialogState {
       ('Cut to clipboard', 'Ctrl + X'),
       ('Paste from clipboard', 'Ctrl + V'),
       ('Parent directory', 'Alt + Up'),
+      ('Select tab 1-9', 'Alt + 1-9'),
     ];
 
     return Column(

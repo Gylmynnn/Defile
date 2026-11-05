@@ -83,23 +83,23 @@ class FileExplorerPage extends StatelessWidget {
               tabs.cycleSplitMode,
           const SingleActivator(LogicalKeyboardKey.f6): tabs.togglePaneFocus,
           // Tab direct selection (1-9)
-          const SingleActivator(LogicalKeyboardKey.digit1, control: true): () =>
+          const SingleActivator(LogicalKeyboardKey.digit1, alt: true): () =>
               tabs.selectTab(0),
-          const SingleActivator(LogicalKeyboardKey.digit2, control: true): () =>
+          const SingleActivator(LogicalKeyboardKey.digit2, alt: true): () =>
               tabs.selectTab(1),
-          const SingleActivator(LogicalKeyboardKey.digit3, control: true): () =>
+          const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () =>
               tabs.selectTab(2),
-          const SingleActivator(LogicalKeyboardKey.digit4, control: true): () =>
+          const SingleActivator(LogicalKeyboardKey.digit4, alt: true): () =>
               tabs.selectTab(3),
-          const SingleActivator(LogicalKeyboardKey.digit5, control: true): () =>
+          const SingleActivator(LogicalKeyboardKey.digit5, alt: true): () =>
               tabs.selectTab(4),
-          const SingleActivator(LogicalKeyboardKey.digit6, control: true): () =>
+          const SingleActivator(LogicalKeyboardKey.digit6, alt: true): () =>
               tabs.selectTab(5),
-          const SingleActivator(LogicalKeyboardKey.digit7, control: true): () =>
+          const SingleActivator(LogicalKeyboardKey.digit7, alt: true): () =>
               tabs.selectTab(6),
-          const SingleActivator(LogicalKeyboardKey.digit8, control: true): () =>
+          const SingleActivator(LogicalKeyboardKey.digit8, alt: true): () =>
               tabs.selectTab(7),
-          const SingleActivator(LogicalKeyboardKey.digit9, control: true): () =>
+          const SingleActivator(LogicalKeyboardKey.digit9, alt: true): () =>
               tabs.selectTab(tabs.tabs.length - 1),
           const SingleActivator(LogicalKeyboardKey.digit1, meta: true): () =>
               tabs.selectTab(0),
@@ -737,6 +737,14 @@ class _EntryContentState extends State<_EntryContentArea> {
         ): () => _newFile(context),
         const SingleActivator(LogicalKeyboardKey.f6): _switchPaneFocus,
         const SingleActivator(LogicalKeyboardKey.tab): _switchPaneFocus,
+        // Per-pane layout (Explorer View): Ctrl+1 = grid, 2 = list, 3 =
+        // compact. Tab selection moved to Alt+1..9 to free these up.
+        const SingleActivator(LogicalKeyboardKey.digit1, control: true):
+            () => controller.setViewMode(ExplorerViewMode.grid),
+        const SingleActivator(LogicalKeyboardKey.digit2, control: true):
+            () => controller.setViewMode(ExplorerViewMode.list),
+        const SingleActivator(LogicalKeyboardKey.digit3, control: true):
+            () => controller.setViewMode(ExplorerViewMode.compact),
       },
       child: Focus(
         focusNode: controller.keyboardFocusNode,
