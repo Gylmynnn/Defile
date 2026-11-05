@@ -720,6 +720,7 @@ class _EntryContentState extends State<_EntryContentArea> {
             _toggleSidebar,
         const SingleActivator(LogicalKeyboardKey.keyF, control: true):
             _startSearch,
+        const SingleActivator(LogicalKeyboardKey.slash): _toggleSearch,
         const SingleActivator(LogicalKeyboardKey.delete, shift: true):
             _deleteSelectedPermanently,
         const SingleActivator(LogicalKeyboardKey.arrowUp, alt: true):
@@ -857,12 +858,23 @@ class _EntryContentState extends State<_EntryContentArea> {
     _notifyPaneFocus();
     _pendingOpenPath = null;
     controller.clearSelection();
+    _restoreSearchFocus();
+  }
+
+  /// Keeps the search field focused while a search is active: pointer
+  /// interaction with the pane (tap, band select, open) would otherwise move
+  /// keyboard focus to the list, leaving search mode active but untypable.
+  void _restoreSearchFocus() {
+    if (controller.isSearching.value) {
+      controller.searchFocusNode.requestFocus();
+    }
   }
 
   void _handleBandDown(PointerDownEvent event) {
     if (event.buttons != kPrimaryButton) return;
 
     _notifyPaneFocus();
+    _restoreSearchFocus();
     _bandCandidate = true;
     _bandStart = event.localPosition;
     _bandCurrent = event.localPosition;
@@ -1078,6 +1090,22 @@ class _EntryContentState extends State<_EntryContentArea> {
     controller.searchFocusNode.requestFocus();
   }
 
+  /// `/` toggles search: opens and focuses the field when search is off; if
+  /// search is active but the list stole keyboard focus, `/` returns focus to
+  /// the field instead of ending the search. With the field focused, `/` is
+  /// intercepted by the field's own key handler and closes the search.
+  void _toggleSearch() {
+    if (controller.isSearching.value) {
+      if (controller.searchFocusNode.hasFocus) {
+        controller.stopSearch();
+      } else {
+        controller.searchFocusNode.requestFocus();
+      }
+      return;
+    }
+    _startSearch();
+  }
+
   void _openTerminal() {
     if (_keyboardBlocked) return;
     controller.openTerminal();
@@ -1180,6 +1208,7 @@ class _EntryContentState extends State<_EntryContentArea> {
 
   void _handleEntryPress(rust.FileEntry entry) {
     _notifyPaneFocus();
+    _restoreSearchFocus();
     _entryPressActive = true;
 
     final HardwareKeyboard keyboard = HardwareKeyboard.instance;
@@ -1227,6 +1256,7 @@ class _EntryContentState extends State<_EntryContentArea> {
     if (_pendingOpenPath == entry.path) {
       _pendingOpenPath = null;
       controller.openFile(entry);
+      _restoreSearchFocus();
       return;
     }
 
@@ -1265,11 +1295,14 @@ class _EntryContentState extends State<_EntryContentArea> {
       final PortalPickController picker = Get.find<PortalPickController>();
       unawaited(
         picker.tryConfirmWithEntry(entry).then((bool confirmed) {
-          if (!confirmed) controller.openFile(entry);
+          if (confirmed) return;
+          controller.openFile(entry);
+          _restoreSearchFocus();
         }),
       );
       return;
     }
     controller.openFile(entry);
+    _restoreSearchFocus();
   }
 }

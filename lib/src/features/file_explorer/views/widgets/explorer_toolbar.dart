@@ -26,12 +26,30 @@ class ExplorerToolbar extends StatefulWidget {
 class _ExplorerToolbarState extends State<ExplorerToolbar> {
   final TextEditingController _searchController = TextEditingController();
 
+  /// Keeps the text field's content aligned with the controller's search
+  /// query, so keyboard-driven resets (`Esc`/`/`) also clear the field.
+  Worker? _querySync;
+
   FileExplorerController get controller => ExplorerScope.of(context);
 
   @override
   void dispose() {
+    _querySync?.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _querySync?.dispose();
+    _querySync = ever<String>(controller.searchQuery, (value) {
+      if (_searchController.text == value) return;
+      _searchController.text = value;
+      _searchController.selection = TextSelection.collapsed(
+        offset: value.length,
+      );
+    });
   }
 
   @override

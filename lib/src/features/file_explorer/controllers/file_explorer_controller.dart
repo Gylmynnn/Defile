@@ -6,6 +6,7 @@ import '../utils/app_toast.dart';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
@@ -89,12 +90,16 @@ class FileExplorerController extends GetxController {
   final RxList<String> pathHistory = <String>[].obs;
   final RxList<String> forwardHistory = <String>[].obs;
 
+  /// Search-field focus node. Its key handler (installed in [onInit])
+  /// intercepts `/` and `Esc` while the field is focused so the toggle/close
+  /// keys are consumed here instead of being inserted into the query text.
   final FocusNode searchFocusNode = FocusNode();
   final FocusNode keyboardFocusNode = FocusNode();
 
   @override
   void onInit() {
     super.onInit();
+    searchFocusNode.onKeyEvent = _handleSearchKey;
     ever(entries, (_) => _entriesRevision++);
     ever(selection, (List<rust.FileEntry> selected) {
       _selectionSnapshot = List<rust.FileEntry>.unmodifiable(selected);

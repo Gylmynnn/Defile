@@ -14,6 +14,19 @@ extension ExplorerSelection on FileExplorerController {
     keyboardFocusNode.requestFocus();
   }
 
+  /// Key handler attached to [FileExplorerController.searchFocusNode]:
+  /// `/` and `Esc` leave search mode (unfocus, clear, return keyboard focus
+  /// to the file list) instead of reaching the text field below.
+  KeyEventResult _handleSearchKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.slash ||
+        event.logicalKey == LogicalKeyboardKey.escape) {
+      stopSearch();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   void updateSearch(String value) => searchQuery.value = value;
 
   bool isSelected(rust.FileEntry entry) => selectedPaths.contains(entry.path);
