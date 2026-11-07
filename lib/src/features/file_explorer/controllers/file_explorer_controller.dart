@@ -4,6 +4,7 @@ import 'dart:io' as io;
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 
 import '../utils/app_toast.dart';
+import '../utils/overwrite_prompt.dart';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;

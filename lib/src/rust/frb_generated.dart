@@ -99,6 +99,7 @@ abstract class RustLibApi extends BaseApi {
     required String sourcePath,
     required String destinationDirectory,
     required String newName,
+    required bool overwrite,
   });
 
   Future<String> crateApiFileEntryCreateDirectory({
@@ -189,6 +190,7 @@ abstract class RustLibApi extends BaseApi {
     required String sourcePath,
     required String destinationDirectory,
     required String newName,
+    required bool overwrite,
   });
 
   Future<String> crateApiSystemMoveToTrash({required String path});
@@ -277,6 +279,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required String sourcePath,
     required String destinationDirectory,
     required String newName,
+    required bool overwrite,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -285,6 +288,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(sourcePath, serializer);
           sse_encode_String(destinationDirectory, serializer);
           sse_encode_String(newName, serializer);
+          sse_encode_bool(overwrite, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -297,7 +301,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_file_operation_error,
         ),
         constMeta: kCrateApiFileEntryCopyEntryConstMeta,
-        argValues: [sourcePath, destinationDirectory, newName],
+        argValues: [sourcePath, destinationDirectory, newName, overwrite],
         apiImpl: this,
       ),
     );
@@ -305,7 +309,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiFileEntryCopyEntryConstMeta => const TaskConstMeta(
     debugName: "copy_entry",
-    argNames: ["sourcePath", "destinationDirectory", "newName"],
+    argNames: ["sourcePath", "destinationDirectory", "newName", "overwrite"],
   );
 
   @override
@@ -1157,6 +1161,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required String sourcePath,
     required String destinationDirectory,
     required String newName,
+    required bool overwrite,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -1165,6 +1170,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(sourcePath, serializer);
           sse_encode_String(destinationDirectory, serializer);
           sse_encode_String(newName, serializer);
+          sse_encode_bool(overwrite, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -1177,7 +1183,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_file_operation_error,
         ),
         constMeta: kCrateApiFileEntryMoveEntryConstMeta,
-        argValues: [sourcePath, destinationDirectory, newName],
+        argValues: [sourcePath, destinationDirectory, newName, overwrite],
         apiImpl: this,
       ),
     );
@@ -1185,7 +1191,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiFileEntryMoveEntryConstMeta => const TaskConstMeta(
     debugName: "move_entry",
-    argNames: ["sourcePath", "destinationDirectory", "newName"],
+    argNames: ["sourcePath", "destinationDirectory", "newName", "overwrite"],
   );
 
   @override

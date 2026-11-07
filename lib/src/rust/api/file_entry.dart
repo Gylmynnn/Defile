@@ -9,27 +9,31 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'file_entry.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `copy_directory_recursive`, `entry_from_metadata`, `validate_name`
+// These functions are ignored because they are not marked as `pub`: `copy_directory_recursive`, `entry_from_metadata`, `remove_existing`, `validate_name`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `fmt`, `from`
 
 Future<void> copyEntry({
   required String sourcePath,
   required String destinationDirectory,
   required String newName,
+  required bool overwrite,
 }) => RustLib.instance.api.crateApiFileEntryCopyEntry(
   sourcePath: sourcePath,
   destinationDirectory: destinationDirectory,
   newName: newName,
+  overwrite: overwrite,
 );
 
 Future<void> moveEntry({
   required String sourcePath,
   required String destinationDirectory,
   required String newName,
+  required bool overwrite,
 }) => RustLib.instance.api.crateApiFileEntryMoveEntry(
   sourcePath: sourcePath,
   destinationDirectory: destinationDirectory,
   newName: newName,
+  overwrite: overwrite,
 );
 
 Future<void> deleteEntry({required String path}) =>

@@ -77,41 +77,104 @@ extension ExplorerOperations on FileExplorerController {
     if (items.isEmpty) return;
 
     final bool cut = clipboardIsCut.value;
-    if (cut) clipboardEntries.clear();
-
-    await _transferEntries(
+    final List<String>? transferred = await _transferEntries(
       entries: items,
       destinationDirectory: currentPath.value,
       move: cut,
     );
+    // A cancelled prompt (null) must leave a cut clipboard untouched; a
+    // skipped item stays in the clipboard because it was not moved.
+    if (cut && transferred != null) {
+      final Set<String> done = transferred.toSet();
+      clipboardEntries.assignAll(
+        clipboardEntries.where((entry) => !done.contains(entry.path)),
+      );
+    }
   }
 
-  Future<void> _transferEntries({
+  /// Transfers [entries] into [destinationDirectory], confirming replacements
+  /// for items that already exist there.
+  ///
+  /// Returns null when the user cancels, otherwise the paths that were
+  /// actually transferred (successful copies/moves only).
+  Future<List<String>?> _transferEntries({
     required List<rust.FileEntry> entries,
     required String destinationDirectory,
     required bool move,
     String? newName,
   }) async {
-    int succeeded = 0;
-    String? lastError;
+    // Skip entries whose source and destination are the same path: there is
+    // nothing to transfer and overwriting would be a self-destructive no-op.
+    final List<rust.FileEntry> items = <rust.FileEntry>[
+      for (final entry in entries)
+        if (!p.equals(
+          p.normalize(p.join(destinationDirectory, newName ?? entry.name)),
+          p.normalize(entry.path),
+        ))
+          entry,
+    ];
+    if (items.isEmpty) return const <String>[];
 
-    for (final entry in entries) {
+    // Resolve collisions up front so a copy/move never just fails with
+    // "already exists": the user decides whether the old item is replaced.
+    final Map<String, bool> conflicts = <String, bool>{};
+    for (final entry in items) {
+      final String name = newName ?? entry.name;
+      final String destination = p.join(destinationDirectory, name);
+      final io.FileSystemEntityType type = await io.FileSystemEntity.type(
+        destination,
+      );
+      if (type != io.FileSystemEntityType.notFound) {
+        conflicts[name] = type == io.FileSystemEntityType.directory;
+      }
+    }
+
+    bool overwrite = false;
+    bool skipConflicts = false;
+    if (conflicts.isNotEmpty) {
+      final OverwriteDecision? decision = await showOverwritePrompt(
+        names: conflicts.keys.toList(),
+        anyDirectory: conflicts.values.any((bool isDir) => isDir),
+      );
+      if (decision == null || decision == OverwriteDecision.cancel) {
+        return null;
+      }
+      overwrite = decision == OverwriteDecision.replace;
+      skipConflicts = decision == OverwriteDecision.skip;
+    }
+
+    int succeeded = 0;
+    int skipped = 0;
+    String? lastError;
+    final List<String> transferred = <String>[];
+
+    for (final entry in items) {
+      final String name = newName ?? entry.name;
+
+      if (skipConflicts && conflicts.containsKey(name)) {
+        skipped++;
+        continue;
+      }
+
       try {
         if (move) {
           await fileSystemService.moveEntry(
             sourcePath: entry.path,
             destinationDirectory: destinationDirectory,
-            newName: newName ?? entry.name,
+            newName: name,
+            overwrite: overwrite,
           );
         } else {
           await fileSystemService.copyEntry(
             sourcePath: entry.path,
             destinationDirectory: destinationDirectory,
-            newName: newName ?? entry.name,
+            newName: name,
+            overwrite: overwrite,
           );
         }
 
         succeeded++;
+        transferred.add(entry.path);
       } catch (error) {
         lastError = error.toString();
       }
@@ -122,7 +185,7 @@ extension ExplorerOperations on FileExplorerController {
     if (Get.isRegistered<ExplorerTabsController>()) {
       final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
       final String dest = p.normalize(destinationDirectory);
-      final Set<String> sourceDirs = entries
+      final Set<String> sourceDirs = items
           .map((e) => p.normalize(p.dirname(e.path)))
           .toSet();
 
@@ -137,25 +200,36 @@ extension ExplorerOperations on FileExplorerController {
 
     final String label = move ? 'moved' : 'copied';
 
-    if (succeeded == entries.length) {
+    if (succeeded == items.length) {
       showAppToast(
         title: 'Success',
-        message: '${entries.length} item(s) $label.',
+        message: '${items.length} item(s) $label.',
         variant: AppToastVariant.success,
       );
-    } else if (entries.length == 1 && lastError != null) {
+    } else if (items.length == 1 && lastError != null) {
       showAppToast(
         title: 'Failed',
         message: lastError,
         variant: AppToastVariant.error,
       );
+    } else if (succeeded == 0 && skipped > 0) {
+      showAppToast(
+        title: 'Nothing $label',
+        message: 'Existing item(s) were kept.',
+        variant: AppToastVariant.info,
+      );
     } else {
+      final String skippedNote = skipped > 0
+          ? ' ($skipped existing item(s) kept)'
+          : '';
       showAppToast(
         title: 'Partially completed',
-        message: '$succeeded of ${entries.length} items $label.',
+        message: '$succeeded of ${items.length} items $label$skippedNote.',
         variant: AppToastVariant.error,
       );
     }
+
+    return transferred;
   }
 
   Future<void> trashEntries(List<rust.FileEntry> entries) async {

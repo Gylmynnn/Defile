@@ -107,6 +107,7 @@ fn wire__crate__api__file_entry__copy_entry_impl(
             let api_source_path = <String>::sse_decode(&mut deserializer);
             let api_destination_directory = <String>::sse_decode(&mut deserializer);
             let api_new_name = <String>::sse_decode(&mut deserializer);
+            let api_overwrite = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, crate::api::file_entry::FileOperationError>((move || {
@@ -114,6 +115,7 @@ fn wire__crate__api__file_entry__copy_entry_impl(
                         api_source_path,
                         api_destination_directory,
                         api_new_name,
+                        api_overwrite,
                     )?;
                     std::result::Result::Ok(output_ok)
                 })(
@@ -1107,6 +1109,7 @@ fn wire__crate__api__file_entry__move_entry_impl(
             let api_source_path = <String>::sse_decode(&mut deserializer);
             let api_destination_directory = <String>::sse_decode(&mut deserializer);
             let api_new_name = <String>::sse_decode(&mut deserializer);
+            let api_overwrite = <bool>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, crate::api::file_entry::FileOperationError>((move || {
@@ -1114,6 +1117,7 @@ fn wire__crate__api__file_entry__move_entry_impl(
                         api_source_path,
                         api_destination_directory,
                         api_new_name,
+                        api_overwrite,
                     )?;
                     std::result::Result::Ok(output_ok)
                 })(

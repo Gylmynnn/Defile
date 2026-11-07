@@ -52,6 +52,19 @@ impl From<io::Error> for FileOperationError {
     }
 }
 
+fn remove_existing(path: &Path) -> Result<(), FileOperationError> {
+    let metadata = fs::symlink_metadata(path)?;
+
+    if metadata.is_dir() {
+        fs::remove_dir_all(path)?;
+    } else {
+        // Covers regular files and symlinks (nothing follows the link).
+        fs::remove_file(path)?;
+    }
+
+    Ok(())
+}
+
 fn validate_name(name: &str) -> Result<(), FileOperationError> {
     if name.trim().is_empty()
         || name == "."
@@ -98,6 +111,7 @@ pub fn copy_entry(
     source_path: std::string::String,
     destination_directory: std::string::String,
     new_name: std::string::String,
+    overwrite: bool,
 ) -> Result<(), FileOperationError> {
     validate_name(&new_name)?;
 
@@ -121,19 +135,40 @@ pub fn copy_entry(
 
     let destination = destination_dir.join(new_name);
 
-    if destination.exists() {
-        return Err(FileOperationError::DestinationExists(
-            destination.display().to_string(),
+    if destination == source {
+        return Err(FileOperationError::InvalidPath(
+            "Source and destination are the same".to_string(),
         ));
     }
 
-    if metadata.is_dir() {
-        if destination.starts_with(&source) || source.starts_with(&destination) {
-            return Err(FileOperationError::InvalidPath(
-                "Invalid source and destination folders".to_string(),
+    if metadata.is_dir() && (destination.starts_with(&source) || source.starts_with(&destination)) {
+        return Err(FileOperationError::InvalidPath(
+            "Invalid source and destination folders".to_string(),
+        ));
+    }
+
+    if destination.exists() {
+        if !overwrite {
+            return Err(FileOperationError::DestinationExists(
+                destination.display().to_string(),
             ));
         }
 
+        let destination_metadata = fs::symlink_metadata(&destination)
+            .map_err(|error| FileOperationError::Io(error.to_string()))?;
+
+        // A regular file can simply be rewritten by fs::copy; directories and
+        // symlinks must be removed first so their old contents cannot leak
+        // into the replacement.
+        if metadata.is_dir()
+            || destination_metadata.is_dir()
+            || destination_metadata.file_type().is_symlink()
+        {
+            remove_existing(&destination)?;
+        }
+    }
+
+    if metadata.is_dir() {
         copy_directory_recursive(&source, &destination)?;
     } else if metadata.is_file() {
         fs::copy(&source, &destination)?;
@@ -151,6 +186,7 @@ pub fn move_entry(
     source_path: std::string::String,
     destination_directory: std::string::String,
     new_name: std::string::String,
+    overwrite: bool,
 ) -> Result<(), FileOperationError> {
     validate_name(&new_name)?;
 
@@ -168,9 +204,9 @@ pub fn move_entry(
 
     let destination = destination_dir.join(new_name);
 
-    if destination.exists() {
-        return Err(FileOperationError::DestinationExists(
-            destination.display().to_string(),
+    if destination == source {
+        return Err(FileOperationError::InvalidPath(
+            "Source and destination are the same".to_string(),
         ));
     }
 
@@ -178,6 +214,16 @@ pub fn move_entry(
         return Err(FileOperationError::InvalidPath(
             "Invalid source and destination folders".to_string(),
         ));
+    }
+
+    if destination.exists() {
+        if !overwrite {
+            return Err(FileOperationError::DestinationExists(
+                destination.display().to_string(),
+            ));
+        }
+
+        remove_existing(&destination)?;
     }
 
     fs::rename(&source, &destination)?;
@@ -352,4 +398,148 @@ pub fn open_file(path: String) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn workspace(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "defile_file_entry_test_{tag}_{}",
+            std::process::id()
+        ));
+        fs::remove_dir_all(&dir).ok();
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn path_string(path: &Path) -> std::string::String {
+        path.to_string_lossy().into_owned()
+    }
+
+    #[test]
+    fn copy_refuses_to_replace_without_overwrite() {
+        let dir = workspace("copy_no_overwrite");
+        let source = dir.join("index.html");
+        let destination_dir = dir.join("dest");
+        fs::create_dir_all(&destination_dir).unwrap();
+        fs::write(&source, "new").unwrap();
+        fs::write(destination_dir.join("index.html"), "old").unwrap();
+
+        let result = copy_entry(
+            path_string(&source),
+            path_string(&destination_dir),
+            "index.html".to_string(),
+            false,
+        );
+
+        assert!(matches!(
+            result,
+            Err(FileOperationError::DestinationExists(_))
+        ));
+        assert_eq!(
+            fs::read_to_string(destination_dir.join("index.html")).unwrap(),
+            "old"
+        );
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn copy_replaces_existing_file_when_overwrite_is_set() {
+        let dir = workspace("copy_overwrite_file");
+        let source = dir.join("index.html");
+        let destination_dir = dir.join("dest");
+        fs::create_dir_all(&destination_dir).unwrap();
+        fs::write(&source, "new content").unwrap();
+        fs::write(destination_dir.join("index.html"), "old content").unwrap();
+
+        copy_entry(
+            path_string(&source),
+            path_string(&destination_dir),
+            "index.html".to_string(),
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(
+            fs::read_to_string(destination_dir.join("index.html")).unwrap(),
+            "new content"
+        );
+        // Copy keeps the source in place.
+        assert_eq!(fs::read_to_string(&source).unwrap(), "new content");
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn copy_replaces_directory_without_leaving_stale_children() {
+        let dir = workspace("copy_overwrite_dir");
+        let source = dir.join("project");
+        let destination_dir = dir.join("dest");
+        fs::create_dir_all(source.join("new")).unwrap();
+        fs::create_dir_all(destination_dir.join("project/old")).unwrap();
+        fs::write(source.join("index.html"), "new").unwrap();
+        fs::write(destination_dir.join("project/old/stale.txt"), "stale").unwrap();
+
+        copy_entry(
+            path_string(&source),
+            path_string(&destination_dir),
+            "project".to_string(),
+            true,
+        )
+        .unwrap();
+
+        assert!(destination_dir.join("project/index.html").is_file());
+        assert!(destination_dir.join("project/new").is_dir());
+        assert!(!destination_dir.join("project/old").exists());
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn move_replaces_existing_file_and_removes_source() {
+        let dir = workspace("move_overwrite");
+        let source = dir.join("index.html");
+        let destination_dir = dir.join("dest");
+        fs::create_dir_all(&destination_dir).unwrap();
+        fs::write(&source, "new").unwrap();
+        fs::write(destination_dir.join("index.html"), "old").unwrap();
+
+        move_entry(
+            path_string(&source),
+            path_string(&destination_dir),
+            "index.html".to_string(),
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(
+            fs::read_to_string(destination_dir.join("index.html")).unwrap(),
+            "new"
+        );
+        assert!(!source.exists());
+
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn copy_onto_itself_is_rejected_without_touching_the_file() {
+        let dir = workspace("copy_self");
+        let source = dir.join("index.html");
+        fs::write(&source, "keep me").unwrap();
+
+        let result = copy_entry(
+            path_string(&source),
+            path_string(&dir),
+            "index.html".to_string(),
+            true,
+        );
+
+        assert!(matches!(result, Err(FileOperationError::InvalidPath(_))));
+        assert_eq!(fs::read_to_string(&source).unwrap(), "keep me");
+
+        fs::remove_dir_all(&dir).ok();
+    }
 }

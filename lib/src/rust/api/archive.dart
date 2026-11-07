@@ -7,11 +7,12 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `add_path`, `archive_file_name`
+// These functions are ignored because they are not marked as `pub`: `add_path`, `append_paths`, `archive_file_name`, `write_tar`, `write_zip`
 
-/// Bundles the given files and directories into a zip archive at
-/// [destination], storing each item's relative name at the archive root and
-/// preserving the directory tree below it.
+/// Bundles the given files and directories into an archive at [destination].
+/// The format is derived from the destination extension: zip, tar and
+/// tar.gz/tgz. Each item's relative name lands at the archive root and the
+/// directory tree below it is preserved.
 Future<void> compressEntries({
   required List<String> paths,
   required String destination,

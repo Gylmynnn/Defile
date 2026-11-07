@@ -67,11 +67,13 @@ class FileSystemService {
     required String sourcePath,
     required String destinationDirectory,
     required String newName,
+    bool overwrite = false,
   }) {
     return rust.copyEntry(
       sourcePath: sourcePath,
       destinationDirectory: destinationDirectory,
       newName: newName,
+      overwrite: overwrite,
     );
   }
 
@@ -79,11 +81,13 @@ class FileSystemService {
     required String sourcePath,
     required String destinationDirectory,
     required String newName,
+    bool overwrite = false,
   }) {
     return rust.moveEntry(
       sourcePath: sourcePath,
       destinationDirectory: destinationDirectory,
       newName: newName,
+      overwrite: overwrite,
     );
   }
 
