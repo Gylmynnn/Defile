@@ -115,7 +115,7 @@ pub(crate) fn open_in_terminal(
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
-fn terminal_spec(terminal: &str) -> Result<(&'static str, &'static [&'static str]), String> {
+pub(crate) fn terminal_spec(terminal: &str) -> Result<(&'static str, &'static [&'static str]), String> {
     if terminal.is_empty() {
         return TERMINALS
             .iter()
@@ -151,7 +151,7 @@ fn is_supported(terminal: &str) -> bool {
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
-fn is_installed(program: &str) -> bool {
+pub(crate) fn is_installed(program: &str) -> bool {
     std::process::Command::new("sh")
         .args(["-c", &format!("command -v {program} >/dev/null 2>&1")])
         .status()
@@ -160,7 +160,7 @@ fn is_installed(program: &str) -> bool {
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
-fn shell_quote(value: &str) -> std::string::String {
+pub(crate) fn shell_quote(value: &str) -> std::string::String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
