@@ -138,6 +138,18 @@ should_bundle() {
 }
 
 cp -L "$MPV_LIB" "$LIBS_DIR/$MPV_SONAME"
+
+# media_kit's Dart FFI opens the unversioned "libmpv.so" before it tries the
+# versioned sonames. Shipping only the soname made the loader skip the bundled
+# copy on any system that has mpv installed, so a *second* libmpv was mapped
+# from the host while libmedia_kit_video_plugin.so kept using the bundled one.
+# The mpv handle was then created through one instance and the render API
+# driven through the other, which aborts inside libmpv
+# ("m_config_core.c: m_config_cache_from_shadow: Assertion `group_index >= 0'")
+# as soon as a video preview starts. Expose the unversioned name as a symlink:
+# the loader notices the shared inode and both paths reuse one instance.
+ln -sf "$MPV_SONAME" "$LIBS_DIR/libmpv.so"
+
 while read -r name path; do
   should_bundle "$name" || continue
   if [ ! -e "$path" ]; then

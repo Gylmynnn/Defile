@@ -143,11 +143,36 @@ fn locate_theme(roots: &[PathBuf], name: &str) -> Option<PathBuf> {
     None
 }
 
-fn theme_chain(roots: &[PathBuf], theme: &str) -> Vec<PathBuf> {
-    type ChainCache = HashMap<(Vec<PathBuf>, std::string::String), Vec<PathBuf>>;
-    static CACHE: OnceLock<Mutex<ChainCache>> = OnceLock::new();
+type ChainCache = HashMap<(Vec<PathBuf>, std::string::String), Vec<PathBuf>>;
+static CHAIN_CACHE: OnceLock<Mutex<ChainCache>> = OnceLock::new();
 
-    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+type CandidateCache =
+    HashMap<(Vec<PathBuf>, std::string::String, std::string::String, u32), Vec<PathBuf>>;
+static CANDIDATE_CACHE: OnceLock<Mutex<CandidateCache>> = OnceLock::new();
+
+type SvgCache = HashMap<(PathBuf, u32), Vec<u8>>;
+static SVG_CACHE: OnceLock<Mutex<SvgCache>> = OnceLock::new();
+
+fn clear_theme_caches() {
+    if let Some(cache) = CHAIN_CACHE.get() {
+        if let Ok(mut guard) = cache.lock() {
+            guard.clear();
+        }
+    }
+    if let Some(cache) = CANDIDATE_CACHE.get() {
+        if let Ok(mut guard) = cache.lock() {
+            guard.clear();
+        }
+    }
+    if let Some(cache) = SVG_CACHE.get() {
+        if let Ok(mut guard) = cache.lock() {
+            guard.clear();
+        }
+    }
+}
+
+fn theme_chain(roots: &[PathBuf], theme: &str) -> Vec<PathBuf> {
+    let cache = CHAIN_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     let cache_key = (roots.to_vec(), theme.to_string());
     {
         let guard = cache.lock().unwrap_or_else(|e| e.into_inner());
@@ -187,6 +212,9 @@ fn theme_chain(roots: &[PathBuf], theme: &str) -> Vec<PathBuf> {
     }
 
     let mut guard = cache.lock().unwrap_or_else(|e| e.into_inner());
+    if guard.len() >= 64 {
+        guard.clear();
+    }
     guard.insert(cache_key, chain.clone());
     chain
 }
@@ -197,11 +225,7 @@ fn find_icon_candidates_in_roots(
     name: &str,
     size: u32,
 ) -> Vec<PathBuf> {
-    type CandidateCache =
-        HashMap<(Vec<PathBuf>, std::string::String, std::string::String, u32), Vec<PathBuf>>;
-    static CACHE: OnceLock<Mutex<CandidateCache>> = OnceLock::new();
-
-    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let cache = CANDIDATE_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     let cache_key = (roots.to_vec(), theme.to_string(), name.to_string(), size);
     {
         let guard = cache.lock().unwrap_or_else(|e| e.into_inner());
@@ -237,6 +261,9 @@ fn find_icon_candidates_in_roots(
 
     let result: Vec<PathBuf> = candidates.into_iter().map(|(_, _, path)| path).collect();
     let mut guard = cache.lock().unwrap_or_else(|e| e.into_inner());
+    if guard.len() >= 512 {
+        guard.clear();
+    }
     guard.insert(cache_key, result.clone());
     result
 }
@@ -317,10 +344,7 @@ pub fn find_icon(
 }
 
 fn render_svg(path: &Path, size: u32) -> Option<Vec<u8>> {
-    type SvgCache = HashMap<(PathBuf, u32), Vec<u8>>;
-    static CACHE: OnceLock<Mutex<SvgCache>> = OnceLock::new();
-
-    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let cache = SVG_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     let cache_key = (path.to_path_buf(), size);
     {
         let guard = cache.lock().unwrap_or_else(|e| e.into_inner());
@@ -343,6 +367,9 @@ fn render_svg(path: &Path, size: u32) -> Option<Vec<u8>> {
 
     let png = pixmap.encode_png().ok()?;
     let mut guard = cache.lock().unwrap_or_else(|e| e.into_inner());
+    if guard.len() >= 256 {
+        guard.clear();
+    }
     guard.insert(cache_key, png.clone());
     Some(png)
 }
@@ -398,6 +425,7 @@ pub fn get_icon_theme() -> std::string::String {
 
 #[flutter_rust_bridge::frb]
 pub fn set_icon_theme(name: std::string::String) -> Result<(), std::string::String> {
+    clear_theme_caches();
     write_setting("icon-theme", &name)
 }
 

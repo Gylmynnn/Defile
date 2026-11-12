@@ -24,8 +24,8 @@ class _ImagePreview extends StatelessWidget {
                 constraints.maxHeight,
               );
               final int cacheWidth = box.isFinite
-                  ? math.min((box * dpr * 2).round(), 2048)
-                  : 1024;
+                  ? math.min((box * dpr).round(), 1024)
+                  : 768;
               return Image.file(
                 File(file.path),
                 cacheWidth: cacheWidth,
@@ -85,7 +85,24 @@ Timer? _pooledDisposeTimer;
 /// is only worth keeping while another preview is likely to follow. Drop
 /// it after this idle time — re-previewing then pays the native init
 /// again, which is exactly the tradeoff the pool makes on purpose.
-const Duration _poolIdleLifetime = Duration(minutes: 2);
+const Duration _poolIdleLifetime = Duration(seconds: 30);
+
+Player _createConfiguredPlayer() {
+  final player = Player();
+  try {
+    (player.platform as dynamic)?.setProperty('demuxer-max-bytes', '8388608');
+    (player.platform as dynamic)?.setProperty('demuxer-max-back-bytes', '2097152');
+  } catch (_) {}
+  return player;
+}
+
+void releasePooledMediaPreview() {
+  _pooledDisposeTimer?.cancel();
+  _pooledDisposeTimer = null;
+  _pooledPlayer?.dispose();
+  _pooledPlayer = null;
+  _pooledVideoController = null;
+}
 
 (Player, VideoController?) _takePooled() {
   _pooledDisposeTimer?.cancel();
@@ -96,10 +113,14 @@ const Duration _poolIdleLifetime = Duration(minutes: 2);
   _pooledVideoController = null;
   if (player != null) return (player, controller);
   MediaKit.ensureInitialized();
-  return (Player(), null);
+  return (_createConfiguredPlayer(), null);
 }
 
 void _parkPlayer(Player player, VideoController? controller) {
+  // Stop playback so the current media's demuxer cache and decoded frames
+  // are unloaded immediately while the native player and texture context remain warm.
+  unawaited(player.stop());
+
   // Single slot: one live media preview is the normal flow. With two at
   // once (split panes) the surplus player is torn down as before — its
   // controller dies with it.

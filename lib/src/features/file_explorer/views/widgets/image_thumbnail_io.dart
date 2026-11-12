@@ -35,7 +35,7 @@ class ImageThumbnail extends StatelessWidget {
     // the box size, so cover never has to upscale.
     final int cacheDimension = math.min(
       (math.max(width, height) * devicePixelRatio * 2).round(),
-      768,
+      384,
     );
 
     return Container(

@@ -90,6 +90,14 @@ class IconThemeService extends GetxService {
         bytes = null;
       }
 
+      if (_resolved.length >= 256) {
+        final List<String> toEvict = _resolved.keys.take(64).toList();
+        for (final k in toEvict) {
+          _resolved.remove(k);
+          _pending.remove(k);
+        }
+      }
+
       _resolved[key] = bytes;
       return bytes;
     });

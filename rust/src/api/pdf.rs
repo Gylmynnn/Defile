@@ -2,6 +2,21 @@ use lopdf::Document;
 use std::process::Command;
 
 pub fn get_pdf_page_count(path: String) -> Result<i32, String> {
+    // Prefer pdfinfo when available: only inspects the PDF trailer/xref dictionary
+    // using negligible memory (<2MB) rather than loading the whole document into the Rust heap.
+    if let Ok(output) = Command::new("pdfinfo").arg(&path).output() {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines() {
+                if let Some(count_str) = line.strip_prefix("Pages:") {
+                    if let Ok(count) = count_str.trim().parse::<i32>() {
+                        return Ok(count);
+                    }
+                }
+            }
+        }
+    }
+
     let document = Document::load(&path).map_err(|e| format!("Failed to load PDF: {}", e))?;
     Ok(document.get_pages().len() as i32)
 }

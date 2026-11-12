@@ -43,11 +43,10 @@ class _PortalBackendWindowListener extends WindowListener {
 Future<void> main(List<String> args) async {
   ProcessSignal.sigterm.watch().listen((_) => exit(0));
   WidgetsFlutterBinding.ensureInitialized();
-  // Browsing photo-heavy folders decodes many 768px-class thumbnails; the
-  // default Flutter image cache budgets 100 MiB of decoded bitmaps, which
-  // lands directly in the RSS of the long-lived portal backend. 48 MiB
-  // still holds well over a hundred grid thumbnails.
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 48 << 20;
+  // Browsing photo-heavy folders decodes thumbnails; budget 32 MiB of decoded
+  // bitmaps and cap image cache count so memory is recycled quickly.
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 32 << 20;
+  PaintingBinding.instance.imageCache.maximumSize = 120;
   final bool portalBackend = args.contains('--dbus-portal');
   final PortalFileChooserService fileChooser = PortalFileChooserService();
   final FileManager1Service fileManager = FileManager1Service();

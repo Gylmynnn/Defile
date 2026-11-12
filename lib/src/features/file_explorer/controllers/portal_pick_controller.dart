@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/painting.dart';
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
@@ -137,6 +138,8 @@ class PortalPickController extends GetxController {
     if (queue.isEmpty && _revealedByPortal) {
       _revealedByPortal = false;
       _windowWanted = false;
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
       windowManager.hide();
     }
     if (queue.isEmpty && idleExitAfter != null) {

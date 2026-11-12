@@ -165,6 +165,7 @@ class _PdfPreviewState extends State<_PdfPreview> {
     if (old.file.path != widget.file.path ||
         old.resolvedPath != widget.resolvedPath) {
       _currentPage = 0;
+      _pageImage = null;
       _load();
     }
   }
@@ -198,7 +199,7 @@ class _PdfPreviewState extends State<_PdfPreview> {
       final imageBytes = await pdf.renderPdfPage(
         path: _path,
         pageIndex: pageIndex,
-        width: 1200, // ponytail: increase width for better quality/fill
+        width: 800, // Balanced quality and lightweight memory footprint
       );
 
       if (!mounted) return;

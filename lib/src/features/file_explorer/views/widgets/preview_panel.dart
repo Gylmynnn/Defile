@@ -54,6 +54,9 @@ class _PreviewPanelState extends State<PreviewPanel> {
       final bool paneMode = widget.enabledOverride != null;
       final bool enabled =
           widget.enabledOverride?.value ?? themeService.previewEnabled.value;
+      if (!enabled) {
+        releasePooledMediaPreview();
+      }
       final double minMainWidth = controller.isSearching.value
           ? _minMainWidthSearching
           : _minMainWidth;
@@ -74,7 +77,7 @@ class _PreviewPanelState extends State<PreviewPanel> {
       final void Function(double) onResize = paneMode
           ? (value) => controller.panePreviewWidth.value = value
           : (value) => themeService.previewWidth.value = value;
-      final rust.FileEntry? file = controller.previewFile.value;
+      final rust.FileEntry? file = enabled ? controller.previewFile.value : null;
       // Keep the handle reserved even when nothing is selected so the grid
       // does not shift on the first selection.
       final double panelWidth = width + _resizeHandleWidth;
@@ -189,7 +192,10 @@ class _PreviewBottomPanelState extends State<PreviewBottomPanel> {
       final bool paneMode = widget.enabledOverride != null;
       final bool enabled =
           widget.enabledOverride?.value ?? themeService.previewEnabled.value;
-      final rust.FileEntry? file = controller.previewFile.value;
+      if (!enabled) {
+        releasePooledMediaPreview();
+      }
+      final rust.FileEntry? file = enabled ? controller.previewFile.value : null;
 
       final double configuredHeight = paneMode
           ? controller.panePreviewHeight.value
