@@ -64,17 +64,24 @@ cp -a "$BUNDLE/." "$APPDIR/usr/bin/"
 LIBS_DIR="$APPDIR/usr/bin/lib"
 
 # Ask the plugin itself where its libmpv comes from (works with multiarch and
-# custom prefixes); fall back to the dynamic linker cache.
+# custom prefixes); fall back to the dynamic linker cache. The soname depends on
+# the build distribution (libmpv.so.2 on newer ones, libmpv.so.1 on Ubuntu
+# 22.04), so match any of them instead of hard-coding a version.
 if [ -z "${MPV_LIB:-}" ]; then
   MPV_LIB="$(ldd "$LIBS_DIR/libmedia_kit_video_plugin.so" 2>/dev/null |
-    awk '$1 == "libmpv.so.2" { print $3 }')"
+    awk '$1 ~ /^libmpv\.so\./ && !found { print $3; found = 1 }')"
 fi
-MPV_LIB="${MPV_LIB:-$(ldconfig -p 2>/dev/null | awk '$1 == "libmpv.so.2" && !found { print $NF; found = 1 }')}"
+MPV_LIB="${MPV_LIB:-$(ldconfig -p 2>/dev/null | awk '$1 ~ /^libmpv\.so\./ && !found { print $NF; found = 1 }')}"
 if [ -z "$MPV_LIB" ] || [ ! -e "$MPV_LIB" ]; then
-  echo "libmpv.so.2 not found." >&2
+  echo "libmpv not found." >&2
   echo "Install mpv with its development files (e.g. libmpv-dev) and retry." >&2
   exit 1
 fi
+
+# Ship it under the name the plugin actually asks the loader for.
+MPV_SONAME="$(readelf -d "$MPV_LIB" 2>/dev/null |
+  awk -F'[][]' '/SONAME/ && !found { print $2; found = 1 }')"
+MPV_SONAME="${MPV_SONAME:-$(basename "$(readlink -f "$MPV_LIB")")}"
 
 MPV_LDD="$(ldd "$MPV_LIB")"
 if grep -q "not found" <<<"$MPV_LDD"; then
@@ -101,32 +108,36 @@ done
 
 # GL/EGL/DRM are tied to the host's GPU drivers; bundling them breaks more
 # than it fixes. glibc and the C++ runtime are part of the base system too.
+# X extension libraries (Xpresent, Xss, Xv, X11-xcb, ...) are not part of the
+# base X11 set: libmpv needs them and minimal systems do not ship them, so
+# they are bundled unless the Flutter bundle already pulls them from the host.
+is_host_provided() {
+  case "$1" in
+    ld-linux* | libc.so.* | libm.so.* | libmvec* | libdl.so.* | libpthread*)
+      return 0 ;;
+    librt.so.* | libresolv* | libutil* | libnsl* | libanl* | libgcc_s* | libstdc++*)
+      return 0 ;;
+    libGL.so.* | libEGL.so.* | libGLX* | libGLdispatch* | libOpenGL* | libdrm.so.*)
+      return 0 ;;
+    libgbm* | libglapi*)
+      return 0 ;;
+    libsystemd* | libudev* | libdbus-1* | libselinux*)
+      return 0 ;;
+  esac
+
+  return 1
+}
+
 should_bundle() {
   local name="$1"
 
   [ -n "${HOST_LIBS[$name]:-}" ] && return 1
-
-  case "$name" in
-    ld-linux* | libc.so.* | libm.so.* | libmvec* | libdl.so.* | libpthread*)
-      return 1 ;;
-    librt.so.* | libresolv* | libutil* | libnsl* | libanl* | libgcc_s* | libstdc++*)
-      return 1 ;;
-    libGL.so.* | libEGL.so.* | libGLX* | libGLdispatch* | libOpenGL* | libdrm.so.*)
-      return 1 ;;
-    libgbm* | libglapi*)
-      return 1 ;;
-    libsystemd* | libudev* | libdbus-1* | libselinux*)
-      return 1 ;;
-    libX11-xcb* | libXpresent* | libXss* | libXv.so.*)
-      return 1 ;;
-    libcom_err* | libgmp* | libfontconfig* | libfreetype* | libharfbuzz* | libfribidi*)
-      return 1 ;;
-  esac
+  is_host_provided "$name" && return 1
 
   return 0
 }
 
-cp -L "$MPV_LIB" "$LIBS_DIR/libmpv.so.2"
+cp -L "$MPV_LIB" "$LIBS_DIR/$MPV_SONAME"
 while read -r name path; do
   should_bundle "$name" || continue
   if [ ! -e "$path" ]; then
@@ -162,6 +173,47 @@ Categories=Utility;FileManager;
 Terminal=false
 EOF
 cp "$APPDIR/$APP_NAME.desktop" "$APPDIR/usr/share/applications/$APP_NAME.desktop"
+
+# Fail early on libraries the AppImage still expects from the host but does not
+# ship. The catalog test runs on a minimal system, so a single unresolved entry
+# makes the whole AppImage unusable there.
+echo "==> checking dependencies"
+missing=0
+while read -r elf; do
+  while read -r name _; do
+    # Host-provided libraries (GPU drivers, glibc, system integration) are
+    # intentionally not shipped; anything else must resolve inside the AppImage.
+    is_host_provided "$name" && continue
+    echo "Unresolved dependency in ${elf#"$APPDIR"/}: $name" >&2
+    missing=1
+  done < <(LD_LIBRARY_PATH="$LIBS_DIR" ldd "$elf" 2>/dev/null | grep "not found" || true)
+done < <(find "$APPDIR/usr/bin" -maxdepth 2 -type f \
+  \( -name "$APP_NAME" -o -name '*.so' -o -name '*.so.*' \))
+if [ "$missing" -ne 0 ]; then
+  echo "The AppImage is not self-contained; bundle the libraries above." >&2
+  exit 1
+fi
+
+if command -v objdump >/dev/null 2>&1; then
+  glibc="$(
+    find "$APPDIR/usr/bin" -maxdepth 2 -type f \
+      \( -name "$APP_NAME" -o -name '*.so' -o -name '*.so.*' \) -print0 |
+      xargs -0 -r objdump -T 2>/dev/null |
+      grep -o 'GLIBC_[0-9.]*' | sed 's/^GLIBC_//' | sort -Vu | tail -n 1
+  )"
+  echo "==> highest glibc symbol version: ${glibc:-unknown}"
+
+  # Release builds must stay compatible with the oldest system we support (and
+  # with the AppImage catalog test environment, Ubuntu 22.04 / glibc 2.35).
+  if [ -n "${MAX_GLIBC:-}" ]; then
+    if [ -z "$glibc" ] ||
+      [ "$(printf '%s\n%s\n' "$glibc" "$MAX_GLIBC" | sort -Vu | tail -n 1)" != "$MAX_GLIBC" ]; then
+      echo "glibc baseline $glibc exceeds MAX_GLIBC=$MAX_GLIBC." >&2
+      echo "Build on an older distribution instead of bundling newer libraries." >&2
+      exit 1
+    fi
+  fi
+fi
 
 if [ ! -x "$TOOL" ]; then
   echo "==> fetching appimagetool"
