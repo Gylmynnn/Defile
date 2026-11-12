@@ -14,6 +14,7 @@ import '../../services/theme_service.dart';
 import '../../utils/file_types.dart';
 import '../../utils/formatters.dart';
 import 'entry_glyphs.dart';
+import 'entry_transition.dart';
 import 'hover_region.dart';
 import 'image_thumbnail.dart';
 import 'themed_icon.dart';
@@ -109,22 +110,25 @@ class EntryGridView extends StatelessWidget {
       itemBuilder: (context, index) {
         final entry = entries[index];
 
-        return _EntryDragWrapper(
-          entry: entry,
-          dragEntries: dragEntries,
-          canDrop: canDrop,
-          onDrop: onDrop,
-          child: _GridTile(
+        return EntryReveal(
+          index: index,
+          child: _EntryDragWrapper(
             entry: entry,
-            selectedPaths: selectedPaths,
-            onPress: () => onPress(entry),
-            onTap: () => onTap(entry),
-            onOpen: () => onOpen(entry),
-            onMenu: (position) => onMenu(entry, position),
-            onMiddleClick: onMiddleClick == null
-                ? null
-                : () => onMiddleClick!(entry),
-            paneOwner: paneOwner,
+            dragEntries: dragEntries,
+            canDrop: canDrop,
+            onDrop: onDrop,
+            child: _GridTile(
+              entry: entry,
+              selectedPaths: selectedPaths,
+              onPress: () => onPress(entry),
+              onTap: () => onTap(entry),
+              onOpen: () => onOpen(entry),
+              onMenu: (position) => onMenu(entry, position),
+              onMiddleClick: onMiddleClick == null
+                  ? null
+                  : () => onMiddleClick!(entry),
+              paneOwner: paneOwner,
+            ),
           ),
         );
       },
@@ -296,22 +300,25 @@ class EntryListView extends StatelessWidget {
             itemBuilder: (context, index) {
               final entry = entries[index];
 
-              return _EntryDragWrapper(
-                entry: entry,
-                dragEntries: dragEntries,
-                canDrop: canDrop,
-                onDrop: onDrop,
-                child: _ListRow(
+              return EntryReveal(
+                index: index,
+                child: _EntryDragWrapper(
                   entry: entry,
-                  selectedPaths: selectedPaths,
-                  onPress: () => onPress(entry),
-                  onTap: () => onTap(entry),
-                  onOpen: () => onOpen(entry),
-                  onMenu: (position) => onMenu(entry, position),
-                  onMiddleClick: onMiddleClick == null
-                      ? null
-                      : () => onMiddleClick!(entry),
-                  paneOwner: paneOwner,
+                  dragEntries: dragEntries,
+                  canDrop: canDrop,
+                  onDrop: onDrop,
+                  child: _ListRow(
+                    entry: entry,
+                    selectedPaths: selectedPaths,
+                    onPress: () => onPress(entry),
+                    onTap: () => onTap(entry),
+                    onOpen: () => onOpen(entry),
+                    onMenu: (position) => onMenu(entry, position),
+                    onMiddleClick: onMiddleClick == null
+                        ? null
+                        : () => onMiddleClick!(entry),
+                    paneOwner: paneOwner,
+                  ),
                 ),
               );
             },
@@ -502,22 +509,25 @@ class EntryCompactView extends StatelessWidget {
       itemBuilder: (context, index) {
         final entry = entries[index];
 
-        return _EntryDragWrapper(
-          entry: entry,
-          dragEntries: dragEntries,
-          canDrop: canDrop,
-          onDrop: onDrop,
-          child: _CompactRow(
+        return EntryReveal(
+          index: index,
+          child: _EntryDragWrapper(
             entry: entry,
-            selectedPaths: selectedPaths,
-            onPress: () => onPress(entry),
-            onTap: () => onTap(entry),
-            onOpen: () => onOpen(entry),
-            onMenu: (position) => onMenu(entry, position),
-            onMiddleClick: onMiddleClick == null
-                ? null
-                : () => onMiddleClick!(entry),
-            paneOwner: paneOwner,
+            dragEntries: dragEntries,
+            canDrop: canDrop,
+            onDrop: onDrop,
+            child: _CompactRow(
+              entry: entry,
+              selectedPaths: selectedPaths,
+              onPress: () => onPress(entry),
+              onTap: () => onTap(entry),
+              onOpen: () => onOpen(entry),
+              onMenu: (position) => onMenu(entry, position),
+              onMiddleClick: onMiddleClick == null
+                  ? null
+                  : () => onMiddleClick!(entry),
+              paneOwner: paneOwner,
+            ),
           ),
         );
       },

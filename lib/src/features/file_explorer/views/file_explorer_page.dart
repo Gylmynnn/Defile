@@ -19,6 +19,7 @@ import 'widgets/app_dialog.dart';
 import 'widgets/app_sidebar.dart';
 import 'widgets/context_menu.dart';
 import 'widgets/directory_picker_dialog.dart';
+import 'widgets/entry_transition.dart';
 import 'widgets/entry_views.dart';
 import 'widgets/explorer_scope.dart';
 import 'widgets/explorer_status_bar.dart';
@@ -1135,6 +1136,15 @@ class _EntryContentState extends State<_EntryContentArea> {
   }
 
   Widget _buildContent(BuildContext context) {
+    return EntryTransitionScope(
+      // Only a different folder restarts the reveal; refreshing, filtering or
+      // selecting inside the same listing must not replay it.
+      transitionKey: controller.currentPath.value,
+      child: _buildContentBody(context),
+    );
+  }
+
+  Widget _buildContentBody(BuildContext context) {
     final String? error = controller.errorMessage.value;
     if (error != null) {
       return _buildError(error);
