@@ -5,6 +5,68 @@ extension ExplorerSelection on FileExplorerController {
 
   void toggleSidebar() => showSidebar.toggle();
 
+  /// Applies a new sort key and remembers it for the next launch.
+  void setSortField(ExplorerSortField field) {
+    if (sortField.value == field) return;
+
+    sortField.value = field;
+    unawaited(_persistViewSetting('sort-field', field.name));
+  }
+
+  /// Flips ascending/descending for the active sort key.
+  void toggleSortDirection() {
+    sortAscending.value = !sortAscending.value;
+    unawaited(_persistViewSetting('sort-ascending', '${sortAscending.value}'));
+  }
+
+  void setSortAscending(bool value) {
+    if (sortAscending.value == value) return;
+
+    sortAscending.value = value;
+    unawaited(_persistViewSetting('sort-ascending', '$value'));
+  }
+
+  /// Shows or hides dot-files (also bound to `Ctrl+H`).
+  void toggleHiddenFiles() {
+    showHidden.value = !showHidden.value;
+    unawaited(_persistViewSetting('show-hidden', '${showHidden.value}'));
+  }
+
+  Future<void> _persistViewSetting(String key, String value) async {
+    try {
+      await rust_system.setViewSetting(key: key, value: value);
+    } catch (_) {}
+  }
+
+  /// Restores sort/hidden preferences from disk. Called once per tab that owns
+  /// its own system state; sibling tabs inherit the values via
+  /// [seedSystemState].
+  Future<void> _loadViewSettings() async {
+    try {
+      final String field = await rust_system.getViewSetting(key: 'sort-field');
+      for (final ExplorerSortField candidate in ExplorerSortField.values) {
+        if (candidate.name == field) {
+          sortField.value = candidate;
+          break;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      final String ascending = await rust_system.getViewSetting(
+        key: 'sort-ascending',
+      );
+      if (ascending.isNotEmpty) sortAscending.value = ascending == 'true';
+    } catch (_) {}
+
+    try {
+      final String hidden = await rust_system.getViewSetting(
+        key: 'show-hidden',
+      );
+      if (hidden.isNotEmpty) showHidden.value = hidden == 'true';
+    } catch (_) {}
+  }
+
   void startSearch() => isSearching.value = true;
 
   void stopSearch() {

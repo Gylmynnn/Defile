@@ -4,13 +4,18 @@ import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
-rust.FileEntry _entry(String name) => rust.FileEntry(
+rust.FileEntry _entry(
+  String name, {
+  BigInt? size,
+  bool directory = false,
+  int modified = 0,
+}) => rust.FileEntry(
   name: name,
   path: '/$name',
-  isDirectory: false,
-  isFile: true,
-  sizeBytes: BigInt.zero,
-  modifiedSeconds: 0,
+  isDirectory: directory,
+  isFile: !directory,
+  sizeBytes: size ?? BigInt.zero,
+  modifiedSeconds: modified,
 );
 
 class _FakeFs extends FileSystemService {
@@ -58,6 +63,44 @@ void main() {
 
     controller.selection.clear();
     expect(controller.selectionSnapshot, isEmpty);
+  });
+
+  testWidgets('visibleEntries sorts by field and hides dotfiles', (
+    tester,
+  ) async {
+    final controller = Get.put(
+      FileExplorerController(
+        _FakeFs([
+          _entry('beta.txt', size: BigInt.from(10)),
+          _entry('alpha.txt', size: BigInt.from(50)),
+          _entry('.hidden', size: BigInt.from(5)),
+          _entry('folder', directory: true),
+        ]),
+      ),
+    );
+
+    await tester.runAsync(() => controller.loadDirectory('/'));
+
+    List<String> names() =>
+        controller.visibleEntries.map((entry) => entry.name).toList();
+
+    // Default: folder first, then name ascending, dotfiles visible.
+    expect(names(), ['folder', '.hidden', 'alpha.txt', 'beta.txt']);
+
+    controller.setSortField(ExplorerSortField.size);
+    expect(names(), ['folder', '.hidden', 'beta.txt', 'alpha.txt']);
+
+    controller.toggleHiddenFiles();
+    expect(controller.showHidden.value, isFalse);
+    expect(names(), ['folder', 'beta.txt', 'alpha.txt']);
+
+    controller.setSortField(ExplorerSortField.name);
+    controller.setSortAscending(false);
+    expect(names(), ['folder', 'beta.txt', 'alpha.txt']);
+
+    // Cached list is replaced once the sort key changes again.
+    controller.setSortField(ExplorerSortField.modified);
+    expect(names().first, 'folder');
   });
 
   test('canDropEntries rejects self, same parent, and nested destinations', () {

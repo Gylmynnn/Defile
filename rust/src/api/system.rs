@@ -55,6 +55,28 @@ pub fn empty_trash() -> Result<u32, std::string::String> {
     trash::empty_trash()
 }
 
+#[flutter_rust_bridge::frb]
+pub fn restore_from_trash(
+    path: std::string::String,
+) -> Result<std::string::String, std::string::String> {
+    trash::restore_from_trash(path)
+}
+
+/// Reads a per-view preference (sort field, hidden-file visibility, ...).
+#[flutter_rust_bridge::frb]
+pub fn get_view_setting(key: std::string::String) -> std::string::String {
+    crate::api::settings::read_setting(&format!("view-{key}"))
+}
+
+/// Persists a per-view preference; an empty value clears it.
+#[flutter_rust_bridge::frb]
+pub fn set_view_setting(
+    key: std::string::String,
+    value: std::string::String,
+) -> Result<(), std::string::String> {
+    crate::api::settings::write_setting(&format!("view-{key}"), &value)
+}
+
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_home_directory() -> std::string::String {
     home_dir().to_string_lossy().into_owned()

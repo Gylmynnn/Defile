@@ -698,8 +698,27 @@ class _EntryContentState extends State<_EntryContentArea> {
   final Map<String, Rect> _dragRects = <String, Rect>{};
   bool _bandUpdateScheduled = false;
 
+  /// Type-ahead buffer and its reset timer (see [_handleListKey]).
+  String _typeAhead = '';
+  Timer? _typeAheadTimer;
+
+  /// Latest content-area size, used to translate Up/Down and Page keys into a
+  /// sensible number of items for the active view mode.
+  double _viewportWidth = 0;
+  double _viewportHeight = 0;
+
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        _viewportWidth = constraints.maxWidth;
+        _viewportHeight = constraints.maxHeight;
+        return _buildShortcutHost(context);
+      },
+    );
+  }
+
+  Widget _buildShortcutHost(BuildContext context) {
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.enter): _openSelected,
@@ -713,14 +732,19 @@ class _EntryContentState extends State<_EntryContentArea> {
         const SingleActivator(LogicalKeyboardKey.keyV, control: true): _paste,
         const SingleActivator(LogicalKeyboardKey.keyA, control: true):
             _selectAll,
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): _undo,
         const SingleActivator(LogicalKeyboardKey.escape): _clearSelection,
         const SingleActivator(LogicalKeyboardKey.keyR, control: true): _refresh,
         const SingleActivator(LogicalKeyboardKey.f5): _refresh,
         const SingleActivator(LogicalKeyboardKey.f4): _openTerminal,
         const SingleActivator(LogicalKeyboardKey.keyB, control: true):
             _toggleSidebar,
+        const SingleActivator(LogicalKeyboardKey.keyH, control: true):
+            _toggleHiddenFiles,
         const SingleActivator(LogicalKeyboardKey.keyF, control: true):
             _startSearch,
+        const SingleActivator(LogicalKeyboardKey.keyL, control: true):
+            _editPath,
         const SingleActivator(LogicalKeyboardKey.slash): _toggleSearch,
         const SingleActivator(LogicalKeyboardKey.delete, shift: true):
             _deleteSelectedPermanently,
@@ -750,6 +774,7 @@ class _EntryContentState extends State<_EntryContentArea> {
       child: Focus(
         focusNode: controller.keyboardFocusNode,
         autofocus: !widget.second,
+        onKeyEvent: _handleListKey,
         child: Stack(
           children: [
             Positioned.fill(
@@ -839,6 +864,7 @@ class _EntryContentState extends State<_EntryContentArea> {
 
   @override
   void dispose() {
+    _typeAheadTimer?.cancel();
     _bandRect.dispose();
     super.dispose();
   }
@@ -987,6 +1013,202 @@ class _EntryContentState extends State<_EntryContentArea> {
     return true;
   }
 
+  /// Number of tiles per row in grid view (used by Up/Down to move a row).
+  int get _gridColumns {
+    final double usable = _viewportWidth - 36; // 18px padding on each side
+    if (usable <= 0) return 1;
+    // Mirrors SliverGridDelegateWithMaxCrossAxisExtent: ceil(width / (extent
+    // + spacing)), with 132 extent and 6 spacing.
+    final int columns = (usable / 138).ceil();
+    return columns < 1 ? 1 : columns;
+  }
+
+  /// Roughly one screenful of entries, so PageUp/PageDown land where the eye
+  /// expects regardless of the active view mode.
+  int get _pageStep {
+    switch (controller.viewMode.value) {
+      case ExplorerViewMode.grid:
+        final int rows = ((_viewportHeight - 40) / 114).floor();
+        return (_gridColumns * (rows < 1 ? 1 : rows)).clamp(1, 500);
+      case ExplorerViewMode.list:
+        return (_viewportHeight / 29).floor().clamp(1, 200);
+      case ExplorerViewMode.compact:
+        return (_viewportHeight / 22).floor().clamp(1, 200);
+    }
+  }
+
+  /// Keyboard handler for the file list: arrows, Home/End, PageUp/PageDown,
+  /// `Shift` selection and type-ahead. Combo shortcuts (Ctrl+C, Enter, ...)
+  /// fall through to the surrounding [CallbackShortcuts].
+  KeyEventResult _handleListKey(FocusNode node, KeyEvent event) {
+    if (_keyboardBlocked) return KeyEventResult.ignored;
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final HardwareKeyboard keyboard = HardwareKeyboard.instance;
+    final bool shift = keyboard.isShiftPressed;
+    final bool control = keyboard.isControlPressed || keyboard.isMetaPressed;
+
+    // Alt+ArrowUp (go to parent) and friends belong to shorter layers.
+    if (keyboard.isAltPressed) return KeyEventResult.ignored;
+
+    final LogicalKeyboardKey key = event.logicalKey;
+
+    if (control) {
+      if (key == LogicalKeyboardKey.space) {
+        final List<rust.FileEntry> selection = controller.selection;
+        if (selection.isNotEmpty) controller.toggleSelection(selection.last);
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
+    final bool grid = controller.viewMode.value == ExplorerViewMode.grid;
+    final int rowStep = grid ? _gridColumns : 1;
+
+    if (key == LogicalKeyboardKey.arrowUp) {
+      _moveSelection(-rowStep, extend: shift);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowDown) {
+      _moveSelection(rowStep, extend: shift);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      _moveSelection(-1, extend: shift);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      _moveSelection(1, extend: shift);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.home) {
+      _selectIndex(0, extend: shift);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.end) {
+      _selectIndex(controller.visibleEntries.length - 1, extend: shift);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.pageUp) {
+      _moveSelection(-_pageStep, extend: shift);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.pageDown) {
+      _moveSelection(_pageStep, extend: shift);
+      return KeyEventResult.handled;
+    }
+
+    // `/` toggles search; leave it to the outer shortcut map.
+    if (key == LogicalKeyboardKey.slash) return KeyEventResult.ignored;
+
+    final String? character = event.character;
+    if (character != null && character.length == 1) {
+      final int code = character.codeUnitAt(0);
+      if (code >= 0x20 && code != 0x7f) {
+        _typeAhead += character;
+        _typeAheadTimer?.cancel();
+        _typeAheadTimer = Timer(const Duration(milliseconds: 800), () {
+          _typeAhead = '';
+        });
+        _jumpToTypeAhead();
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  void _moveSelection(int delta, {required bool extend}) {
+    final List<rust.FileEntry> list = controller.visibleEntries;
+    if (list.isEmpty) return;
+
+    final int current = _selectionIndex(list);
+    final int next;
+    if (current == -1) {
+      next = delta >= 0 ? 0 : list.length - 1;
+    } else {
+      next = (current + delta).clamp(0, list.length - 1);
+    }
+
+    _applySelection(list[next], extend: extend);
+  }
+
+  void _selectIndex(int index, {required bool extend}) {
+    final List<rust.FileEntry> list = controller.visibleEntries;
+    if (list.isEmpty) return;
+
+    _applySelection(list[index.clamp(0, list.length - 1)], extend: extend);
+  }
+
+  /// Index the keyboard cursor should move from. For a shift-range the anchor
+  /// is fixed, so the moving end is whichever selection endpoint is farther
+  /// from it (otherwise repeated `Shift+ArrowUp` would stay pinned to the
+  /// anchor).
+  int _selectionIndex(List<rust.FileEntry> list) {
+    final List<rust.FileEntry> selection = controller.selection;
+    if (selection.isEmpty) return -1;
+
+    final int lastIndex = list.indexWhere(
+      (entry) => entry.path == selection.last.path,
+    );
+
+    final String? anchor = controller.selectionAnchor.value;
+    final int anchorIndex = anchor == null
+        ? -1
+        : list.indexWhere((entry) => entry.path == anchor);
+    if (anchorIndex == -1) return lastIndex;
+
+    final int firstIndex = list.indexWhere(
+      (entry) => entry.path == selection.first.path,
+    );
+    if (firstIndex == -1) return lastIndex;
+
+    return (firstIndex - anchorIndex).abs() >= (lastIndex - anchorIndex).abs()
+        ? firstIndex
+        : lastIndex;
+  }
+
+  void _applySelection(rust.FileEntry entry, {required bool extend}) {
+    if (extend && controller.selection.isNotEmpty) {
+      controller.selectRangeTo(entry);
+    } else {
+      controller.selectOnly(entry);
+    }
+
+    _revealEntry(entry);
+  }
+
+  void _jumpToTypeAhead() {
+    final List<rust.FileEntry> list = controller.visibleEntries;
+    if (list.isEmpty || _typeAhead.isEmpty) return;
+
+    final String needle = _typeAhead.toLowerCase();
+    final int index = list.indexWhere(
+      (entry) => entry.name.toLowerCase().startsWith(needle),
+    );
+    if (index == -1) return;
+
+    final rust.FileEntry entry = list[index];
+    controller.selectOnly(entry);
+    _revealEntry(entry);
+  }
+
+  void _revealEntry(rust.FileEntry entry) {
+    final BuildContext? tile = entryTileKey(
+      entry.path,
+      owner: controller,
+    ).currentContext;
+    if (tile == null) return;
+
+    Scrollable.ensureVisible(
+      tile,
+      duration: const Duration(milliseconds: 120),
+      alignment: 0.5,
+    );
+  }
+
   Future<void> _openSelected() async {
     if (_keyboardBlocked) return;
 
@@ -1069,6 +1291,11 @@ class _EntryContentState extends State<_EntryContentArea> {
     controller.selectAll();
   }
 
+  void _undo() {
+    if (_keyboardBlocked) return;
+    controller.undoLast();
+  }
+
   void _clearSelection() {
     if (_keyboardBlocked) return;
     _pendingOpenPath = null;
@@ -1094,9 +1321,19 @@ class _EntryContentState extends State<_EntryContentArea> {
     controller.toggleSidebar();
   }
 
+  void _toggleHiddenFiles() {
+    if (_keyboardBlocked) return;
+    controller.toggleHiddenFiles();
+  }
+
   void _startSearch() {
     controller.startSearch();
     controller.searchFocusNode.requestFocus();
+  }
+
+  void _editPath() {
+    if (controller.isSearching.value) controller.stopSearch();
+    controller.startPathEdit();
   }
 
   /// `/` toggles search: opens and focuses the field when search is off; if

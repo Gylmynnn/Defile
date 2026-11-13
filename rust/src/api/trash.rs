@@ -77,6 +77,120 @@ pub(crate) fn move_to_trash(
     Err("Move to Trash is not supported on this platform yet".to_string())
 }
 
+/// Restores a Trash item to the folder it was deleted from.
+///
+/// The original location is read from the freedesktop `.trashinfo` sidecar. If
+/// that folder is gone it is recreated, and if the original name is taken the
+/// item lands next to it under a de-duplicated name. Returns the restored path.
+pub(crate) fn restore_from_trash(
+    path: std::string::String,
+) -> Result<std::string::String, std::string::String> {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = path;
+        return Err("Restoring from Trash is not supported on macOS yet".to_string());
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        let source = PathBuf::from(&path);
+        let root = trash_root().ok_or("Trash is not available on this platform")?;
+
+        if !source.starts_with(&root) {
+            return Err("Item is not part of Trash".to_string());
+        }
+
+        if source == root {
+            return Err("Select a specific item to restore".to_string());
+        }
+
+        fs::symlink_metadata(&source)
+            .map_err(|error| format!("Item not found or not accessible: {error}"))?;
+
+        let name = source
+            .file_name()
+            .map(Path::new)
+            .ok_or("Invalid item name")?
+            .to_path_buf();
+
+        let info_path = root
+            .join("info")
+            .join(format!("{}.trashinfo", name.to_string_lossy()));
+
+        let original = parse_original_path(&info_path)
+            .ok_or("Could not determine the original location of this item")?;
+
+        let target_dir = original
+            .parent()
+            .filter(|dir| !dir.as_os_str().is_empty())
+            .map(Path::to_path_buf)
+            .unwrap_or_else(home_dir);
+
+        fs::create_dir_all(&target_dir)
+            .map_err(|error| format!("Failed to recreate the original folder: {error}"))?;
+
+        let target_name = original
+            .file_name()
+            .map(Path::new)
+            .map(Path::to_path_buf)
+            .unwrap_or(name);
+
+        let destination = unique_destination(&target_dir, &target_name);
+
+        fs::rename(&source, &destination)
+            .map_err(|error| format!("Failed to restore: {error}"))?;
+
+        let _ = fs::remove_file(&info_path);
+
+        return Ok(destination.to_string_lossy().into_owned());
+    }
+
+    #[allow(unreachable_code)]
+    Err("Restoring from Trash is not supported on this platform yet".to_string())
+}
+
+/// Reads the original absolute path from a `.trashinfo` sidecar, undoing the
+/// percent-encoding some implementations apply.
+fn parse_original_path(info_path: &Path) -> Option<PathBuf> {
+    let contents = fs::read_to_string(info_path).ok()?;
+
+    for line in contents.lines() {
+        if let Some(value) = line.trim().strip_prefix("Path=") {
+            if value.is_empty() {
+                return None;
+            }
+
+            return Some(PathBuf::from(percent_decode(value)));
+        }
+    }
+
+    None
+}
+
+fn percent_decode(value: &str) -> std::string::String {
+    let bytes = value.as_bytes();
+    let mut decoded: Vec<u8> = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+
+    while index < bytes.len() {
+        if bytes[index] == b'%' && index + 2 < bytes.len() {
+            let high = (bytes[index + 1] as char).to_digit(16);
+            let low = (bytes[index + 2] as char).to_digit(16);
+
+            if let (Some(high), Some(low)) = (high, low) {
+                decoded.push((high * 16 + low) as u8);
+                index += 3;
+                continue;
+            }
+        }
+
+        decoded.push(bytes[index]);
+        index += 1;
+    }
+
+    String::from_utf8_lossy(&decoded).into_owned()
+}
+
 pub(crate) fn delete_from_trash(path: std::string::String) -> Result<(), std::string::String> {
     let source = PathBuf::from(&path);
     let root = trash_root().ok_or("Trash is not available on this platform")?;
@@ -361,5 +475,77 @@ mod tests {
 
         std::env::set_var("XDG_DATA_HOME", "");
         let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    #[cfg(all(unix, not(target_os = "macos")))]
+    fn restore_from_trash_returns_item_to_original_folder() {
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        let base = std::env::temp_dir().join(format!("defile_trash_restore_{}", std::process::id()));
+        let data_home = base.join("data");
+        let work = base.join("work");
+        fs::create_dir_all(&data_home).unwrap();
+        fs::create_dir_all(&work).unwrap();
+
+        std::env::set_var("XDG_DATA_HOME", &data_home);
+
+        let source = work.join("restore-me.txt");
+        fs::write(&source, "hi").unwrap();
+
+        let destination = move_to_trash(source.to_string_lossy().into_owned()).unwrap();
+
+        let restored = restore_from_trash(destination.clone()).unwrap();
+        assert_eq!(restored, source.to_string_lossy());
+        assert!(source.exists());
+        assert!(!Path::new(&destination).exists());
+        assert!(!data_home
+            .join("Trash/info/restore-me.txt.trashinfo")
+            .exists());
+
+        // Non-Trash paths are rejected.
+        assert!(restore_from_trash(restored).is_err());
+
+        std::env::set_var("XDG_DATA_HOME", "");
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    #[cfg(all(unix, not(target_os = "macos")))]
+    fn restore_from_trash_avoids_clobbering_an_occupied_name() {
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        let base = std::env::temp_dir().join(format!("defile_trash_restore2_{}", std::process::id()));
+        let data_home = base.join("data");
+        let work = base.join("work");
+        fs::create_dir_all(&data_home).unwrap();
+        fs::create_dir_all(&work).unwrap();
+
+        std::env::set_var("XDG_DATA_HOME", &data_home);
+
+        let source = work.join("taken.txt");
+        fs::write(&source, "original").unwrap();
+
+        let destination = move_to_trash(source.to_string_lossy().into_owned()).unwrap();
+
+        // A new file now occupies the original name.
+        fs::write(&source, "replacement").unwrap();
+
+        let restored = restore_from_trash(destination).unwrap();
+        assert_eq!(Path::new(&restored).file_name().unwrap(), "taken.1.txt");
+        assert_eq!(fs::read_to_string(&source).unwrap(), "replacement");
+        assert_eq!(fs::read_to_string(&restored).unwrap(), "original");
+
+        std::env::set_var("XDG_DATA_HOME", "");
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn percent_decode_restores_escaped_paths() {
+        assert_eq!(percent_decode("/home/a b.txt"), "/home/a b.txt");
+        assert_eq!(percent_decode("/home/a%20b.txt"), "/home/a b.txt");
+        assert_eq!(percent_decode("%2Ftmp%2Ffile"), "/tmp/file");
+        // A dangling percent sign is left untouched.
+        assert_eq!(percent_decode("/tmp/100%"), "/tmp/100%");
     }
 }

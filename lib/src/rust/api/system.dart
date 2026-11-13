@@ -18,6 +18,17 @@ Future<void> deleteFromTrash({required String path}) =>
 
 Future<int> emptyTrash() => RustLib.instance.api.crateApiSystemEmptyTrash();
 
+Future<String> restoreFromTrash({required String path}) =>
+    RustLib.instance.api.crateApiSystemRestoreFromTrash(path: path);
+
+/// Reads a per-view preference (sort field, hidden-file visibility, ...).
+Future<String> getViewSetting({required String key}) =>
+    RustLib.instance.api.crateApiSystemGetViewSetting(key: key);
+
+/// Persists a per-view preference; an empty value clears it.
+Future<void> setViewSetting({required String key, required String value}) =>
+    RustLib.instance.api.crateApiSystemSetViewSetting(key: key, value: value);
+
 String getHomeDirectory() =>
     RustLib.instance.api.crateApiSystemGetHomeDirectory();
 

@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
@@ -11,6 +12,7 @@ import 'context_menu.dart';
 import 'explorer_scope.dart';
 import 'hover_region.dart';
 import 'settings_dialog.dart';
+import 'sort_menu.dart';
 
 class ExplorerToolbar extends StatefulWidget {
   const ExplorerToolbar({super.key, this.compact = false});
@@ -104,6 +106,16 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
             () => _ViewModeSwitch(
               mode: controller.viewMode.value,
               onChanged: controller.setViewMode,
+            ),
+          ),
+          const SizedBox(width: 6),
+          _ToolbarIconButton(
+            icon: Icons.sort,
+            tooltip: 'Sort and view options',
+            onTapAt: (position) => showAppContextMenu(
+              context: context,
+              position: position,
+              entries: buildSortMenuEntries(controller),
             ),
           ),
           const SizedBox(width: 6),
@@ -204,6 +216,10 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
 
       final List<String> breadcrumbs = controller.breadcrumbs;
 
+      if (controller.isEditingPath.value) {
+        return _PathEditor(controller: controller);
+      }
+
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -273,6 +289,99 @@ class _Breadcrumb extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _PathEditor extends StatefulWidget {
+  const _PathEditor({required this.controller});
+
+  final FileExplorerController controller;
+
+  @override
+  State<_PathEditor> createState() => _PathEditorState();
+}
+
+/// Type-a-path field shown in place of the breadcrumbs while `Ctrl+L` is
+/// active. Enter navigates, `Esc` returns to the breadcrumb view.
+class _PathEditorState extends State<_PathEditor> {
+  late final TextEditingController _text = TextEditingController(
+    text: widget.controller.currentPath.value,
+  );
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.onKeyEvent = (node, event) {
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.escape) {
+        widget.controller.cancelPathEdit();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    };
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _focusNode.requestFocus();
+      _text.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _text.text.length,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 26,
+      padding: const EdgeInsets.only(left: 8, right: 4),
+      decoration: BoxDecoration(
+        color: context.colors.window,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: context.colors.selectionBorder),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.subdirectory_arrow_right,
+            size: 14,
+            color: context.colors.textFaint,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextField(
+              controller: _text,
+              focusNode: _focusNode,
+              autofocus: true,
+              onSubmitted: widget.controller.submitPathEdit,
+              cursorHeight: 13,
+              style: TextStyle(fontSize: 12, color: context.colors.textPrimary),
+              decoration: InputDecoration(
+                isDense: true,
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: 'Type a path and press Enter',
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: context.colors.textFaint,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -424,8 +533,9 @@ class _ToolbarIconButton extends StatelessWidget {
   const _ToolbarIconButton({
     required this.icon,
     required this.tooltip,
-    required this.onTap,
+    this.onTap,
     this.onSecondaryTap,
+    this.onTapAt,
     this.active = false,
   });
 
@@ -433,11 +543,14 @@ class _ToolbarIconButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback? onTap;
   final ValueChanged<Offset>? onSecondaryTap;
+
+  /// Opens a menu anchored to the button. Takes precedence over [onTap].
+  final ValueChanged<Offset>? onTapAt;
   final bool active;
 
   @override
   Widget build(BuildContext context) {
-    final bool enabled = onTap != null;
+    final bool enabled = onTap != null || onTapAt != null;
 
     return Tooltip(
       message: tooltip,
@@ -452,6 +565,13 @@ class _ToolbarIconButton extends StatelessWidget {
 
           return GestureDetector(
             onTap: onTap,
+            onTapDown: onTapAt != null
+                ? (details) {
+                    final RenderBox box =
+                        context.findRenderObject()! as RenderBox;
+                    onTapAt!(box.localToGlobal(box.size.bottomLeft(Offset.zero)));
+                  }
+                : null,
             onSecondaryTapDown: onSecondaryTap != null
                 ? (details) => onSecondaryTap!(details.globalPosition)
                 : null,

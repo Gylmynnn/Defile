@@ -1,10 +1,11 @@
-import 'dart:async' show Timer;
+import 'dart:async' show Timer, unawaited;
 import 'dart:io' as io;
 
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 
 import '../utils/app_toast.dart';
 import '../utils/overwrite_prompt.dart';
+import '../utils/transfer_progress.dart';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;
@@ -23,6 +24,10 @@ part 'explorer_selection.dart';
 enum ExplorerViewMode { grid, list, compact }
 
 enum ExplorerLocation { directory, recent, trash }
+
+/// Sort key applied to the visible entry list. Folders always stay grouped
+/// ahead of files; the field only orders items inside each group.
+enum ExplorerSortField { name, size, modified, type }
 
 class FileExplorerController extends GetxController {
   FileExplorerController(
@@ -55,6 +60,9 @@ class FileExplorerController extends GetxController {
   List<rust.FileEntry>? _visibleCache;
   int _visibleCacheRevision = -1;
   String? _visibleCacheQuery;
+  bool? _visibleCacheHidden;
+  ExplorerSortField? _visibleCacheSort;
+  bool? _visibleCacheAscending;
 
   List<String>? _breadcrumbsCache;
   String? _breadcrumbsKey;
@@ -68,6 +76,15 @@ class FileExplorerController extends GetxController {
   final RxBool isSearching = false.obs;
   final RxString searchQuery = ''.obs;
 
+  /// True while the location bar is in type-a-path mode (`Ctrl+L`).
+  final RxBool isEditingPath = false.obs;
+
+  /// Listing order and dot-file visibility, persisted across restarts. Defaults
+  /// mirror the long-standing behavior: name ascending, hidden items shown.
+  final Rx<ExplorerSortField> sortField = ExplorerSortField.name.obs;
+  final RxBool sortAscending = true.obs;
+  final RxBool showHidden = true.obs;
+
   final RxList<rust.FileEntry> selection = <rust.FileEntry>[].obs;
   final RxSet<String> selectedPaths = <String>{}.obs;
   final RxnString selectionAnchor = RxnString();
@@ -80,6 +97,10 @@ class FileExplorerController extends GetxController {
   final RxList<String> availableTerminals = <String>[].obs;
 
   final Rxn<rust.FileEntry> previewFile = Rxn();
+
+  /// Reversible actions (rename/move/trash) applied with `Ctrl+Z`, newest last.
+  final List<UndoEntry> _undoStack = <UndoEntry>[];
+  bool get canUndo => _undoStack.isNotEmpty;
 
   /// Whether THIS pane's own preview panel is open (split view). Independent
   /// per tab; the global preview toggle lives in the ThemeService.
@@ -172,6 +193,9 @@ class FileExplorerController extends GetxController {
     driveUsages.assignAll(source.driveUsages);
     availableTerminals.assignAll(source.availableTerminals);
     terminal.value = source.terminal.value;
+    sortField.value = source.sortField.value;
+    sortAscending.value = source.sortAscending.value;
+    showHidden.value = source.showHidden.value;
   }
 
   /// Loads system-wide data shared by every tab: places (with drive usage)
@@ -180,6 +204,7 @@ class FileExplorerController extends GetxController {
     return Future.wait([
       _loadPlaces(),
       _loadTerminalSettings(),
+      _loadViewSettings(),
     ]);
   }
 
@@ -238,21 +263,83 @@ class FileExplorerController extends GetxController {
       return _pathSearchResults ?? const <rust.FileEntry>[];
     }
 
+    final bool hidden = showHidden.value;
+    final ExplorerSortField field = sortField.value;
+    final bool ascending = sortAscending.value;
+
     if (_visibleCache != null &&
         _visibleCacheRevision == _entriesRevision &&
-        _visibleCacheQuery == query) {
+        _visibleCacheQuery == query &&
+        _visibleCacheHidden == hidden &&
+        _visibleCacheSort == field &&
+        _visibleCacheAscending == ascending) {
       return _visibleCache!;
     }
 
-    final List<rust.FileEntry> result = query.isEmpty
+    List<rust.FileEntry> result = query.isEmpty
         ? entries
         : entries
               .where((entry) => entry.name.toLowerCase().contains(query))
               .toList();
 
+    // Recents keep the order the system history provides; sorting and the
+    // dot-file filter apply to real directory listings (including Trash).
+    if (location.value != ExplorerLocation.recent) {
+      if (!hidden) {
+        result = result
+            .where((entry) => !entry.name.startsWith('.'))
+            .toList();
+      }
+      result = _sortedEntries(result, field, ascending);
+    }
+
     _visibleCache = result;
     _visibleCacheRevision = _entriesRevision;
     _visibleCacheQuery = query;
+    _visibleCacheHidden = hidden;
+    _visibleCacheSort = field;
+    _visibleCacheAscending = ascending;
+    return result;
+  }
+
+  /// Orders [source] by [field]/[ascending], keeping folders ahead of files so
+  /// the directory tree stays scannable regardless of the chosen key.
+  static List<rust.FileEntry> _sortedEntries(
+    List<rust.FileEntry> source,
+    ExplorerSortField field,
+    bool ascending,
+  ) {
+    final List<rust.FileEntry> result = List<rust.FileEntry>.of(source);
+
+    int compare(rust.FileEntry a, rust.FileEntry b) {
+      if (a.isDirectory != b.isDirectory) {
+        return a.isDirectory ? -1 : 1;
+      }
+
+      final int order;
+      switch (field) {
+        case ExplorerSortField.name:
+          order = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case ExplorerSortField.size:
+          order = a.sizeBytes.compareTo(b.sizeBytes);
+        case ExplorerSortField.modified:
+          order = a.modifiedSeconds.compareTo(b.modifiedSeconds);
+        case ExplorerSortField.type:
+          final String typeA = a.isDirectory
+              ? ''
+              : p.extension(a.name).toLowerCase();
+          final String typeB = b.isDirectory
+              ? ''
+              : p.extension(b.name).toLowerCase();
+          order = typeA != typeB
+              ? typeA.compareTo(typeB)
+              : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      }
+
+      return ascending ? order : -order;
+    }
+
+    result.sort(compare);
     return result;
   }
 }

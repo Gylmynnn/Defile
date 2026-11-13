@@ -223,6 +223,52 @@ extension ExplorerNavigation on FileExplorerController {
     await navigateTo(parentPath);
   }
 
+  /// Enters type-a-path mode for the location bar (`Ctrl+L`).
+  void startPathEdit() {
+    if (location.value != ExplorerLocation.directory) return;
+
+    isEditingPath.value = true;
+  }
+
+  /// Leaves type-a-path mode without navigating.
+  void cancelPathEdit() {
+    if (!isEditingPath.value) return;
+
+    isEditingPath.value = false;
+    keyboardFocusNode.requestFocus();
+  }
+
+  /// Navigates to the path typed in the location bar. `~` expands to Home and
+  /// a relative path resolves against the current folder.
+  Future<void> submitPathEdit(String raw) async {
+    final String target = _resolveInputPath(raw);
+    isEditingPath.value = false;
+
+    if (target.isEmpty) {
+      keyboardFocusNode.requestFocus();
+      return;
+    }
+
+    await navigateTo(target);
+  }
+
+  String _resolveInputPath(String raw) {
+    String value = raw.trim();
+    if (value.isEmpty) return '';
+
+    if (value == '~') {
+      value = homePath.value;
+    } else if (value.startsWith('~/')) {
+      value = p.join(homePath.value, value.substring(2));
+    }
+
+    if (!p.isAbsolute(value)) {
+      value = p.join(currentPath.value, value);
+    }
+
+    return p.normalize(value);
+  }
+
   Future<void> refreshDirectory() async {
     if (location.value == ExplorerLocation.recent) {
       await _loadRecentEntries();

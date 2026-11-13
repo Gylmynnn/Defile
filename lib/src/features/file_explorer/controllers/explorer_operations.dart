@@ -143,12 +143,33 @@ extension ExplorerOperations on FileExplorerController {
       skipConflicts = decision == OverwriteDecision.skip;
     }
 
+    // Multi-item batches get a cancellable progress dialog; a single item
+    // finishes too quickly to justify one.
+    final TransferProgress? progress = items.length > 1
+        ? TransferProgress(
+            title: move ? 'Moving items' : 'Copying items',
+            total: items.length,
+          )
+        : null;
+    if (progress != null) {
+      showTransferProgress(progress);
+      // Let the overlay mount before the transfer loop starts blocking.
+      await Future<void>.delayed(Duration.zero);
+    }
+
     int succeeded = 0;
     int skipped = 0;
+    bool cancelled = false;
     String? lastError;
     final List<String> transferred = <String>[];
+    final List<(String, String)> movedPairs = <(String, String)>[];
 
     for (final entry in items) {
+      if (progress?.isCancelled ?? false) {
+        cancelled = true;
+        break;
+      }
+
       final String name = newName ?? entry.name;
 
       if (skipConflicts && conflicts.containsKey(name)) {
@@ -157,6 +178,8 @@ extension ExplorerOperations on FileExplorerController {
       }
 
       try {
+        final String destination = p.join(destinationDirectory, name);
+
         if (move) {
           await fileSystemService.moveEntry(
             sourcePath: entry.path,
@@ -164,6 +187,11 @@ extension ExplorerOperations on FileExplorerController {
             newName: name,
             overwrite: overwrite,
           );
+          // Only a move that did not replace an existing item is safely
+          // reversible: undoing a replacement would drop the replaced file.
+          if (!conflicts.containsKey(name)) {
+            movedPairs.add((entry.path, destination));
+          }
         } else {
           await fileSystemService.copyEntry(
             sourcePath: entry.path,
@@ -175,32 +203,52 @@ extension ExplorerOperations on FileExplorerController {
 
         succeeded++;
         transferred.add(entry.path);
+        progress?.advance();
       } catch (error) {
         lastError = error.toString();
       }
     }
 
-    await refreshDirectory();
+    if (progress != null) progress.close();
 
-    if (Get.isRegistered<ExplorerTabsController>()) {
-      final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
-      final String dest = p.normalize(destinationDirectory);
-      final Set<String> sourceDirs = items
-          .map((e) => p.normalize(p.dirname(e.path)))
-          .toSet();
-
-      for (final tab in tabs.tabs) {
-        if (tab.controller == this) continue;
-        final String tabPath = p.normalize(tab.controller.currentPath.value);
-        if (sourceDirs.contains(tabPath) || tabPath == dest) {
-          tab.controller.refreshDirectory();
-        }
-      }
+    if (move && movedPairs.isNotEmpty) {
+      final List<(String, String)> pairs = List<(String, String)>.of(
+        movedPairs,
+      );
+      _pushUndo(
+        pairs.length == 1
+            ? 'Moved "${p.basename(pairs.single.$1)}" back'
+            : 'Moved ${pairs.length} items back',
+        () async {
+          for (final (String from, String to) in pairs) {
+            await fileSystemService.moveEntry(
+              sourcePath: to,
+              destinationDirectory: p.dirname(from),
+              newName: p.basename(from),
+              overwrite: false,
+            );
+          }
+        },
+      );
     }
+
+    await refreshDirectory();
+    _refreshSiblingTabs(
+      sourceDirectories: items
+          .map((e) => p.normalize(p.dirname(e.path)))
+          .toSet(),
+      otherDirectory: p.normalize(destinationDirectory),
+    );
 
     final String label = move ? 'moved' : 'copied';
 
-    if (succeeded == items.length) {
+    if (cancelled) {
+      showAppToast(
+        title: 'Cancelled',
+        message: '$succeeded of ${items.length} items $label before cancelling.',
+        variant: AppToastVariant.info,
+      );
+    } else if (succeeded == items.length) {
       showAppToast(
         title: 'Success',
         message: '${items.length} item(s) $label.',
@@ -232,20 +280,91 @@ extension ExplorerOperations on FileExplorerController {
     return transferred;
   }
 
+  /// Refreshes other open tabs that live in a touched directory so their
+  /// listings stay in sync after a transfer or undo.
+  void _refreshSiblingTabs({
+    required Set<String> sourceDirectories,
+    required String otherDirectory,
+  }) {
+    if (!Get.isRegistered<ExplorerTabsController>()) return;
+
+    final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
+    for (final tab in tabs.tabs) {
+      if (tab.controller == this) continue;
+      final String tabPath = p.normalize(tab.controller.currentPath.value);
+      if (sourceDirectories.contains(tabPath) || tabPath == otherDirectory) {
+        tab.controller.refreshDirectory();
+      }
+    }
+  }
+
+  void _pushUndo(String label, Future<void> Function() reverse) {
+    _undoStack.add(UndoEntry(label, reverse));
+    if (_undoStack.length > 30) _undoStack.removeAt(0);
+  }
+
+  /// Reverses the most recent rename/move/trash action (`Ctrl+Z`).
+  Future<void> undoLast() async {
+    if (_undoStack.isEmpty) {
+      showAppToast(
+        title: 'Nothing to undo',
+        message: 'There are no recent actions to undo.',
+        variant: AppToastVariant.info,
+      );
+      return;
+    }
+
+    final UndoEntry entry = _undoStack.removeLast();
+
+    try {
+      await entry.reverse();
+      await refreshDirectory();
+      showAppToast(
+        title: 'Undone',
+        message: entry.label,
+        variant: AppToastVariant.success,
+      );
+    } catch (error) {
+      showAppToast(
+        title: 'Undo failed',
+        message: error.toString(),
+        variant: AppToastVariant.error,
+      );
+    }
+  }
+
   Future<void> trashEntries(List<rust.FileEntry> entries) async {
     if (entries.isEmpty) return;
 
     int succeeded = 0;
     String? lastError;
+    final List<String> trashed = <String>[];
 
     for (final entry in entries) {
       try {
-        await fileSystemService.moveToTrash(entry.path);
+        final String destination = await fileSystemService.moveToTrash(
+          entry.path,
+        );
+        trashed.add(destination);
         succeeded++;
         _removeFromClipboard(entry.path);
       } catch (error) {
         lastError = error.toString();
       }
+    }
+
+    if (trashed.isNotEmpty) {
+      final List<String> paths = List<String>.of(trashed);
+      _pushUndo(
+        paths.length == 1
+            ? 'Restored "${p.basename(paths.single)}"'
+            : 'Restored ${paths.length} items from Trash',
+        () async {
+          for (final String path in paths) {
+            await fileSystemService.restoreFromTrash(path);
+          }
+        },
+      );
     }
 
     await refreshDirectory();
@@ -335,6 +454,62 @@ extension ExplorerOperations on FileExplorerController {
       );
     }
   }
+
+  /// Puts Trash items back in the folders they were deleted from, recreating
+  /// those folders and de-duplicating names when needed.
+  Future<void> restoreEntries(List<rust.FileEntry> entries) async {
+    if (entries.isEmpty) return;
+
+    int succeeded = 0;
+    String? lastError;
+    final List<String> destinations = <String>[];
+
+    for (final entry in entries) {
+      try {
+        final String restored = await fileSystemService.restoreFromTrash(
+          entry.path,
+        );
+        destinations.add(restored);
+        succeeded++;
+      } catch (error) {
+        lastError = error.toString();
+      }
+    }
+
+    await refreshDirectory();
+
+    if (Get.isRegistered<ExplorerTabsController>()) {
+      final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
+      for (final tab in tabs.tabs) {
+        if (tab.controller == this) continue;
+        tab.controller.refreshDirectory();
+      }
+    }
+
+    if (succeeded == entries.length) {
+      showAppToast(
+        title: 'Restored',
+        message: succeeded == 1
+            ? 'Restored to ${p.dirname(destinations.single)}'
+            : '$succeeded item(s) restored to their original folders.',
+        variant: AppToastVariant.success,
+      );
+    } else if (entries.length == 1 && lastError != null) {
+      showAppToast(
+        title: 'Failed to restore',
+        message: lastError,
+        variant: AppToastVariant.error,
+      );
+    } else {
+      showAppToast(
+        title: 'Partially restored',
+        message: '$succeeded of ${entries.length} items restored.',
+        variant: AppToastVariant.error,
+      );
+    }
+  }
+
+  Future<void> restoreEntry(rust.FileEntry entry) => restoreEntries([entry]);
 
   static const List<String> _archiveSuffixes = [
     '.zip',
@@ -609,8 +784,16 @@ extension ExplorerOperations on FileExplorerController {
     }
 
     try {
-      await fileSystemService.renameEntry(entry.path, trimmedName);
+      final String newPath = await fileSystemService.renameEntry(
+        entry.path,
+        trimmedName,
+      );
       await refreshDirectory();
+
+      _pushUndo(
+        'Renamed back to "${entry.name}"',
+        () => fileSystemService.renameEntry(newPath, entry.name),
+      );
 
       showAppToast(
         title: 'Success',
@@ -724,4 +907,13 @@ extension ExplorerOperations on FileExplorerController {
       );
     }
   }
+}
+
+/// One reversible action on the undo stack: a human label plus the closure
+/// that applies the inverse operation.
+class UndoEntry {
+  UndoEntry(this.label, this.reverse);
+
+  final String label;
+  final Future<void> Function() reverse;
 }

@@ -120,6 +120,16 @@ extension _ExplorerPageActions on _EntryContentState {
             ),
         ],
         ContextMenuSeparator(),
+        if (inTrash)
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: Icons.restore,
+              label: single
+                  ? 'Restore'
+                  : 'Restore ${targets.length} Items',
+              onSelected: () => controller.restoreEntries(targets),
+            ),
+          ),
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.drive_file_move_outlined,
@@ -179,6 +189,17 @@ extension _ExplorerPageActions on _EntryContentState {
       context: context,
       position: position,
       entries: [
+        if (controller.canUndo) ...[
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: Icons.undo,
+              label: 'Undo',
+              shortcut: 'Ctrl+Z',
+              onSelected: controller.undoLast,
+            ),
+          ),
+          ContextMenuSeparator(),
+        ],
         ContextMenuActionEntry(
           ContextMenuAction(
             icon: Icons.content_paste,
@@ -213,6 +234,17 @@ extension _ExplorerPageActions on _EntryContentState {
             label: 'Refresh',
             shortcut: 'Ctrl+R',
             onSelected: controller.refreshDirectory,
+          ),
+        ),
+        ContextMenuActionEntry(
+          ContextMenuAction(
+            icon: controller.showHidden.value
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+            label: 'Show hidden files',
+            shortcut: 'Ctrl+H',
+            checked: controller.showHidden.value,
+            onSelected: controller.toggleHiddenFiles,
           ),
         ),
         ContextMenuActionEntry(

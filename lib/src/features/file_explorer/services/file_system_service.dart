@@ -63,6 +63,10 @@ class FileSystemService {
     return rust_system.emptyTrash();
   }
 
+  Future<String> restoreFromTrash(String path) {
+    return rust_system.restoreFromTrash(path: path);
+  }
+
   Future<void> copyEntry({
     required String sourcePath,
     required String destinationDirectory,
