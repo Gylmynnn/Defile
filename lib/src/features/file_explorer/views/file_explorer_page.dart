@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';

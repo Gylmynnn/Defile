@@ -18,7 +18,7 @@ extension _ExplorerPageActions on _EntryContentState {
       entries: [
         ContextMenuActionEntry(
           ContextMenuAction(
-            icon: Icons.open_in_new,
+            icon: CupertinoIcons.goforward,
             label: single ? 'Open' : 'Open ${targets.length} Items',
             shortcut: 'Enter',
             onSelected: () async {
@@ -160,7 +160,7 @@ extension _ExplorerPageActions on _EntryContentState {
           ContextMenuAction(
             icon: inTrash
                 ? Icons.delete_forever_outlined
-                : Icons.delete_outline,
+                : CupertinoIcons.trash,
             label: inTrash
                 ? single
                       ? 'Delete Permanently'
@@ -176,7 +176,7 @@ extension _ExplorerPageActions on _EntryContentState {
         ContextMenuSeparator(),
         ContextMenuActionEntry(
           ContextMenuAction(
-            icon: Icons.info_outline,
+            icon: CupertinoIcons.info,
             label: 'Properties',
             enabled: single,
             onSelected: () => _showPropertiesDialog(entry),
