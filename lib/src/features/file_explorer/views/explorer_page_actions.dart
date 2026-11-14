@@ -50,14 +50,16 @@ extension _ExplorerPageActions on _EntryContentState {
           ContextMenuActionEntry(
             ContextMenuAction(
               icon: Icons.splitscreen,
-              label: (Get.isRegistered<ExplorerTabsController>() &&
+              label:
+                  (Get.isRegistered<ExplorerTabsController>() &&
                       Get.find<ExplorerTabsController>().isSplit)
                   ? 'Open in Other Pane'
                   : 'Open in Split View',
               onSelected: () {
                 if (Get.isRegistered<ExplorerTabsController>()) {
-                  Get.find<ExplorerTabsController>()
-                      .openInOtherPane(entry.path);
+                  Get.find<ExplorerTabsController>().openInOtherPane(
+                    entry.path,
+                  );
                 }
               },
             ),
@@ -124,9 +126,7 @@ extension _ExplorerPageActions on _EntryContentState {
           ContextMenuActionEntry(
             ContextMenuAction(
               icon: Icons.restore,
-              label: single
-                  ? 'Restore'
-                  : 'Restore ${targets.length} Items',
+              label: single ? 'Restore' : 'Restore ${targets.length} Items',
               onSelected: () => controller.restoreEntries(targets),
             ),
           ),
@@ -136,6 +136,14 @@ extension _ExplorerPageActions on _EntryContentState {
             label: 'Move to...',
             enabled: !inTrash,
             onSelected: () => _pickDestination(targets, move: true),
+          ),
+        ),
+        ContextMenuActionEntry(
+          ContextMenuAction(
+            icon: Icons.file_copy_outlined,
+            label: 'Copy to...',
+            enabled: !inTrash,
+            onSelected: () => _pickDestination(targets, move: false),
           ),
         ),
         ContextMenuSeparator(),
@@ -470,7 +478,11 @@ extension _ExplorerPageActions on _EntryContentState {
             onTap: () {
               final String name = textController.text;
               Get.back();
-              controller.compressEntries(targets, archiveName: name, format: format);
+              controller.compressEntries(
+                targets,
+                archiveName: name,
+                format: format,
+              );
             },
           ),
         ],
@@ -498,10 +510,7 @@ extension _ExplorerPageActions on _EntryContentState {
     return fileName;
   }
 
-  void _showCreateEntryDialog(
-    BuildContext context, {
-    required bool directory,
-  }) {
+  void _showCreateEntryDialog(BuildContext context, {required bool directory}) {
     final TextEditingController textController = TextEditingController();
 
     showAppDialog(

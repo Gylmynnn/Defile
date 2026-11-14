@@ -1,12 +1,12 @@
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../controllers/directory_picker_controller.dart';
+import '../../utils/place_icons.dart';
 import 'app_dialog.dart';
 import 'hover_region.dart';
 
@@ -209,47 +209,44 @@ class _PickerSidebar extends StatelessWidget {
     return Container(
       width: 176,
       color: context.colors.sidebar,
-      child: Obx(
-        () {
-          final List<rust_system.Place> homes = picker.homePlaces;
-          final List<rust_system.Place> folders = picker.folderPlaces;
-          final List<rust_system.Place> drives = picker.drivePlaces;
+      child: Obx(() {
+        final List<rust_system.Place> homes = picker.homePlaces;
+        final List<rust_system.Place> folders = picker.folderPlaces;
+        final List<rust_system.Place> drives = picker.drivePlaces;
 
-          return ListView(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            children: [
-              for (final place in homes)
+        return ListView(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          children: [
+            for (final place in homes)
+              _SidebarTile(
+                place: place,
+                icon: placeIcon(place),
+                active: picker.isPlaceActive(place),
+                onTap: () => picker.openPlace(place),
+              ),
+            if (folders.isNotEmpty) ...[
+              const _SidebarGroupLabel('Places'),
+              for (final place in folders)
                 _SidebarTile(
                   place: place,
-                  icon: CupertinoIcons.house,
+                  icon: folderPlaceIcon(place),
                   active: picker.isPlaceActive(place),
                   onTap: () => picker.openPlace(place),
                 ),
-              if (folders.isNotEmpty) ...[
-                const _SidebarGroupLabel('Places'),
-                for (final place in folders)
-                  _SidebarTile(
-                    place: place,
-                    icon: CupertinoIcons.folder,
-                    iconColor: context.colors.folder,
-                    active: picker.isPlaceActive(place),
-                    onTap: () => picker.openPlace(place),
-                  ),
-              ],
-              if (drives.isNotEmpty) ...[
-                const _SidebarGroupLabel('Drives'),
-                for (final place in drives)
-                  _SidebarTile(
-                    place: place,
-                    icon: Icons.storage,
-                    active: picker.isPlaceActive(place),
-                    onTap: () => picker.openPlace(place),
-                  ),
-              ],
             ],
-          );
-        },
-      ),
+            if (drives.isNotEmpty) ...[
+              const _SidebarGroupLabel('Drives'),
+              for (final place in drives)
+                _SidebarTile(
+                  place: place,
+                  icon: sidebarDriveIcon,
+                  active: picker.isPlaceActive(place),
+                  onTap: () => picker.openPlace(place),
+                ),
+            ],
+          ],
+        );
+      }),
     );
   }
 }
@@ -288,12 +285,10 @@ class _SidebarTile extends StatelessWidget {
     required this.icon,
     required this.active,
     required this.onTap,
-    this.iconColor,
   });
 
   final rust_system.Place place;
   final IconData icon;
-  final Color? iconColor;
   final bool active;
   final VoidCallback onTap;
 
@@ -317,7 +312,9 @@ class _SidebarTile extends StatelessWidget {
               color: background,
               borderRadius: BorderRadius.circular(5),
               border: Border.all(
-                color: active ? context.colors.selectionBorder : Colors.transparent,
+                color: active
+                    ? context.colors.selectionBorder
+                    : Colors.transparent,
               ),
             ),
             child: Row(
@@ -327,7 +324,7 @@ class _SidebarTile extends StatelessWidget {
                   size: 14,
                   color: active
                       ? context.colors.textPrimary
-                      : (iconColor ?? context.colors.textSecondary),
+                      : context.colors.textSecondary,
                 ),
                 const SizedBox(width: 9),
                 Expanded(
@@ -399,9 +396,7 @@ class _FolderRow extends StatelessWidget {
                       color: selected
                           ? context.colors.textStrong
                           : context.colors.textPrimary,
-                      fontWeight: selected
-                          ? FontWeight.w500
-                          : FontWeight.w400,
+                      fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
                     ),
                   ),
                 ),

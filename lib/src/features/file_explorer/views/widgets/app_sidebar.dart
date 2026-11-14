@@ -1,12 +1,12 @@
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../controllers/explorer_tabs_controller.dart';
 import '../../controllers/file_explorer_controller.dart';
+import '../../utils/place_icons.dart';
 import 'context_menu.dart';
 import 'explorer_scope.dart';
 import 'hover_region.dart';
@@ -75,7 +75,7 @@ class AppSidebar extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 2, bottom: 12),
                 children: [
                   for (final place in c.quickPlaces)
-                    _placeTile(context, c, place, icon: _iconFor(place)),
+                    _placeTile(context, c, place, icon: placeIcon(place)),
                   if (c.folderPlaces.isNotEmpty) ...[
                     if (collapsed)
                       const _RailGroupDivider()
@@ -86,7 +86,7 @@ class AppSidebar extends StatelessWidget {
                         context,
                         c,
                         place,
-                        icon: _folderIcon(place),
+                        icon: folderPlaceIcon(place),
                         // iconColor: context.colors.folder,
                       ),
                   ],
@@ -105,60 +105,6 @@ class AppSidebar extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  IconData _iconFor(rust_system.Place place) {
-    switch (place.kind) {
-      case rust_system.PlaceKind.home:
-        return CupertinoIcons.home;
-      case rust_system.PlaceKind.recent:
-        return CupertinoIcons.time;
-      case rust_system.PlaceKind.trash:
-        return CupertinoIcons.trash;
-      case rust_system.PlaceKind.network:
-        return CupertinoIcons.wifi;
-      case rust_system.PlaceKind.folder:
-        return Icons.folder;
-      case rust_system.PlaceKind.drive:
-        return Icons.storage;
-    }
-  }
-
-  /// Cupertino glyph for a well-known XDG folder, matched on the directory
-  /// basename so localized homes ("Dokumen", "Unduhan", …) still resolve.
-  IconData _folderIcon(rust_system.Place place) {
-    final List<String> parts = place.path
-        .split('/')
-        .where((String segment) => segment.isNotEmpty)
-        .toList();
-    final String name = parts.isEmpty ? '' : parts.last.toLowerCase();
-    switch (name) {
-      case 'documents':
-      case 'dokumen':
-        return Icons.folder_open;
-      case 'downloads':
-      case 'unduhan':
-        return CupertinoIcons.cloud_download;
-      case 'pictures':
-      case 'gambar':
-        return CupertinoIcons.photo;
-      case 'music':
-      case 'musik':
-        return CupertinoIcons.tv_music_note;
-      case 'videos':
-      case 'video':
-        return CupertinoIcons.film;
-      case 'desktop':
-        return CupertinoIcons.device_laptop;
-      case 'public':
-      case 'publik':
-        return CupertinoIcons.person_2;
-      case 'templates':
-      case 'templat':
-        return CupertinoIcons.doc_on_doc;
-      default:
-        return CupertinoIcons.folder;
-    }
   }
 
   Widget _placeTile(
@@ -222,10 +168,8 @@ class AppSidebar extends StatelessWidget {
     return DragTarget<List<rust.FileEntry>>(
       onWillAcceptWithDetails: (details) =>
           c.canDropEntries(details.data, path),
-      onAcceptWithDetails: (details) => c.moveEntries(
-        entries: details.data,
-        destinationDirectory: path,
-      ),
+      onAcceptWithDetails: (details) =>
+          c.moveEntries(entries: details.data, destinationDirectory: path),
       builder: (context, candidateData, rejectedData) {
         final bool dropping = candidateData.any(
           (data) => data != null && c.canDropEntries(data, path),
@@ -485,7 +429,7 @@ class _DriveTile extends StatelessWidget {
             child: collapsed
                 ? Center(
                     child: Icon(
-                      CupertinoIcons.device_desktop,
+                      sidebarDriveIcon,
                       size: 15,
                       color: dropping || active
                           ? context.colors.textPrimary
@@ -498,7 +442,7 @@ class _DriveTile extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            CupertinoIcons.device_desktop,
+                            sidebarDriveIcon,
                             size: 14,
                             color: dropping || active
                                 ? context.colors.textPrimary
@@ -547,10 +491,7 @@ class _DriveTile extends StatelessWidget {
           final String usageText = ratio == null
               ? ''
               : ' · ${(ratio * 100).round()}% used';
-          tile = Tooltip(
-            message: '${place.label}$usageText',
-            child: tile,
-          );
+          tile = Tooltip(message: '${place.label}$usageText', child: tile);
         }
         return tile;
       },
