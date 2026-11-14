@@ -73,6 +73,10 @@ const List<_SidebarItemDef> _allSidebarItems = [
       'sidebar',
       'disk',
       'layout',
+      'sort',
+      'hidden',
+      'dotfiles',
+      'order',
     ],
   ),
   _SidebarItemDef(

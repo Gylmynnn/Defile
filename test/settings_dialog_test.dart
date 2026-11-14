@@ -1,12 +1,21 @@
+import 'package:defile/src/features/file_explorer/controllers/file_explorer_controller.dart';
+import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 import 'package:defile/src/features/file_explorer/services/font_service.dart';
 import 'package:defile/src/features/file_explorer/services/icon_theme_service.dart';
 import 'package:defile/src/features/file_explorer/services/theme_service.dart';
 import 'package:defile/src/features/file_explorer/views/widgets/settings_dialog.dart';
+import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/frb_generated.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+
+class _EmptyFs extends FileSystemService {
+  @override
+  Future<List<rust.FileEntry>> listDirectory(String path) async =>
+      const <rust.FileEntry>[];
+}
 
 void main() {
   setUpAll(() async {
@@ -79,4 +88,36 @@ void main() {
       await tester.pumpAndSettle();
     },
   );
+
+  testWidgets('Interface section exposes sort and hidden-file controls', (
+    tester,
+  ) async {
+    Get.put(IconThemeService());
+    Get.put(FontService());
+    Get.put(ThemeService());
+
+    final controller = Get.put(FileExplorerController(_EmptyFs()));
+    await tester.runAsync(() => controller.loadDirectory('/'));
+
+    await tester.pumpWidget(
+      const GetMaterialApp(home: Scaffold(body: SettingsDialog())),
+    );
+
+    await tester.tap(find.text('Interface'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sort files by'), findsOneWidget);
+    expect(find.text('Sort direction'), findsOneWidget);
+    expect(find.text('Show hidden files'), findsOneWidget);
+
+    // The section reflects (and drives) the shared controller state.
+    controller.setSortField(ExplorerSortField.size);
+    controller.setSortAscending(false);
+    controller.toggleHiddenFiles();
+    await tester.pumpAndSettle();
+
+    expect(controller.sortField.value, ExplorerSortField.size);
+    expect(controller.sortAscending.value, isFalse);
+    expect(controller.showHidden.value, isFalse);
+  });
 }

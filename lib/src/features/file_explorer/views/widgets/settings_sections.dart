@@ -368,6 +368,79 @@ extension _SettingsSections on _SettingsDialogState {
             if (controller != null)
               Obx(() {
                 return _CustomSettingRow(
+                  title: 'Sort files by',
+                  subtitle:
+                      'Folders stay grouped first; this orders the items '
+                      'inside each group.',
+                  control: _CustomDropdown<ExplorerSortField>(
+                    value: controller.sortField.value,
+                    items: const [
+                      DropdownMenuItem(
+                        value: ExplorerSortField.name,
+                        child: Text('Name'),
+                      ),
+                      DropdownMenuItem(
+                        value: ExplorerSortField.size,
+                        child: Text('Size'),
+                      ),
+                      DropdownMenuItem(
+                        value: ExplorerSortField.modified,
+                        child: Text('Date modified'),
+                      ),
+                      DropdownMenuItem(
+                        value: ExplorerSortField.type,
+                        child: Text('Type'),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) controller.setSortField(val);
+                    },
+                  ),
+                );
+              }),
+            _CustomDivider(),
+            if (controller != null)
+              Obx(() {
+                return _CustomSettingRow(
+                  title: 'Sort direction',
+                  subtitle: 'Order items from A–Z / smallest / oldest first, '
+                      'or reversed.',
+                  control: _CustomDropdown<bool>(
+                    value: controller.sortAscending.value,
+                    items: const [
+                      DropdownMenuItem(
+                        value: true,
+                        child: Text('Ascending'),
+                      ),
+                      DropdownMenuItem(
+                        value: false,
+                        child: Text('Descending'),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) controller.setSortAscending(val);
+                    },
+                  ),
+                );
+              }),
+            _CustomDivider(),
+            if (controller != null)
+              Obx(() {
+                return _CustomSettingRow(
+                  title: 'Show hidden files',
+                  subtitle:
+                      'Reveal dot-files and dot-folders in the listing. '
+                      'Toggle anytime with Ctrl + H.',
+                  control: _CustomSwitch(
+                    value: controller.showHidden.value,
+                    onChanged: (_) => controller.toggleHiddenFiles(),
+                  ),
+                );
+              }),
+            _CustomDivider(),
+            if (controller != null)
+              Obx(() {
+                return _CustomSettingRow(
                   title: 'Show sidebar',
                   subtitle:
                       'Show quick access folders, places, and disk drives on '
@@ -526,6 +599,9 @@ extension _SettingsSections on _SettingsDialogState {
       ('Move to trash', 'Delete'),
       ('Permanent delete', 'Shift + Delete'),
       ('Select all', 'Ctrl + A'),
+      ('Undo last action', 'Ctrl + Z'),
+      ('Show / hide hidden files', 'Ctrl + H'),
+      ('Edit location path', 'Ctrl + L'),
       ('Copy to clipboard', 'Ctrl + C'),
       ('Cut to clipboard', 'Ctrl + X'),
       ('Paste from clipboard', 'Ctrl + V'),
