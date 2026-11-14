@@ -3,9 +3,9 @@ import 'package:defile/src/features/file_explorer/controllers/file_explorer_cont
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 import 'package:defile/src/features/file_explorer/views/widgets/explorer_tab_bar.dart';
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 

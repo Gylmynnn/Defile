@@ -1,7 +1,7 @@
 import 'package:defile/src/features/file_explorer/utils/place_icons.dart';
 import 'package:defile/src/rust/api/system.dart' as rust_system;
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 rust_system.Place _place(rust_system.PlaceKind kind, String path) =>

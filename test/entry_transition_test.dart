@@ -3,7 +3,7 @@ import 'package:defile/src/features/file_explorer/services/theme_service.dart';
 import 'package:defile/src/features/file_explorer/views/widgets/entry_transition.dart';
 import 'package:defile/src/features/file_explorer/views/widgets/entry_views.dart';
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 

@@ -1,7 +1,7 @@
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/system.dart' as rust_system;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 
 import '../../../../theme/app_theme.dart';

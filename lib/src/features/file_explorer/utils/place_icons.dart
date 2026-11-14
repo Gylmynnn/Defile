@@ -1,6 +1,6 @@
 import 'package:defile/src/rust/api/system.dart' as rust_system;
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Icon used for a quick-access place (Home, Recents, Trash, Network, ...).
 ///

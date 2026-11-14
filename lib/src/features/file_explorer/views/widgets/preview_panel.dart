@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:defile/src/rust/api/document.dart' as document;
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/pdf.dart' as pdf;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';

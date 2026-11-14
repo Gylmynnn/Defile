@@ -14,7 +14,7 @@ import 'package:defile/src/features/file_explorer/views/widgets/portal_pick_bar.
 import 'package:defile/src/rust/frb_generated.dart';
 import 'package:defile/src/theme/app_theme.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 
 class _PortalBackendWindowListener extends WindowListener {
@@ -116,6 +116,9 @@ Future<void> main(List<String> args) async {
     await windowManager.focus();
   });
 
+  // GetMaterialApp used to run this through its `initialBinding`. The root is
+  // now a plain `material_ui` MaterialApp, so the binding runs here instead.
+  FileExplorerBinding().dependencies();
   runApp(const RootApp());
   if (portalBackend) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -161,24 +164,21 @@ class RootApp extends StatelessWidget {
       final palette = themeService.palette;
       final accent = themeService.accent;
 
-      return GetMaterialApp(
+      return MaterialApp(
         title: 'Defile',
         debugShowCheckedModeBanner: false,
+        navigatorKey: Get.key,
         theme: AppTheme.dark(
           palette: palette,
           accentPreset: accent,
           fontFamily: font.isEmpty ? null : font,
         ),
-        initialBinding: FileExplorerBinding(),
         builder: (BuildContext context, Widget? child) => Obx(
           () => _UiScaler(
             scale: themeService.uiScale.value,
             child: Stack(
               children: [
                 child ?? const SizedBox.shrink(),
-                // A pending FileChooser request must win over anything drawn
-                // beneath it (toasts, context menus), so it gets its own
-                // event-handling layer inside the scaled surface.
                 const _PortalLayer(),
               ],
             ),

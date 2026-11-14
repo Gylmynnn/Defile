@@ -6,7 +6,7 @@ import 'package:defile/src/features/file_explorer/services/theme_service.dart';
 import 'package:defile/src/features/file_explorer/views/widgets/settings_dialog.dart';
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/frb_generated.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -42,7 +42,7 @@ void main() {
       await tester.runAsync(fontService.init);
 
       await tester.pumpWidget(
-        const GetMaterialApp(home: Scaffold(body: SettingsDialog())),
+        const MaterialApp(home: Scaffold(body: SettingsDialog())),
       );
 
       // Sidebar Category Headers & menu items (appear both as item under Options and as section header)
@@ -100,7 +100,7 @@ void main() {
     await tester.runAsync(() => controller.loadDirectory('/'));
 
     await tester.pumpWidget(
-      const GetMaterialApp(home: Scaffold(body: SettingsDialog())),
+      const MaterialApp(home: Scaffold(body: SettingsDialog())),
     );
 
     await tester.tap(find.text('Interface'));

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:super_clipboard/super_clipboard.dart'

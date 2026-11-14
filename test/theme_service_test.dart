@@ -2,7 +2,7 @@ import 'package:defile/src/features/file_explorer/services/theme_service.dart';
 import 'package:defile/src/rust/frb_generated.dart';
 import 'package:defile/src/theme/app_theme.dart';
 import 'package:defile/src/theme/theme_palette.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -43,7 +43,7 @@ void main() {
     ).extension<AppThemeColors>()!;
 
     await tester.pumpWidget(
-      GetMaterialApp(
+      MaterialApp(
         theme: AppTheme.dark(
           palette: service.palette,
           accentPreset: service.accent,

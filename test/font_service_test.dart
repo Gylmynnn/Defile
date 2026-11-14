@@ -3,7 +3,7 @@ import 'package:defile/src/features/file_explorer/services/icon_theme_service.da
 import 'package:defile/src/features/file_explorer/services/theme_service.dart';
 import 'package:defile/src/features/file_explorer/views/widgets/settings_dialog.dart';
 import 'package:defile/src/rust/frb_generated.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -61,7 +61,7 @@ void main() {
     addTearDown(() => tester.runAsync(() => fontService.setFont(originalFont)));
 
     await tester.pumpWidget(
-      const GetMaterialApp(home: Scaffold(body: SettingsDialog())),
+      const MaterialApp(home: Scaffold(body: SettingsDialog())),
     );
 
     expect(find.text('Appearance'), findsOneWidget);
