@@ -79,6 +79,8 @@ extension ExplorerNavigation on FileExplorerController {
     location.value = ExplorerLocation.directory;
     clearSelection();
     previewFile.value = null;
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
 
     try {
       final result = await fileSystemService.listDirectory(path);
@@ -131,6 +133,9 @@ extension ExplorerNavigation on FileExplorerController {
     isLoading.value = true;
     errorMessage.value = null;
     clearSelection();
+    previewFile.value = null;
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
 
     try {
       final result = await rust_system.listRecentFiles(

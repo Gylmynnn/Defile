@@ -479,7 +479,9 @@ class _MenuRow extends StatelessWidget {
                   Icon(
                     Icons.check,
                     size: 15,
-                    color: enabled ? context.colors.accent : context.colors.accent.withValues(alpha: 0.5),
+                    color: enabled
+                        ? context.colors.accent
+                        : context.colors.accent.withValues(alpha: 0.5),
                   )
                 else if (action.shortcut != null)
                   Text(

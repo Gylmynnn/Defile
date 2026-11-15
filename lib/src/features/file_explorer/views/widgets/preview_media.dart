@@ -24,8 +24,8 @@ class _ImagePreview extends StatelessWidget {
                 constraints.maxHeight,
               );
               final int cacheWidth = box.isFinite
-                  ? math.min((box * dpr).round(), 1024)
-                  : 768;
+                  ? math.min((box * dpr).round(), 640)
+                  : 512;
               return Image.file(
                 File(file.path),
                 cacheWidth: cacheWidth,
@@ -79,7 +79,9 @@ class _MediaPlaceholder extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              isVideo ? 'Video preview unavailable' : 'Audio preview unavailable',
+              isVideo
+                  ? 'Video preview unavailable'
+                  : 'Audio preview unavailable',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12.5, color: context.colors.textFaint),
             ),

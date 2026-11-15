@@ -106,6 +106,9 @@ class FileSystemService {
     required String path,
     required String destinationDir,
   }) {
-    return rust_archive.extractArchive(path: path, destinationDir: destinationDir);
+    return rust_archive.extractArchive(
+      path: path,
+      destinationDir: destinationDir,
+    );
   }
 }

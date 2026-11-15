@@ -245,7 +245,8 @@ extension ExplorerOperations on FileExplorerController {
     if (cancelled) {
       showAppToast(
         title: 'Cancelled',
-        message: '$succeeded of ${items.length} items $label before cancelling.',
+        message:
+            '$succeeded of ${items.length} items $label before cancelling.',
         variant: AppToastVariant.info,
       );
     } else if (succeeded == items.length) {
@@ -571,7 +572,8 @@ extension ExplorerOperations on FileExplorerController {
 
     showAppToast(
       title: 'Compressing',
-      message: 'Packing ${entries.length} item(s) into "${p.basename(destination)}"',
+      message:
+          'Packing ${entries.length} item(s) into "${p.basename(destination)}"',
       variant: AppToastVariant.loading,
     );
 
@@ -584,7 +586,8 @@ extension ExplorerOperations on FileExplorerController {
 
       showAppToast(
         title: 'Compressed',
-        message: '${entries.length} item(s) packed into "${p.basename(destination)}"',
+        message:
+            '${entries.length} item(s) packed into "${p.basename(destination)}"',
         variant: AppToastVariant.success,
       );
     } catch (error) {
@@ -602,7 +605,8 @@ extension ExplorerOperations on FileExplorerController {
     if (rootName == null || rootName.trim().isEmpty) {
       showAppToast(
         title: 'Extract',
-        message: 'Unsupported archive format. Zip, tar and tar.gz are supported.',
+        message:
+            'Unsupported archive format. Zip, tar and tar.gz are supported.',
         variant: AppToastVariant.error,
       );
       return;
@@ -628,8 +632,7 @@ extension ExplorerOperations on FileExplorerController {
 
       showAppToast(
         title: 'Extracted',
-        message:
-            '$items item(s) extracted into "${p.basename(destination)}"',
+        message: '$items item(s) extracted into "${p.basename(destination)}"',
         variant: AppToastVariant.success,
       );
     } catch (error) {

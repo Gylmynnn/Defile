@@ -60,23 +60,26 @@ class FileExplorerPage extends StatelessWidget {
             LogicalKeyboardKey.keyT,
             control: true,
             shift: true,
-          ): () => tabs.reopenClosedTab(),
+          ): () =>
+              tabs.reopenClosedTab(),
           const SingleActivator(
             LogicalKeyboardKey.keyT,
             meta: true,
             shift: true,
-          ): () => tabs.reopenClosedTab(),
+          ): () =>
+              tabs.reopenClosedTab(),
           const SingleActivator(LogicalKeyboardKey.keyW, control: true):
               tabs.closeActiveTab,
           const SingleActivator(LogicalKeyboardKey.keyW, meta: true):
               tabs.closeActiveTab,
-          const SingleActivator(LogicalKeyboardKey.tab, control: true):
-              () => tabs.selectRelative(1),
+          const SingleActivator(LogicalKeyboardKey.tab, control: true): () =>
+              tabs.selectRelative(1),
           const SingleActivator(
             LogicalKeyboardKey.tab,
             control: true,
             shift: true,
-          ): () => tabs.selectRelative(-1),
+          ): () =>
+              tabs.selectRelative(-1),
           // Split pane management
           const SingleActivator(LogicalKeyboardKey.f3): tabs.cycleSplitMode,
           const SingleActivator(LogicalKeyboardKey.backslash, control: true):
@@ -201,14 +204,13 @@ class _LayoutHostState extends State<_LayoutHost> {
             // Key on the MODE only: switching tabs (or the focused pane)
             // updates this layout in place — the glide should replay solely
             // when the split mode itself is toggled.
-            return _SplitLayout(
-              key: ValueKey('split:${tabs.splitMode.value}'),
-            );
+            return _SplitLayout(key: ValueKey('split:${tabs.splitMode.value}'));
           }
 
           if (_exitMode != null && _exitFirst != null && _exitSecond != null) {
             // Cut the exit short if a pane's tab was closed mid-glide.
-            final bool alive = tabs.tabs.contains(_exitFirst) &&
+            final bool alive =
+                tabs.tabs.contains(_exitFirst) &&
                 tabs.tabs.contains(_exitSecond);
             if (alive) {
               if (!_exiting) {
@@ -339,14 +341,8 @@ class _SplitLayout extends StatelessWidget {
   /// Builder restarts from [Tween.begin] whenever it receives a different
   /// tween, so a fresh instance here would snap the glide back to its start
   /// on every parent rebuild (the topbar "pop back" glitch).
-  static final Tween<double> _enterGlide = Tween<double>(
-    begin: 0.0,
-    end: 1.0,
-  );
-  static final Tween<double> _exitGlide = Tween<double>(
-    begin: 1.0,
-    end: 0.0,
-  );
+  static final Tween<double> _enterGlide = Tween<double>(begin: 0.0, end: 1.0);
+  static final Tween<double> _exitGlide = Tween<double>(begin: 1.0, end: 0.0);
 
   @override
   Widget build(BuildContext context) {
@@ -427,20 +423,8 @@ class _SplitLayout extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.all(2.5),
               child: vertical
-                  ? Column(
-                      children: [
-                        firstPane,
-                        divider,
-                        secondPane,
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        firstPane,
-                        divider,
-                        secondPane,
-                      ],
-                    ),
+                  ? Column(children: [firstPane, divider, secondPane])
+                  : Row(children: [firstPane, divider, secondPane]),
             );
           });
         },
@@ -488,7 +472,11 @@ class _SplitLayout extends StatelessWidget {
 /// One pane of the split area: its own toolbar, entry content and status bar,
 /// all bound to the pane's tab controller. Shows an accent frame when focused.
 class _SplitPane extends StatelessWidget {
-  const _SplitPane({required this.tab, required this.second, this.forceVertical});
+  const _SplitPane({
+    required this.tab,
+    required this.second,
+    this.forceVertical,
+  });
 
   final ExplorerTab tab;
   final bool second;
@@ -509,7 +497,8 @@ class _SplitPane extends StatelessWidget {
         onPointerDown: (_) => tabs.focusPane(second: second),
         child: Obx(() {
           final bool isFocused = tabs.splitFocusSecond.value == second;
-          final bool vertical = forceVertical ??
+          final bool vertical =
+              forceVertical ??
               tabs.splitMode.value == ExplorerSplitMode.vertical;
 
           // Own preview per pane: below the content in side-by-side split,
@@ -553,8 +542,7 @@ class _SplitPane extends StatelessWidget {
                           Expanded(child: mainArea),
                           PreviewPanel(
                             availableWidth: constraints.maxWidth,
-                            enabledOverride:
-                                tab.controller.panePreviewEnabled,
+                            enabledOverride: tab.controller.panePreviewEnabled,
                           ),
                         ],
                       );
@@ -571,11 +559,7 @@ class _SplitPane extends StatelessWidget {
 /// Draggable splitter between the two split panes. [axis] is the direction
 /// the panes are laid out in: stacked panes (Axis.vertical) get a horizontal divider.
 class _PaneDivider extends StatefulWidget {
-  const _PaneDivider({
-    required this.axis,
-    this.onDrag,
-    this.onDoubleTap,
-  });
+  const _PaneDivider({required this.axis, this.onDrag, this.onDoubleTap});
 
   final Axis axis;
   final ValueChanged<double>? onDrag;
@@ -614,18 +598,30 @@ class _PaneDividerState extends State<_PaneDivider> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onDoubleTap: widget.onDoubleTap,
-        onHorizontalDragStart: isVertical ? null : (_) => setState(() => _dragging = true),
+        onHorizontalDragStart: isVertical
+            ? null
+            : (_) => setState(() => _dragging = true),
         onHorizontalDragUpdate: isVertical
             ? null
             : (details) => widget.onDrag?.call(details.delta.dx),
-        onHorizontalDragEnd: isVertical ? null : (_) => setState(() => _dragging = false),
-        onHorizontalDragCancel: isVertical ? null : () => setState(() => _dragging = false),
-        onVerticalDragStart: !isVertical ? null : (_) => setState(() => _dragging = true),
+        onHorizontalDragEnd: isVertical
+            ? null
+            : (_) => setState(() => _dragging = false),
+        onHorizontalDragCancel: isVertical
+            ? null
+            : () => setState(() => _dragging = false),
+        onVerticalDragStart: !isVertical
+            ? null
+            : (_) => setState(() => _dragging = true),
         onVerticalDragUpdate: !isVertical
             ? null
             : (details) => widget.onDrag?.call(details.delta.dy),
-        onVerticalDragEnd: !isVertical ? null : (_) => setState(() => _dragging = false),
-        onVerticalDragCancel: !isVertical ? null : () => setState(() => _dragging = false),
+        onVerticalDragEnd: !isVertical
+            ? null
+            : (_) => setState(() => _dragging = false),
+        onVerticalDragCancel: !isVertical
+            ? null
+            : () => setState(() => _dragging = false),
         child: Container(
           width: isVertical ? double.infinity : 9,
           height: isVertical ? 9 : double.infinity,
@@ -757,20 +753,18 @@ class _EntryContentState extends State<_EntryContentArea> {
           shift: true,
         ): () =>
             _newFolder(context),
-        const SingleActivator(
-          LogicalKeyboardKey.keyN,
-          control: true,
-        ): () => _newFile(context),
+        const SingleActivator(LogicalKeyboardKey.keyN, control: true): () =>
+            _newFile(context),
         const SingleActivator(LogicalKeyboardKey.f6): _switchPaneFocus,
         const SingleActivator(LogicalKeyboardKey.tab): _switchPaneFocus,
         // Per-pane layout (Explorer View): Ctrl+1 = grid, 2 = list, 3 =
         // compact. Tab selection moved to Alt+1..9 to free these up.
-        const SingleActivator(LogicalKeyboardKey.digit1, control: true):
-            () => controller.setViewMode(ExplorerViewMode.grid),
-        const SingleActivator(LogicalKeyboardKey.digit2, control: true):
-            () => controller.setViewMode(ExplorerViewMode.list),
-        const SingleActivator(LogicalKeyboardKey.digit3, control: true):
-            () => controller.setViewMode(ExplorerViewMode.compact),
+        const SingleActivator(LogicalKeyboardKey.digit1, control: true): () =>
+            controller.setViewMode(ExplorerViewMode.grid),
+        const SingleActivator(LogicalKeyboardKey.digit2, control: true): () =>
+            controller.setViewMode(ExplorerViewMode.list),
+        const SingleActivator(LogicalKeyboardKey.digit3, control: true): () =>
+            controller.setViewMode(ExplorerViewMode.compact),
       },
       child: Focus(
         focusNode: controller.keyboardFocusNode,
@@ -810,8 +804,10 @@ class _EntryContentState extends State<_EntryContentArea> {
                         child: GestureDetector(
                           behavior: HitTestBehavior.translucent,
                           onTap: _handleBackgroundTap,
-                          onSecondaryTapUp: (details) =>
-                              _showBackgroundMenu(context, details.globalPosition),
+                          onSecondaryTapUp: (details) => _showBackgroundMenu(
+                            context,
+                            details.globalPosition,
+                          ),
                           child: Obx(() => _buildContent(context)),
                         ),
                       ),
@@ -820,8 +816,9 @@ class _EntryContentState extends State<_EntryContentArea> {
                           child: IgnorePointer(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: context.colors.selection
-                                    .withValues(alpha: 0.18),
+                                color: context.colors.selection.withValues(
+                                  alpha: 0.18,
+                                ),
                                 border: Border.all(
                                   color: context.colors.accent,
                                   width: 2,
@@ -846,10 +843,7 @@ class _EntryContentState extends State<_EntryContentArea> {
                 child: IgnorePointer(
                   child: RepaintBoundary(
                     child: CustomPaint(
-                      painter: _SelectionBandPainter(
-                        _bandRect,
-                        context.colors,
-                      ),
+                      painter: _SelectionBandPainter(_bandRect, context.colors),
                     ),
                   ),
                 ),
@@ -1468,7 +1462,8 @@ class _EntryContentState extends State<_EntryContentArea> {
     _entryPressActive = true;
 
     final HardwareKeyboard keyboard = HardwareKeyboard.instance;
-    _pressWasModifier = keyboard.isControlPressed ||
+    _pressWasModifier =
+        keyboard.isControlPressed ||
         keyboard.isMetaPressed ||
         keyboard.isShiftPressed;
 

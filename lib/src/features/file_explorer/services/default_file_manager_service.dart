@@ -55,9 +55,7 @@ class DefaultFileManagerService {
     // GLib resolves handlers through mimeinfo.cache; without regenerating it
     // defile.desktop stays invisible and the lookup falls through to the
     // previous handler even though the mimeapps.list entry is correct.
-    await Process.run('update-desktop-database', <String>[
-      file.parent.path,
-    ]);
+    await Process.run('update-desktop-database', <String>[file.parent.path]);
 
     final ProcessResult result = await Process.run('xdg-mime', <String>[
       'default',
@@ -117,15 +115,14 @@ Exec=${_execValue(executablePath)} --dbus-file-manager1
     if (!needsQuoting.hasMatch(path)) {
       return path;
     }
-    final String escaped = path
-        .replaceAll(r'\', r'\\')
-        .replaceAll('"', r'\"');
+    final String escaped = path.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
     return '"$escaped"';
   }
 
   /// The desktop entry handed to `xdg-mime`. `%u` forwards the opened path
   /// (URI or plain) to Defile's CLI arguments.
-  String entryContents(String executablePath) => '''
+  String entryContents(String executablePath) =>
+      '''
 [Desktop Entry]
 Type=Application
 Name=Defile

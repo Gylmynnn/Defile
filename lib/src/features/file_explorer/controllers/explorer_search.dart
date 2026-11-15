@@ -53,8 +53,7 @@ extension ExplorerPathSearch on FileExplorerController {
   /// name filter takes over for queries without `/`).
   void resetPathSearch() {
     _pathSearchTimer?.cancel();
-    final bool hadWork =
-        _pathSearchTimer != null || _pathSearchResults != null;
+    final bool hadWork = _pathSearchTimer != null || _pathSearchResults != null;
     _pathSearchTimer = null;
     _pathSearchGeneration++;
     _pathSearchResults = null;
@@ -96,10 +95,11 @@ extension ExplorerPathSearch on FileExplorerController {
       final List<rust.FileEntry> matched = <rust.FileEntry>[];
 
       for (final entry in level) {
-        if (entry.isDirectory &&
-            entry.name.toLowerCase().contains(pattern)) {
+        if (entry.isDirectory && entry.name.toLowerCase().contains(pattern)) {
           matched.add(entry);
-          if (matched.length >= FileExplorerController._pathSearchMaxExpand) break;
+          if (matched.length >= FileExplorerController._pathSearchMaxExpand) {
+            break;
+          }
         }
       }
       if (matched.isEmpty) return const <rust.FileEntry>[];
@@ -120,7 +120,8 @@ extension ExplorerPathSearch on FileExplorerController {
             if (plan.pattern.isEmpty ||
                 entry.name.toLowerCase().contains(plan.pattern)) {
               results.add(entry);
-              if (results.length >= FileExplorerController._pathSearchMaxResults) {
+              if (results.length >=
+                  FileExplorerController._pathSearchMaxResults) {
                 return results;
               }
             }

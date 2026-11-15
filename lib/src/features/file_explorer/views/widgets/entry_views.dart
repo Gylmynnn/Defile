@@ -50,7 +50,7 @@ GlobalKey entryTileKey(String path, {Object? owner}) {
   final GlobalKey? existing = _entryKeys[key];
   if (existing != null) return existing;
 
-  if (_entryKeys.length > 256) {
+  if (_entryKeys.length > 128) {
     _entryKeys.removeWhere((_, k) => k.currentContext == null);
   }
 

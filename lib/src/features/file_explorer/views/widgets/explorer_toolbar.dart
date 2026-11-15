@@ -119,8 +119,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
             ),
           ),
           const SizedBox(width: 6),
-          if (!widget.compact)
-            const ExplorerSplitControls(),
+          if (!widget.compact) const ExplorerSplitControls(),
           if (!widget.compact) const SizedBox(width: 6),
           Obx(() {
             if (!controller.isSearching.value) {
@@ -569,7 +568,9 @@ class _ToolbarIconButton extends StatelessWidget {
                 ? (details) {
                     final RenderBox box =
                         context.findRenderObject()! as RenderBox;
-                    onTapAt!(box.localToGlobal(box.size.bottomLeft(Offset.zero)));
+                    onTapAt!(
+                      box.localToGlobal(box.size.bottomLeft(Offset.zero)),
+                    );
                   }
                 : null,
             onSecondaryTapDown: onSecondaryTap != null
@@ -663,8 +664,7 @@ void _showSplitMenu(
           icon: Icons.view_column_outlined,
           label: 'Side by side',
           checked: tabs.splitMode.value == ExplorerSplitMode.horizontal,
-          onSelected: () =>
-              tabs.setSplitMode(ExplorerSplitMode.horizontal),
+          onSelected: () => tabs.setSplitMode(ExplorerSplitMode.horizontal),
         ),
       ),
       ContextMenuActionEntry(

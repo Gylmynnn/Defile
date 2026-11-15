@@ -10,11 +10,16 @@ class _TextPreview extends StatefulWidget {
 }
 
 class _TextPreviewState extends State<_TextPreview> {
+  static const int _maxPreviewBytes = 256 * 1024; // 256 KB
+  static const int _maxPreviewLines = 500;
+
   String? _content;
   List<List<CodeToken>>? _tokens;
   bool _wrap = true;
   bool _loading = true;
   String? _error;
+  int _totalLines = 0;
+  bool _truncated = false;
 
   @override
   void initState() {
@@ -42,19 +47,27 @@ class _TextPreviewState extends State<_TextPreview> {
       final file = File(widget.file.path);
       final stat = await file.stat();
 
-      // Limit 1MB, add streaming for larger files.
-      if (stat.size > 1024 * 1024) {
+      // Limit 256KB to keep memory consumption low
+      if (stat.size > _maxPreviewBytes) {
         setState(() {
           _loading = false;
-          _error = 'File too large to preview (> 1MB)';
+          _error = 'File too large to preview (> 256KB)';
         });
         return;
       }
 
-      final content = (await file.readAsString()).replaceAll('\t', '    ');
+      final raw = (await file.readAsString()).replaceAll('\t', '    ');
       if (!mounted) return;
 
+      final allLines = raw.split('\n');
+      final bool truncated = allLines.length > _maxPreviewLines;
+      final String content = truncated
+          ? allLines.take(_maxPreviewLines).join('\n')
+          : raw;
+
       setState(() {
+        _totalLines = allLines.length;
+        _truncated = truncated;
         _content = content;
         _tokens = CodeHighlighter.forFileName(widget.file.name)
             ?.tokenize(content);
@@ -120,7 +133,8 @@ class _TextPreviewState extends State<_TextPreview> {
         children: [
           Expanded(
             child: Text(
-              codeLanguageLabel(widget.file.name).toUpperCase(),
+              codeLanguageLabel(widget.file.name).toUpperCase() +
+                  (_truncated ? ' • 500 of $_totalLines lines' : ''),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: textStyle.copyWith(
@@ -152,11 +166,7 @@ class _TextPreviewState extends State<_TextPreview> {
     );
   }
 
-  Widget _buildBody(
-    String content,
-    List<String> lines,
-    TextStyle textStyle,
-  ) {
+  Widget _buildBody(String content, List<String> lines, TextStyle textStyle) {
     // Gutter width grows with the widest line number; 8.5 ≈ digit advance
     // of the mono fallback at 11.5px, plus fixed padding.
     final int digits = lines.length.toString().length;
@@ -222,9 +232,7 @@ class _TextPreviewState extends State<_TextPreview> {
                   child: Text(
                     '${index + 1}',
                     textAlign: TextAlign.right,
-                    style: textStyle.copyWith(
-                      color: context.colors.textFaint,
-                    ),
+                    style: textStyle.copyWith(color: context.colors.textFaint),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -289,10 +297,7 @@ class _TextPreviewState extends State<_TextPreview> {
       case CodeTokenKind.punct:
         return base.copyWith(color: colors.textSecondary);
       case CodeTokenKind.heading:
-        return base.copyWith(
-          color: colors.accent,
-          fontWeight: FontWeight.w600,
-        );
+        return base.copyWith(color: colors.accent, fontWeight: FontWeight.w600);
       case CodeTokenKind.codeSpan:
         return base.copyWith(color: colors.success);
       case CodeTokenKind.emphasis:

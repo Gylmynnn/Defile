@@ -33,9 +33,7 @@ class UpdateCheckResult {
   static int compareVersions(String a, String b) {
     final List<int> left = _segments(a);
     final List<int> right = _segments(b);
-    final int common = left.length < right.length
-        ? left.length
-        : right.length;
+    final int common = left.length < right.length ? left.length : right.length;
     for (int i = 0; i < common; i++) {
       if (left[i] != right[i]) return left[i].compareTo(right[i]);
     }
@@ -107,10 +105,7 @@ class UpdateCheckService {
 
       return UpdateCheckResult(
         currentVersion: currentVersion,
-        latestVersion: tag.replaceFirst(
-          RegExp('^v', caseSensitive: false),
-          '',
-        ),
+        latestVersion: tag.replaceFirst(RegExp('^v', caseSensitive: false), ''),
         releaseUrl: release['html_url'] as String?,
       );
     } catch (error) {

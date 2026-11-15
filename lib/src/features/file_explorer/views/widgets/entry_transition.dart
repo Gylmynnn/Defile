@@ -121,10 +121,9 @@ class EntryReveal extends StatelessWidget {
       animation: transition.animation,
       child: child,
       builder: (context, child) {
-        final double raw =
-            ((transition.animation.value - start) / (1 - start))
-                .clamp(0.0, 1.0)
-                .toDouble();
+        final double raw = ((transition.animation.value - start) / (1 - start))
+            .clamp(0.0, 1.0)
+            .toDouble();
         final double t = Curves.easeOutCubic.transform(raw);
 
         // A zero translation is painted without an extra layer, so leaving the

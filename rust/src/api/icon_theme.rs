@@ -261,7 +261,7 @@ fn find_icon_candidates_in_roots(
 
     let result: Vec<PathBuf> = candidates.into_iter().map(|(_, _, path)| path).collect();
     let mut guard = cache.lock().unwrap_or_else(|e| e.into_inner());
-    if guard.len() >= 512 {
+    if guard.len() >= 256 {
         guard.clear();
     }
     guard.insert(cache_key, result.clone());
@@ -367,7 +367,7 @@ fn render_svg(path: &Path, size: u32) -> Option<Vec<u8>> {
 
     let png = pixmap.encode_png().ok()?;
     let mut guard = cache.lock().unwrap_or_else(|e| e.into_inner());
-    if guard.len() >= 256 {
+    if guard.len() >= 128 {
         guard.clear();
     }
     guard.insert(cache_key, png.clone());

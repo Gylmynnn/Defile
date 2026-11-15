@@ -199,7 +199,7 @@ class _PdfPreviewState extends State<_PdfPreview> {
       final imageBytes = await pdf.renderPdfPage(
         path: _path,
         pageIndex: pageIndex,
-        width: 800, // Balanced quality and lightweight memory footprint
+        width: 600, // Balanced quality and lightweight memory footprint
       );
 
       if (!mounted) return;

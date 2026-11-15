@@ -277,13 +277,14 @@ class _ExplorerTabBarState extends State<ExplorerTabBar> {
                           final ExplorerTab t = tabs[index];
                           final bool isFirstPane = index == activeIndex;
                           final bool isSecondPane =
-                              _tabs.isSplit && t.id == _tabs.splitPartnerId.value;
+                              _tabs.isSplit &&
+                              t.id == _tabs.splitPartnerId.value;
                           final bool isVisibleInSplit =
                               isFirstPane || isSecondPane;
                           final bool isFocused = _tabs.isSplit
                               ? (_tabs.splitFocusSecond.value
-                                  ? isSecondPane
-                                  : isFirstPane)
+                                    ? isSecondPane
+                                    : isFirstPane)
                               : isFirstPane;
 
                           // Every tab carries a pane flag while split view is
@@ -494,9 +495,7 @@ class _TabItem extends StatelessWidget {
                                         color: closeHovered
                                             ? context.colors.hover
                                             : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(
-                                          10,
-                                        ),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
                                       alignment: Alignment.center,
                                       child: Icon(
@@ -545,9 +544,7 @@ class _PaneBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color foreground = filled
-        ? context.colors.accentContent
-        : color;
+    final Color foreground = filled ? context.colors.accentContent : color;
 
     return Container(
       width: 13,

@@ -17,10 +17,9 @@ extension _SettingsSections on _SettingsDialogState {
               subtitle: 'AppImage build — releases are published on GitHub.',
               linkText: 'Read the changelog.',
               onLinkTap: () {
-                Process.run(
-                  'xdg-open',
-                  <String>['https://github.com/Gylmynnn/Defile/releases'],
-                );
+                Process.run('xdg-open', <String>[
+                  'https://github.com/Gylmynnn/Defile/releases',
+                ]);
               },
               control: _CustomButton(
                 label: _checkingUpdate ? 'Checking…' : 'Check for updates',
@@ -403,19 +402,14 @@ extension _SettingsSections on _SettingsDialogState {
               Obx(() {
                 return _CustomSettingRow(
                   title: 'Sort direction',
-                  subtitle: 'Order items from A–Z / smallest / oldest first, '
+                  subtitle:
+                      'Order items from A–Z / smallest / oldest first, '
                       'or reversed.',
                   control: _CustomDropdown<bool>(
                     value: controller.sortAscending.value,
                     items: const [
-                      DropdownMenuItem(
-                        value: true,
-                        child: Text('Ascending'),
-                      ),
-                      DropdownMenuItem(
-                        value: false,
-                        child: Text('Descending'),
-                      ),
+                      DropdownMenuItem(value: true, child: Text('Ascending')),
+                      DropdownMenuItem(value: false, child: Text('Descending')),
                     ],
                     onChanged: (val) {
                       if (val != null) controller.setSortAscending(val);

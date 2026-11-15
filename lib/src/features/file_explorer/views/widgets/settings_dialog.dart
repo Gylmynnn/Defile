@@ -219,7 +219,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
       _showInfoMessage(
         'Update available',
         'Defile ${result.latestVersion} is available — you are running '
-        '$_appVersion.\n${result.releaseUrl ?? ''}',
+            '$_appVersion.\n${result.releaseUrl ?? ''}',
       );
     } else {
       _showInfoMessage(
@@ -248,8 +248,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
       _update(() => _isDefaultFileManager = true);
       showAppToast(
         title: 'Default file manager',
-        message:
-            'Defile now handles folders — xdg-open will open them here.',
+        message: 'Defile now handles folders — xdg-open will open them here.',
         variant: AppToastVariant.success,
       );
     } catch (error) {

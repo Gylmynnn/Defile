@@ -12,8 +12,8 @@ pub(crate) fn list_recent_files(
         return Err(format!("Path is not a directory: {root:?}"));
     }
 
-    let max_visited: usize = 20_000;
-    let max_candidates: usize = 4_000;
+    let max_visited: usize = 5_000;
+    let max_candidates: usize = (limit as usize * 4).max(400);
 
     let mut queue = VecDeque::from([root]);
     let mut candidates: Vec<FileEntry> = Vec::new();

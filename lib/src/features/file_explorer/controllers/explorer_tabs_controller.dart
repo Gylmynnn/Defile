@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/painting.dart';
 import 'package:get/get.dart';
 
 import '../services/file_system_service.dart';
@@ -132,6 +133,8 @@ class ExplorerTabsController extends GetxService {
   void onClose() {
     for (final tab in tabs) {
       tab.controller.onDelete();
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
     }
     tabs.clear();
     _recentlyClosed.clear();
@@ -411,6 +414,8 @@ class ExplorerTabsController extends GetxService {
     }
 
     tab.controller.onDelete();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
 
     if (activeIndex.value > index) {
       activeIndex.value -= 1;
@@ -429,8 +434,9 @@ class ExplorerTabsController extends GetxService {
 
   void closeActiveTab() {
     if (isSplit && splitFocusSecond.value) {
-      final int partnerIdx =
-          tabs.indexWhere((t) => t.id == splitPartnerId.value);
+      final int partnerIdx = tabs.indexWhere(
+        (t) => t.id == splitPartnerId.value,
+      );
       if (partnerIdx >= 0) {
         closeTab(partnerIdx);
         return;
@@ -447,6 +453,8 @@ class ExplorerTabsController extends GetxService {
 
       final ExplorerTab tab = tabs.removeAt(i);
       tab.controller.onDelete();
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
     }
 
     activeIndex.value = 0;
@@ -462,6 +470,8 @@ class ExplorerTabsController extends GetxService {
     for (int i = tabs.length - 1; i > index; i--) {
       final ExplorerTab tab = tabs.removeAt(i);
       tab.controller.onDelete();
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
     }
 
     if (activeIndex.value > index) {

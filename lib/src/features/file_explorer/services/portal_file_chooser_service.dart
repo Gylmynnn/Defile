@@ -182,20 +182,21 @@ class PortalFileChooserService {
     // claim past the daemon's own activation budget (a mutual wait that
     // only ever resolves by timeouts).
     await _installPortalUnit();
-    await Process.run(
-      'systemctl',
-      <String>['--user', 'start', 'xdg-desktop-portal.service'],
-    );
-    await Process.run(
-      'systemctl',
-      <String>['--user', 'start', 'defile-portal.service'],
-    );
+    await Process.run('systemctl', <String>[
+      '--user',
+      'start',
+      'xdg-desktop-portal.service',
+    ]);
+    await Process.run('systemctl', <String>[
+      '--user',
+      'start',
+      'defile-portal.service',
+    ]);
 
     for (final String confPath in _portalConfPaths) {
       await File(confPath).parent.create(recursive: true);
-      await File(confPath).writeAsString(
-        _mergedPortalConf(await _readConf(confPath)),
-      );
+      await File(confPath)
+          .writeAsString(_mergedPortalConf(await _readConf(confPath)));
     }
 
     // The daemon re-introspects implementations at startup. With our bus
@@ -204,20 +205,17 @@ class PortalFileChooserService {
     // backend appears (or its 25 s budget expires). Wait for the claim so
     // the bounce below always finds the backend alive.
     for (int attempt = 0; attempt < 70; attempt++) {
-      final ProcessResult owner = await Process.run(
-        'gdbus',
-        <String>[
-          'call',
-          '--session',
-          '--dest',
-          'org.freedesktop.DBus',
-          '--object-path',
-          '/org/freedesktop/DBus',
-          '--method',
-          'org.freedesktop.DBus.GetNameOwner',
-          busName,
-        ],
-      );
+      final ProcessResult owner = await Process.run('gdbus', <String>[
+        'call',
+        '--session',
+        '--dest',
+        'org.freedesktop.DBus',
+        '--object-path',
+        '/org/freedesktop/DBus',
+        '--method',
+        'org.freedesktop.DBus.GetNameOwner',
+        busName,
+      ]);
       if (owner.stdout.contains(':1.')) break;
       await Future<void>.delayed(const Duration(milliseconds: 500));
     }
@@ -268,10 +266,9 @@ class PortalFileChooserService {
         );
     chooser = chooser.isEmpty ? 'gtk' : chooser.split('=').last.trim();
     if (chooser.startsWith('defile')) {
-      chooser = chooser.substring('defile'.length).replaceAll(
-            RegExp(r'^;+'),
-            '',
-          );
+      chooser = chooser
+          .substring('defile'.length)
+          .replaceAll(RegExp(r'^;+'), '');
     }
     final String chooserLine = chooser.isEmpty ? 'defile' : 'defile;$chooser';
 
@@ -358,7 +355,8 @@ class PortalFileChooserService {
   /// our exit handler). No [Install] section: at login the daemon's own
   /// D-Bus activation covers the first start (transient units survive its
   /// 25 s timeout — a bound unit would get stopped with it).
-  String get _portalUnitPath => '$_configDir/systemd/user/defile-portal.service';
+  String get _portalUnitPath =>
+      '$_configDir/systemd/user/defile-portal.service';
 
   String get _portalUnitContents {
     return '''
@@ -387,15 +385,17 @@ RestartSec=2s
   Future<void> _removePortalUnit() async {
     final File unit = File(_portalUnitPath);
     if (!unit.existsSync()) return;
-    await Process.run(
-      'systemctl',
-      <String>['--user', 'stop', 'defile-portal.service'],
-    );
+    await Process.run('systemctl', <String>[
+      '--user',
+      'stop',
+      'defile-portal.service',
+    ]);
     await unit.delete();
     await Process.run('systemctl', <String>['--user', 'daemon-reload']);
   }
 
-  static const String _portalFileContents = '''
+  static const String _portalFileContents =
+      '''
 [portal]
 DBusName=$busName
 Interfaces=org.freedesktop.impl.portal.FileChooser;
@@ -556,8 +556,9 @@ class _PortalFileChooserObject extends DBusObject {
     }
     if (inner is DBusArray) {
       try {
-        final String path =
-            utf8.decode(inner.mapByte().toList()).replaceAll('\x00', '');
+        final String path = utf8
+            .decode(inner.mapByte().toList())
+            .replaceAll('\x00', '');
         return path.isEmpty ? null : path;
       } on FormatException {
         return null;
@@ -572,8 +573,7 @@ class _PortalFileChooserObject extends DBusObject {
   /// The handle IS the frontend request path; we export a Close() object
   /// there and only finish the method call once the user has decided.
   Future<DBusMethodResponse> _openFile(DBusMethodCall call) async {
-    final String handlePath =
-        (call.values[0] as DBusObjectPath).value;
+    final String handlePath = (call.values[0] as DBusObjectPath).value;
 
     String stringArg(int index) {
       if (call.values.length <= index) return '';
@@ -587,10 +587,8 @@ class _PortalFileChooserObject extends DBusObject {
 
     final Map<DBusString, DBusVariant> options =
         call.values.length > 4 && call.values[4] is DBusDict
-            ? (call.values[4] as DBusDict)
-                  .children
-                  .cast<DBusString, DBusVariant>()
-            : <DBusString, DBusVariant>{};
+        ? (call.values[4] as DBusDict).children.cast<DBusString, DBusVariant>()
+        : <DBusString, DBusVariant>{};
 
     bool multiple = false;
     bool directoryMode = false;
@@ -603,7 +601,8 @@ class _PortalFileChooserObject extends DBusObject {
     }
     final DBusVariant? mode = options[const DBusString('mode')];
     if (mode != null && mode.value is DBusString) {
-      directoryMode = directoryMode || (mode.value as DBusString).value == 'opendirectory';
+      directoryMode =
+          directoryMode || (mode.value as DBusString).value == 'opendirectory';
     }
     final DBusVariant? multi = options[const DBusString('multiple')];
     if (multi != null && multi.value is DBusBoolean) {
@@ -660,8 +659,7 @@ class _PortalFileChooserObject extends DBusObject {
   /// path (an existing file selection wins, else start folder + typed
   /// name); the reply carries it as `uris`.
   Future<DBusMethodResponse> _saveFile(DBusMethodCall call) async {
-    final String handlePath =
-        (call.values[0] as DBusObjectPath).value;
+    final String handlePath = (call.values[0] as DBusObjectPath).value;
 
     String stringArg(int index) {
       if (call.values.length <= index) return '';
@@ -673,10 +671,8 @@ class _PortalFileChooserObject extends DBusObject {
 
     final Map<DBusString, DBusVariant> options =
         call.values.length > 4 && call.values[4] is DBusDict
-            ? (call.values[4] as DBusDict)
-                  .children
-                  .cast<DBusString, DBusVariant>()
-            : <DBusString, DBusVariant>{};
+        ? (call.values[4] as DBusDict).children.cast<DBusString, DBusVariant>()
+        : <DBusString, DBusVariant>{};
 
     String? suggested;
     String? currentFolder;
@@ -743,11 +739,7 @@ class _PortalFileChooserObject extends DBusObject {
 
 /// The request object the daemon calls `Close()` on to cancel the dialog.
 class _PortalRequestObject extends DBusObject {
-  _PortalRequestObject(
-    super.path,
-    this.request,
-    this._service,
-  );
+  _PortalRequestObject(super.path, this.request, this._service);
 
   final PortalPickRequest request;
   final PortalFileChooserService _service;

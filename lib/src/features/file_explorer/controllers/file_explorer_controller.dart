@@ -286,9 +286,7 @@ class FileExplorerController extends GetxController {
     // dot-file filter apply to real directory listings (including Trash).
     if (location.value != ExplorerLocation.recent) {
       if (!hidden) {
-        result = result
-            .where((entry) => !entry.name.startsWith('.'))
-            .toList();
+        result = result.where((entry) => !entry.name.startsWith('.')).toList();
       }
       result = _sortedEntries(result, field, ascending);
     }

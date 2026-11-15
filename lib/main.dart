@@ -43,10 +43,10 @@ class _PortalBackendWindowListener extends WindowListener {
 Future<void> main(List<String> args) async {
   ProcessSignal.sigterm.watch().listen((_) => exit(0));
   WidgetsFlutterBinding.ensureInitialized();
-  // Browsing photo-heavy folders decodes thumbnails; budget 32 MiB of decoded
+  // Browsing photo-heavy folders decodes thumbnails; budget 16 MiB of decoded
   // bitmaps and cap image cache count so memory is recycled quickly.
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 32 << 20;
-  PaintingBinding.instance.imageCache.maximumSize = 120;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 16 << 20;
+  PaintingBinding.instance.imageCache.maximumSize = 60;
   final bool portalBackend = args.contains('--dbus-portal');
   final PortalFileChooserService fileChooser = PortalFileChooserService();
   final FileManager1Service fileManager = FileManager1Service();

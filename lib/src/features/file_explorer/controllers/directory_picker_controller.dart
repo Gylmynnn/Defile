@@ -41,14 +41,17 @@ class DirectoryPickerController extends GetxController {
     }
   }
 
-  List<rust_system.Place> get homePlaces =>
-      places.where((place) => place.kind == rust_system.PlaceKind.home).toList();
+  List<rust_system.Place> get homePlaces => places
+      .where((place) => place.kind == rust_system.PlaceKind.home)
+      .toList();
 
-  List<rust_system.Place> get folderPlaces =>
-      places.where((place) => place.kind == rust_system.PlaceKind.folder).toList();
+  List<rust_system.Place> get folderPlaces => places
+      .where((place) => place.kind == rust_system.PlaceKind.folder)
+      .toList();
 
-  List<rust_system.Place> get drivePlaces =>
-      places.where((place) => place.kind == rust_system.PlaceKind.drive).toList();
+  List<rust_system.Place> get drivePlaces => places
+      .where((place) => place.kind == rust_system.PlaceKind.drive)
+      .toList();
 
   /// Only real, browsable directories qualify as destinations, so locations
   /// like Recents, Trash or Network are excluded from the sidebar.

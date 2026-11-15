@@ -154,4 +154,3 @@ class _FileManager1Object extends DBusObject {
     }
   }
 }
-

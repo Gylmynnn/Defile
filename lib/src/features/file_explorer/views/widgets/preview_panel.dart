@@ -22,7 +22,11 @@ part 'preview_media.dart';
 part 'preview_text.dart';
 
 class PreviewPanel extends StatefulWidget {
-  const PreviewPanel({super.key, required this.availableWidth, this.enabledOverride});
+  const PreviewPanel({
+    super.key,
+    required this.availableWidth,
+    this.enabledOverride,
+  });
 
   final double availableWidth;
 
@@ -72,7 +76,9 @@ class _PreviewPanelState extends State<PreviewPanel> {
       final void Function(double) onResize = paneMode
           ? (value) => controller.panePreviewWidth.value = value
           : (value) => themeService.previewWidth.value = value;
-      final rust.FileEntry? file = enabled ? controller.previewFile.value : null;
+      final rust.FileEntry? file = enabled
+          ? controller.previewFile.value
+          : null;
       // Keep the handle reserved even when nothing is selected so the grid
       // does not shift on the first selection.
       final double panelWidth = width + _resizeHandleWidth;
@@ -164,7 +170,11 @@ class _PreviewPanelState extends State<PreviewPanel> {
 /// pane. The previewed file renders on the left, the name/type info on the
 /// right, and the strip's height is draggable through its top edge.
 class PreviewBottomPanel extends StatefulWidget {
-  const PreviewBottomPanel({super.key, required this.availableWidth, this.enabledOverride});
+  const PreviewBottomPanel({
+    super.key,
+    required this.availableWidth,
+    this.enabledOverride,
+  });
 
   final double availableWidth;
 
@@ -187,7 +197,9 @@ class _PreviewBottomPanelState extends State<PreviewBottomPanel> {
       final bool paneMode = widget.enabledOverride != null;
       final bool enabled =
           widget.enabledOverride?.value ?? themeService.previewEnabled.value;
-      final rust.FileEntry? file = enabled ? controller.previewFile.value : null;
+      final rust.FileEntry? file = enabled
+          ? controller.previewFile.value
+          : null;
 
       final double configuredHeight = paneMode
           ? controller.panePreviewHeight.value
@@ -210,10 +222,7 @@ class _PreviewBottomPanelState extends State<PreviewBottomPanel> {
           child: Center(
             child: Text(
               'No file selected',
-              style: TextStyle(
-                fontSize: 12.5,
-                color: context.colors.textFaint,
-              ),
+              style: TextStyle(fontSize: 12.5, color: context.colors.textFaint),
             ),
           ),
         );
@@ -283,10 +292,7 @@ class _PreviewBottomPanelState extends State<PreviewBottomPanel> {
                 },
                 onVerticalDragUpdate: (details) {
                   onResize(
-                    (configuredHeight - details.delta.dy).clamp(
-                      110.0,
-                      420.0,
-                    ),
+                    (configuredHeight - details.delta.dy).clamp(110.0, 420.0),
                   );
                 },
                 onVerticalDragEnd: (_) => setState(() => _resizing = false),
