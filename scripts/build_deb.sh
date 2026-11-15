@@ -154,7 +154,7 @@ Maintainer: $MAINTAINER
 Description: $DESCRIPTION
  A minimalist modern file manager for Linux.
 Installed-Size: $INSTALLED_SIZE
-Depends: libgtk-3-0 | libgtk-3-0t64, libmpv2 | libmpv1 | libmpv2t64, libepoxy0 | libepoxy0t64, libstdc++6, libc6
+Depends: libgtk-3-0 | libgtk-3-0t64, libepoxy0 | libepoxy0t64, libstdc++6, libc6
 EOF
 
 echo "==> building $OUT"

@@ -43,9 +43,6 @@ dependencies:
   freezed_annotation: ^3.1.0
   package_info_plus: ^9.0.1
   window_manager: ^0.5.2
-  media_kit: ^1.2.6
-  media_kit_video: ^2.0.1
-  media_kit_libs_video: ^1.0.7
   super_drag_and_drop: ^0.9.1
   super_clipboard: ^0.9.1
   # Restores the GTK window's rounded corners on the small pop-up windows

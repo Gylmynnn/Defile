@@ -8,8 +8,6 @@ import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:defile/src/rust/api/pdf.dart' as pdf;
 import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../../../theme/app_theme.dart';
 import '../../services/font_service.dart';
@@ -54,9 +52,6 @@ class _PreviewPanelState extends State<PreviewPanel> {
       final bool paneMode = widget.enabledOverride != null;
       final bool enabled =
           widget.enabledOverride?.value ?? themeService.previewEnabled.value;
-      if (!enabled) {
-        releasePooledMediaPreview();
-      }
       final double minMainWidth = controller.isSearching.value
           ? _minMainWidthSearching
           : _minMainWidth;
@@ -192,9 +187,6 @@ class _PreviewBottomPanelState extends State<PreviewBottomPanel> {
       final bool paneMode = widget.enabledOverride != null;
       final bool enabled =
           widget.enabledOverride?.value ?? themeService.previewEnabled.value;
-      if (!enabled) {
-        releasePooledMediaPreview();
-      }
       final rust.FileEntry? file = enabled ? controller.previewFile.value : null;
 
       final double configuredHeight = paneMode
@@ -406,20 +398,8 @@ class _PreviewContent extends StatelessWidget {
       return _ImagePreview(file: file);
     }
 
-    if (isAudioFile(file.name)) {
-      return _MediaPreview(
-        key: const ValueKey('audio-preview'),
-        file: file,
-        showVideo: false,
-      );
-    }
-
-    if (isVideoFile(file.name)) {
-      return _MediaPreview(
-        key: const ValueKey('video-preview'),
-        file: file,
-        showVideo: true,
-      );
+    if (isAudioFile(file.name) || isVideoFile(file.name)) {
+      return _MediaPlaceholder(isVideo: isVideoFile(file.name));
     }
 
     if (isTextFile(file.name)) {

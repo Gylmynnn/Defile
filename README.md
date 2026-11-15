@@ -30,7 +30,7 @@ Download `defile_<version>_amd64.deb` (or `_arm64.deb`) from the
 sudo apt install ./defile_0.6.12_amd64.deb
 ```
 
-Requires: `libgtk-3-0 | libgtk-3-0t64`, `libmpv2 | libmpv2t64`, `libepoxy0`.
+Requires: `libgtk-3-0 | libgtk-3-0t64`, `libepoxy0`.
 
 ### Fedora / RHEL / openSUSE (`.rpm`)
 
@@ -44,7 +44,7 @@ sudo dnf install ./defile-0.6.12-x86_64.rpm
 sudo zypper install ./defile-0.6.12-x86_64.rpm
 ```
 
-Requires: `gtk3`, `mpv-libs`, `libepoxy`.
+Requires: `gtk3`, `libepoxy`.
 
 ### Arch Linux (AUR)
 
@@ -61,11 +61,11 @@ and repackages the official release AppImage (see
 
 The installer falls back to the AppImage when no system package applies.
 It installs to `~/.local/opt/defile`, links `~/.local/bin/defile`, and
-registers the launcher entry. Requires `curl`, `mpv` (libmpv), and FUSE
+registers the launcher entry. Requires `curl` and FUSE
 (`libfuse2` on Debian/Ubuntu, `fuse2` on Arch).
 
 ```bash
-sudo pacman -S curl mpv fuse2
+sudo pacman -S curl fuse2
 ```
 
 ## Packaging from source

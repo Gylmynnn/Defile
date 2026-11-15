@@ -4,10 +4,8 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   irondash_engine_context
-  media_kit_libs_linux
   screen_retriever_linux
   super_native_extensions
-  media_kit_video
   window_manager
 )
 
