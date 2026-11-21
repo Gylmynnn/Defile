@@ -98,7 +98,9 @@ Future<void> main(List<String> args) async {
 
   final windowOptions = WindowOptions(
     titleBarStyle: TitleBarStyle.hidden,
-    skipTaskbar: true,
+    // Portal backends stay invisible helpers; regular GUI windows belong in
+    // the taskbar so minimizing keeps them reachable.
+    skipTaskbar: portalBackend,
   );
 
   if (portalBackend) {

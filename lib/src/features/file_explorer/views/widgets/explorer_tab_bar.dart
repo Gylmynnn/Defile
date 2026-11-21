@@ -250,7 +250,9 @@ class _ExplorerTabBarState extends State<ExplorerTabBar> {
       height: ExplorerTabBar.height,
       padding: const EdgeInsets.only(left: 3),
       decoration: BoxDecoration(
-        color: context.colors.windowDeep,
+        // The strip shares the file list's background; the tab pills carry
+        // the deeper title-bar tone so the active tab reads as a button.
+        color: context.colors.window,
         border: Border(bottom: BorderSide(color: context.colors.divider)),
       ),
       child: Row(
@@ -389,7 +391,7 @@ class _TabItem extends StatelessWidget {
     return HoverRegion(
       builder: (context, hovered) {
         final Color background = active
-            ? context.colors.surface
+            ? context.colors.windowDeep
             : hovered
             ? context.colors.hover
             : Colors.transparent;

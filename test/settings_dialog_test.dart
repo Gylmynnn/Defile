@@ -89,6 +89,65 @@ void main() {
     },
   );
 
+  testWidgets('switching sections starts the new section at the top', (
+    tester,
+  ) async {
+    // Use a realistic desktop surface: the settings dialog clamps to 940px
+    // wide, and the test font (Ahem) is much wider than real system fonts.
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    Get.put(IconThemeService());
+    Get.put(FontService());
+    Get.put(ThemeService());
+
+    // Keep the font picker from kicking off its asynchronous system scan in
+    // the fake-async test zone (its spinner would never settle).
+    Get.find<FontService>().fonts.assignAll(<String>['Inter']);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: SettingsDialog())),
+    );
+
+    // Appearance is the longest section, so it is guaranteed to scroll.
+    await tester.tap(find.text('Appearance'));
+    await tester.pumpAndSettle();
+
+    final Finder contentScrollable = find
+        .descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    tester.state<ScrollableState>(contentScrollable).position.jumpTo(320);
+    await tester.pump();
+
+    expect(
+      tester.state<ScrollableState>(contentScrollable).position.pixels,
+      greaterThan(0),
+    );
+
+    // Every other section is shorter; the offset must not leak across.
+    for (final String label in <String>['Interface', 'Hotkeys', 'About']) {
+      await tester.tap(find.text(label).first);
+      await tester.pumpAndSettle();
+
+      final Finder scrollable = find
+          .descendant(
+            of: find.byType(SingleChildScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+
+      expect(
+        tester.state<ScrollableState>(scrollable).position.pixels,
+        0,
+        reason: 'The $label section should open scrolled to the top.',
+      );
+    }
+  });
+
   testWidgets('Interface section exposes sort and hidden-file controls', (
     tester,
   ) async {

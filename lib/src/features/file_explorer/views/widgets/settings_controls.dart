@@ -2,6 +2,7 @@ part of 'settings_dialog.dart';
 
 class _SidebarItemWidget extends StatelessWidget {
   const _SidebarItemWidget({
+    super.key,
     required this.label,
     required this.icon,
     required this.active,

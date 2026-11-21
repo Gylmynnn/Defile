@@ -464,6 +464,37 @@ extension _SettingsSections on _SettingsDialogState {
             }),
           ],
         ),
+
+        const SizedBox(height: 22),
+        _buildSectionTitle('Window Controls'),
+        const SizedBox(height: 8),
+        _CustomSectionCard(
+          children: [
+            Obx(() {
+              return _CustomSettingRow(
+                title: 'Show minimize button',
+                subtitle:
+                    'Place a minimize control at the top right, after Settings.',
+                control: _CustomSwitch(
+                  value: _windowControls.showMinimize.value,
+                  onChanged: (val) => _windowControls.showMinimize.value = val,
+                ),
+              );
+            }),
+            _CustomDivider(),
+            Obx(() {
+              return _CustomSettingRow(
+                title: 'Show close button',
+                subtitle:
+                    'Place a close control at the top right, after Settings.',
+                control: _CustomSwitch(
+                  value: _windowControls.showClose.value,
+                  onChanged: (val) => _windowControls.showClose.value = val,
+                ),
+              );
+            }),
+          ],
+        ),
       ],
     );
   }

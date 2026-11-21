@@ -7,6 +7,7 @@ import '../../../../theme/app_theme.dart';
 import '../../controllers/explorer_tabs_controller.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../services/theme_service.dart';
+import '../../services/window_controls_service.dart';
 import '../../utils/app_dialog_route.dart';
 import 'context_menu.dart';
 import 'explorer_scope.dart';
@@ -182,6 +183,7 @@ class _ExplorerToolbarState extends State<ExplorerToolbar> {
                 builder: (BuildContext _) => const SettingsDialog(),
               ),
             ),
+          if (!widget.compact) const _WindowControls(),
         ],
       ),
     );
@@ -528,6 +530,49 @@ class _ViewModeSwitch extends StatelessWidget {
   }
 }
 
+/// Custom window controls pinned to the top-right of the shared title bar,
+/// right after Settings. Each control can be hidden from Settings → Interface.
+class _WindowControls extends StatelessWidget {
+  const _WindowControls();
+
+  @override
+  Widget build(BuildContext context) {
+    final WindowControlsService controls =
+        Get.isRegistered<WindowControlsService>()
+        ? Get.find<WindowControlsService>()
+        : Get.put<WindowControlsService>(WindowControlsService());
+
+    return Obx(() {
+      final bool showMinimize = controls.showMinimize.value;
+      final bool showClose = controls.showClose.value;
+
+      if (!showMinimize && !showClose) {
+        return const SizedBox.shrink();
+      }
+
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(width: 6),
+          if (showMinimize)
+            _ToolbarIconButton(
+              icon: CupertinoIcons.minus,
+              tooltip: 'Minimize',
+              onTap: controls.minimizeWindow,
+            ),
+          if (showClose)
+            _ToolbarIconButton(
+              icon: CupertinoIcons.xmark,
+              tooltip: 'Close window',
+              danger: true,
+              onTap: controls.closeWindow,
+            ),
+        ],
+      );
+    });
+  }
+}
+
 class _ToolbarIconButton extends StatelessWidget {
   const _ToolbarIconButton({
     required this.icon,
@@ -536,6 +581,7 @@ class _ToolbarIconButton extends StatelessWidget {
     this.onSecondaryTap,
     this.onTapAt,
     this.active = false,
+    this.danger = false,
   });
 
   final IconData icon;
@@ -546,6 +592,10 @@ class _ToolbarIconButton extends StatelessWidget {
   /// Opens a menu anchored to the button. Takes precedence over [onTap].
   final ValueChanged<Offset>? onTapAt;
   final bool active;
+
+  /// Paints a destructive hover state (red fill, white glyph). Used by the
+  /// window close control.
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
@@ -559,8 +609,15 @@ class _ToolbarIconButton extends StatelessWidget {
           final Color background = active
               ? context.colors.selection
               : hovered && enabled
-              ? context.colors.hover
+              ? (danger ? context.colors.danger : context.colors.hover)
               : Colors.transparent;
+          final Color foreground = !enabled
+              ? context.colors.textFaint.withValues(alpha: 0.45)
+              : danger && hovered
+              ? Colors.white
+              : active
+              ? context.colors.textPrimary
+              : context.colors.textSecondary;
 
           return GestureDetector(
             onTap: onTap,
@@ -584,15 +641,7 @@ class _ToolbarIconButton extends StatelessWidget {
                 color: background,
                 borderRadius: BorderRadius.circular(5),
               ),
-              child: Icon(
-                icon,
-                size: 17,
-                color: !enabled
-                    ? context.colors.textFaint.withValues(alpha: 0.45)
-                    : active
-                    ? context.colors.textPrimary
-                    : context.colors.textSecondary,
-              ),
+              child: Icon(icon, size: 17, color: foreground),
             ),
           );
         },
@@ -743,6 +792,7 @@ class ExplorerSplitTopBar extends StatelessWidget {
               builder: (BuildContext _) => const SettingsDialog(),
             ),
           ),
+          const _WindowControls(),
         ],
       ),
     );

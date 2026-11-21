@@ -14,6 +14,7 @@ import '../../services/icon_theme_service.dart';
 import '../../services/portal_file_chooser_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/update_check_service.dart';
+import '../../services/window_controls_service.dart';
 import '../../utils/app_toast.dart';
 import 'app_button.dart';
 import 'entry_glyphs.dart';
@@ -77,6 +78,11 @@ const List<_SidebarItemDef> _allSidebarItems = [
       'hidden',
       'dotfiles',
       'order',
+      'window',
+      'minimize',
+      'close',
+      'title bar',
+      'control',
     ],
   ),
   _SidebarItemDef(
@@ -162,6 +168,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
   IconThemeService get _iconService => Get.find<IconThemeService>();
   FontService get _fontService => Get.find<FontService>();
   ThemeService get _themeService => Get.find<ThemeService>();
+  WindowControlsService get _windowControls {
+    if (Get.isRegistered<WindowControlsService>()) {
+      return Get.find<WindowControlsService>();
+    }
+    // Tests render the dialog without the exploration binding.
+    return Get.put<WindowControlsService>(WindowControlsService());
+  }
   FileExplorerController? get _explorerController {
     if (Get.isRegistered<FileExplorerController>()) {
       return Get.find<FileExplorerController>();
@@ -507,6 +520,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final bool active = _activeSection == item.section;
 
     return _SidebarItemWidget(
+      key: ValueKey<SettingsSection>(item.section),
       label: item.label,
       icon: item.icon,
       active: active,
@@ -545,6 +559,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
           _buildStickyHeader(),
           Expanded(
             child: SingleChildScrollView(
+              // Sections have wildly different heights and contain stateful
+              // rows (switches, dropdowns, nested lists). Keying the scroll
+              // view makes every switch start from a fresh subtree at offset
+              // zero, instead of reconciling the old section's elements —
+              // which reused scroll offsets and animated switches across
+              // unrelated sections and produced a visible jump/glitch.
+              key: ValueKey<SettingsSection>(_activeSection),
               padding: const EdgeInsets.fromLTRB(28, 20, 28, 36),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
