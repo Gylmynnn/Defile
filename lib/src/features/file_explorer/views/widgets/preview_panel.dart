@@ -142,7 +142,7 @@ class _PreviewPanelState extends State<PreviewPanel> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _PreviewHeader(file: file),
-                      Expanded(child: _PreviewContent(file: file)),
+                      Expanded(child: PreviewContent(file: file)),
                     ],
                   ),
                 ),
@@ -272,7 +272,7 @@ class _PreviewBottomPanelState extends State<PreviewBottomPanel> {
         content = Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: _PreviewContent(file: file)),
+            Expanded(child: PreviewContent(file: file)),
             infoPanel,
           ],
         );
@@ -371,8 +371,11 @@ class _PreviewHeader extends StatelessWidget {
   }
 }
 
-class _PreviewContent extends StatelessWidget {
-  const _PreviewContent({required this.file});
+/// Read-only rendering of a file's content (image, text, PDF, ...). Shared by
+/// the docked preview panel and the Miller-columns preview pane, so both stay
+/// in sync as new formats gain support.
+class PreviewContent extends StatelessWidget {
+  const PreviewContent({super.key, required this.file});
 
   final rust.FileEntry file;
 

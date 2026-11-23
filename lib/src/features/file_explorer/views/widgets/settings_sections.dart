@@ -366,6 +366,10 @@ extension _SettingsSections on _SettingsDialogState {
                         value: ExplorerViewMode.compact,
                         child: Text('Compact'),
                       ),
+                      DropdownMenuItem(
+                        value: ExplorerViewMode.columns,
+                        child: Text('Columns'),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val != null) controller.setViewMode(val);
@@ -627,6 +631,7 @@ extension _SettingsSections on _SettingsDialogState {
       ('Layout: grid', 'Ctrl + 1'),
       ('Layout: list', 'Ctrl + 2'),
       ('Layout: compact', 'Ctrl + 3'),
+      ('Layout: columns', 'Ctrl + 4'),
       ('New directory', 'Ctrl + Shift + N'),
       ('Open terminal in current path', 'F4'),
       ('Refresh directory', 'F5 / Ctrl + R'),

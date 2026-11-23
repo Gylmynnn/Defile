@@ -18,6 +18,18 @@ rust.FileEntry _entry(
   modifiedSeconds: modified,
 );
 
+/// Same, but with an explicit absolute path (needed by the path-keyed fake
+/// filesystem below).
+rust.FileEntry _entryAt(String name, String path, {bool directory = false}) =>
+    rust.FileEntry(
+      name: name,
+      path: path,
+      isDirectory: directory,
+      isFile: !directory,
+      sizeBytes: BigInt.zero,
+      modifiedSeconds: 0,
+    );
+
 class _FakeFs extends FileSystemService {
   _FakeFs(this.entries);
 
@@ -25,6 +37,32 @@ class _FakeFs extends FileSystemService {
 
   @override
   Future<List<rust.FileEntry>> listDirectory(String path) async => entries;
+}
+
+class _TreeFs extends FileSystemService {
+  _TreeFs(this.tree);
+
+  final Map<String, List<rust.FileEntry>> tree;
+
+  @override
+  Future<List<rust.FileEntry>> listDirectory(String path) async =>
+      tree[path] ?? const <rust.FileEntry>[];
+}
+
+/// Records every directory read so the caching behavior can be asserted.
+class _CountingFs extends FileSystemService {
+  _CountingFs(this.tree);
+
+  final Map<String, List<rust.FileEntry>> tree;
+  final List<String> calls = <String>[];
+
+  int readsOf(String path) => calls.where((call) => call == path).length;
+
+  @override
+  Future<List<rust.FileEntry>> listDirectory(String path) async {
+    calls.add(path);
+    return tree[path] ?? const <rust.FileEntry>[];
+  }
 }
 
 void main() {
@@ -127,5 +165,237 @@ void main() {
     expect(controller.canDropEntries([folder], folder.path), isFalse);
     expect(controller.canDropEntries([folder], '/home/docs/sub'), isFalse);
     expect(controller.canDropEntries([], '/home/target'), isFalse);
+  });
+
+  testWidgets('columns load parent and preview listings', (tester) async {
+    final controller = Get.put(
+      FileExplorerController(
+        _TreeFs({
+          '/': [
+            _entryAt('projects', '/projects', directory: true),
+            _entryAt('readme.txt', '/readme.txt'),
+          ],
+          '/projects': [_entryAt('alpha', '/projects/alpha')],
+        }),
+      ),
+    );
+
+    controller.setViewMode(ExplorerViewMode.columns);
+    await tester.runAsync(() => controller.loadDirectory('/'));
+    await tester.pump();
+
+    // Root has no parent listing.
+    expect(controller.columnParentEntries, isEmpty);
+
+    // Selecting the folder fills the preview column with its contents. The
+    // preview refresh is debounced, so advance past the debounce window.
+    controller.selectOnly(
+      controller.entries.firstWhere((entry) => entry.name == 'projects'),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+
+    expect(controller.columnPreviewPath.value, '/projects');
+    expect(
+      controller.columnPreviewEntries.map((entry) => entry.name).toList(),
+      ['alpha'],
+    );
+
+    // Clearing the selection empties the preview again.
+    controller.clearSelection();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    expect(controller.columnPreviewEntries, isEmpty);
+  });
+
+  testWidgets('switching away from columns clears side listings', (
+    tester,
+  ) async {
+    final controller = Get.put(
+      FileExplorerController(_FakeFs([_entry('projects')])),
+    );
+
+    controller.setViewMode(ExplorerViewMode.columns);
+    controller.selection.assignAll([_entryAt('projects', '/projects')]);
+    controller.columnPreviewEntries.add(_entryAt('alpha', '/projects/alpha'));
+    controller.columnParentEntries.add(_entryAt('home', '/home'));
+
+    controller.setViewMode(ExplorerViewMode.list);
+
+    expect(controller.columnPreviewEntries, isEmpty);
+    expect(controller.columnParentEntries, isEmpty);
+    expect(controller.columnPreviewPath.value, isEmpty);
+  });
+
+  testWidgets('sibling navigation does not re-read the parent listing', (
+    tester,
+  ) async {
+    final fs = _CountingFs({
+      '/': [
+        _entryAt('a', '/a', directory: true),
+        _entryAt('b', '/b', directory: true),
+      ],
+      '/a': [_entryAt('a1', '/a/a1')],
+      '/b': [_entryAt('b1', '/b/b1')],
+    });
+    final controller = Get.put(
+      FileExplorerController(fs, initialPath: '/a'),
+    );
+    controller.setViewMode(ExplorerViewMode.columns);
+
+    // Let the controller bootstrap itself into /a.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 80)),
+    );
+    await tester.pump();
+
+    expect(controller.currentPath.value, '/a');
+    // Parent column listed once and shows both siblings.
+    expect(fs.readsOf('/'), 1);
+    expect(
+      controller.columnParentEntries.map((entry) => entry.name).toList(),
+      ['a', 'b'],
+    );
+
+    // Switching to the sibling folder keeps the same parent: no extra read,
+    // and the parent entries object is left untouched.
+    await tester.runAsync(() async {
+      await controller.navigateTo('/b');
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+
+    expect(fs.readsOf('/'), 1);
+    expect(fs.readsOf('/b'), 1);
+    expect(
+      controller.columnParentEntries.map((entry) => entry.name).toList(),
+      ['a', 'b'],
+    );
+  });
+
+  testWidgets('re-selecting a folder reuses the preview cache', (tester) async {
+    final fs = _CountingFs({
+      '/': [
+        _entryAt('a', '/a', directory: true),
+        _entryAt('b', '/b', directory: true),
+      ],
+      '/a': [_entryAt('a1', '/a/a1')],
+      '/b': [_entryAt('b1', '/b/b1')],
+    });
+    final controller = Get.put(FileExplorerController(fs));
+    controller.setViewMode(ExplorerViewMode.columns);
+
+    await tester.runAsync(() => controller.loadDirectory('/'));
+    await tester.pump();
+
+    final rust.FileEntry a = controller.entries.firstWhere(
+      (entry) => entry.name == 'a',
+    );
+    final rust.FileEntry b = controller.entries.firstWhere(
+      (entry) => entry.name == 'b',
+    );
+
+    Future<void> settlePreview() async {
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
+    }
+
+    controller.selectOnly(a);
+    await settlePreview();
+    expect(fs.readsOf('/a'), 1);
+    expect(
+      controller.columnPreviewEntries.map((entry) => entry.name).toList(),
+      ['a1'],
+    );
+
+    controller.selectOnly(b);
+    await settlePreview();
+    expect(fs.readsOf('/b'), 1);
+    expect(fs.readsOf('/a'), 1);
+
+    // Going back to the first folder is served from the cache.
+    controller.selectOnly(a);
+    await settlePreview();
+    expect(fs.readsOf('/a'), 1);
+    expect(
+      controller.columnPreviewEntries.map((entry) => entry.name).toList(),
+      ['a1'],
+    );
+  });
+
+  testWidgets('descending reuses the seeded parent listing', (tester) async {
+    final fs = _CountingFs({
+      '/': [_entryAt('a', '/a', directory: true)],
+      '/a': [_entryAt('b', '/a/b', directory: true)],
+      '/a/b': [_entryAt('c', '/a/b/c')],
+    });
+    final controller = Get.put(FileExplorerController(fs, initialPath: '/'));
+    controller.setViewMode(ExplorerViewMode.columns);
+
+    // Let the controller bootstrap itself into '/'.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 80)),
+    );
+    await tester.pump();
+    expect(controller.currentPath.value, '/');
+    expect(fs.readsOf('/'), 1);
+
+    // Descend into /a: its listing is read once, and the parent column
+    // resolves from the listing seeded when '/' was loaded.
+    await tester.runAsync(() async {
+      await controller.navigateTo('/a');
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    expect(fs.readsOf('/a'), 1);
+    expect(fs.readsOf('/'), 1);
+    expect(
+      controller.columnParentEntries.map((entry) => entry.name).toList(),
+      ['a'],
+    );
+
+    // Descend once more: '/a' was seeded, so it is not read again either.
+    await tester.runAsync(() async {
+      await controller.navigateTo('/a/b');
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    expect(fs.readsOf('/a/b'), 1);
+    expect(fs.readsOf('/a'), 1);
+    expect(
+      controller.columnParentEntries.map((entry) => entry.name).toList(),
+      ['b'],
+    );
+  });
+
+  testWidgets('selecting a file previews it in the columns pane', (
+    tester,
+  ) async {
+    final controller = Get.put(
+      FileExplorerController(
+        _TreeFs({
+          '/': [_entryAt('pic.png', '/pic.png')],
+        }),
+        initialPath: '/',
+      ),
+    );
+    controller.setViewMode(ExplorerViewMode.columns);
+
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 80)),
+    );
+    await tester.pump();
+
+    controller.selectOnly(controller.entries.single);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+
+    // The pane shows the file itself rather than a folder listing.
+    expect(controller.columnPreviewPath.value, '/pic.png');
+    expect(controller.columnPreviewFile.value?.path, '/pic.png');
+    expect(controller.columnPreviewEntries, isEmpty);
+
+    // Going back to a folder clears the file preview.
+    controller.selectOnly(_entryAt('projects', '/projects', directory: true));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    expect(controller.columnPreviewFile.value, isNull);
   });
 }

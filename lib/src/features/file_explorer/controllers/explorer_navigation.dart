@@ -73,20 +73,40 @@ extension ExplorerNavigation on FileExplorerController {
     return result;
   }
 
-  Future<void> loadDirectory(String path) async {
+  /// Loads [path] into the active pane. [force] marks an explicit refresh
+  /// (F5, post-operation): only then are the decoded-image cache and the
+  /// side-pane listings dropped, so ordinary browsing keeps thumbnails warm
+  /// and the Miller-columns cache reusable.
+  Future<void> loadDirectory(String path, {bool force = false}) async {
     isLoading.value = true;
     errorMessage.value = null;
     location.value = ExplorerLocation.directory;
     clearSelection();
     previewFile.value = null;
-    PaintingBinding.instance.imageCache.clear();
-    PaintingBinding.instance.imageCache.clearLiveImages();
+    if (force) {
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+    }
 
     try {
-      final result = await fileSystemService.listDirectory(path);
+      // In the Miller-columns layout a freshly listed folder is remembered for
+      // the side panes; when the same folder is opened again (walking back down
+      // a deep tree, or up into the parent) it is served from that cache
+      // instead of re-reading the disk. Explicit refreshes bypass it.
+      final _ColumnListing? cached = (!force && isColumnsLayout)
+          ? _columnListings[path]
+          : null;
+
+      final List<rust.FileEntry> result =
+          cached?.raw ?? await fileSystemService.listDirectory(path);
+
       entries.assignAll(result);
       currentPath.value = path;
+      if (viewMode.value == ExplorerViewMode.columns) {
+        seedColumnListing(path, result);
+      }
       _refreshDiskUsage(path);
+      unawaited(refreshColumns(reload: force));
     } catch (error) {
       errorMessage.value = error.toString();
     } finally {
@@ -280,6 +300,6 @@ extension ExplorerNavigation on FileExplorerController {
       return;
     }
 
-    await loadDirectory(currentPath.value);
+    await loadDirectory(currentPath.value, force: true);
   }
 }

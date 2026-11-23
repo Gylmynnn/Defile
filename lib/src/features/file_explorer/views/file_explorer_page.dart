@@ -817,13 +817,16 @@ class _EntryContentState extends State<_EntryContentArea> {
         const SingleActivator(LogicalKeyboardKey.f6): _switchPaneFocus,
         const SingleActivator(LogicalKeyboardKey.tab): _switchPaneFocus,
         // Per-pane layout (Explorer View): Ctrl+1 = grid, 2 = list, 3 =
-        // compact. Tab selection moved to Alt+1..9 to free these up.
+        // compact, 4 = columns. Tab selection moved to Alt+1..9 to free
+        // these up.
         const SingleActivator(LogicalKeyboardKey.digit1, control: true): () =>
             controller.setViewMode(ExplorerViewMode.grid),
         const SingleActivator(LogicalKeyboardKey.digit2, control: true): () =>
             controller.setViewMode(ExplorerViewMode.list),
         const SingleActivator(LogicalKeyboardKey.digit3, control: true): () =>
             controller.setViewMode(ExplorerViewMode.compact),
+        const SingleActivator(LogicalKeyboardKey.digit4, control: true): () =>
+            controller.setViewMode(ExplorerViewMode.columns),
       },
       child: Focus(
         focusNode: controller.keyboardFocusNode,
@@ -1088,6 +1091,8 @@ class _EntryContentState extends State<_EntryContentArea> {
         return (_viewportHeight / 29).floor().clamp(1, 200);
       case ExplorerViewMode.compact:
         return (_viewportHeight / 22).floor().clamp(1, 200);
+      case ExplorerViewMode.columns:
+        return (_viewportHeight / 27).floor().clamp(1, 200);
     }
   }
 
@@ -1116,6 +1121,35 @@ class _EntryContentState extends State<_EntryContentArea> {
         return KeyEventResult.handled;
       }
       return KeyEventResult.ignored;
+    }
+
+    // Miller columns behave like yazi: Left/Right walk the folder tree while
+    // Up/Down move the cursor inside the active column.
+    if (controller.isColumnsLayout) {
+      if (key == LogicalKeyboardKey.arrowLeft) {
+        controller.goToParent();
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowRight) {
+        final List<rust.FileEntry> selection = controller.selection;
+        if (selection.length == 1) {
+          final rust.FileEntry entry = selection.single;
+          if (entry.isDirectory) {
+            controller.navigateTo(entry.path);
+          } else {
+            controller.openFile(entry);
+          }
+        }
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowUp) {
+        _moveSelection(-1, extend: shift);
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.arrowDown) {
+        _moveSelection(1, extend: shift);
+        return KeyEventResult.handled;
+      }
     }
 
     final bool grid = controller.viewMode.value == ExplorerViewMode.grid;
@@ -1441,8 +1475,9 @@ class _EntryContentState extends State<_EntryContentArea> {
       return _buildError(error);
     }
 
+    final bool columns = controller.isColumnsLayout;
     final List<rust.FileEntry> entries = controller.visibleEntries;
-    if (entries.isEmpty) {
+    if (entries.isEmpty && !columns) {
       if (controller.isLoading.value) {
         return const Center(
           child: SizedBox(
@@ -1464,6 +1499,8 @@ class _EntryContentState extends State<_EntryContentArea> {
       _showEntryMenu(context, entry, position);
     }
 
+    // Miller columns always render all three panes, even while the active
+    // folder is empty, so the parent and preview stay visible.
     final Widget view = switch (controller.viewMode.value) {
       ExplorerViewMode.grid => EntryGridView(
         entries: entries,
@@ -1504,6 +1541,45 @@ class _EntryContentState extends State<_EntryContentArea> {
         onDrop: _moveEntriesTo,
         paneOwner: controller,
       ),
+      ExplorerViewMode.columns =>
+        columns
+            ? EntryColumnsView(
+                entries: entries,
+                // Pass the observables themselves; the side columns subscribe
+                // internally so cursor moves never rebuild this whole body.
+                parentEntries: controller.columnParentEntries,
+                previewEntries: controller.columnPreviewEntries,
+                previewFile: controller.columnPreviewFile,
+                selectedPaths: controller.selectedPaths,
+                currentPath: controller.currentPath.value,
+                previewPath: controller.columnPreviewPath,
+                onPress: _handleEntryPress,
+                onTap: _handleEntryTap,
+                onOpen: _handleEntryOpen,
+                onMenu: openMenu,
+                onNavigate: _navigateColumnEntry,
+                onPreview: _previewColumnEntry,
+                onMiddleClick: _handleEntryMiddleClick,
+                dragEntries: _dragEntriesFor,
+                canDrop: controller.canDropEntries,
+                onDrop: _moveEntriesTo,
+                paneOwner: controller,
+              )
+            : EntryListView(
+                // Recents and other virtual locations have no parent folder;
+                // they fall back to the regular list.
+                entries: entries,
+                selectedPaths: controller.selectedPaths,
+                onPress: _handleEntryPress,
+                onTap: _handleEntryTap,
+                onOpen: _handleEntryOpen,
+                onMenu: openMenu,
+                onMiddleClick: _handleEntryMiddleClick,
+                dragEntries: _dragEntriesFor,
+                canDrop: controller.canDropEntries,
+                onDrop: _moveEntriesTo,
+                paneOwner: controller,
+              ),
     };
 
     return _LoadingShroud(loading: controller.isLoading.value, child: view);
@@ -1513,6 +1589,27 @@ class _EntryContentState extends State<_EntryContentArea> {
     if (entry.isDirectory && Get.isRegistered<ExplorerTabsController>()) {
       Get.find<ExplorerTabsController>().addTab(path: entry.path);
     }
+  }
+
+  /// Activates an entry clicked in a Miller-columns side pane: folders are
+  /// entered, files open. The side panes never change the selection, so the
+  /// main column's selection stays intact.
+  void _navigateColumnEntry(rust.FileEntry entry) {
+    _notifyPaneFocus();
+    if (entry.isDirectory) {
+      controller.navigateTo(entry.path);
+    } else {
+      controller.openFile(entry);
+    }
+    _restoreSearchFocus();
+  }
+
+  /// Previews a file clicked in a Miller-columns side pane. Selecting it fills
+  /// the preview pane (and the docked preview panel) with the file's content,
+  /// so the first click shows a preview; a double-click opens the file.
+  void _previewColumnEntry(rust.FileEntry entry) {
+    _notifyPaneFocus();
+    controller.selectOnly(entry);
   }
 
   void _handleEntryPress(rust.FileEntry entry) {

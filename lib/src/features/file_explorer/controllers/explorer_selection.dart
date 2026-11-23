@@ -1,7 +1,16 @@
 part of 'file_explorer_controller.dart';
 
 extension ExplorerSelection on FileExplorerController {
-  void setViewMode(ExplorerViewMode mode) => viewMode.value = mode;
+  void setViewMode(ExplorerViewMode mode) {
+    if (viewMode.value == mode) return;
+
+    viewMode.value = mode;
+    if (mode == ExplorerViewMode.columns) {
+      unawaited(refreshColumns());
+    } else {
+      clearColumns();
+    }
+  }
 
   void toggleSidebar() => showSidebar.toggle();
 
@@ -11,12 +20,14 @@ extension ExplorerSelection on FileExplorerController {
 
     sortField.value = field;
     unawaited(_persistViewSetting('sort-field', field.name));
+    unawaited(refreshColumns(reload: false));
   }
 
   /// Flips ascending/descending for the active sort key.
   void toggleSortDirection() {
     sortAscending.value = !sortAscending.value;
     unawaited(_persistViewSetting('sort-ascending', '${sortAscending.value}'));
+    unawaited(refreshColumns(reload: false));
   }
 
   void setSortAscending(bool value) {
@@ -24,12 +35,14 @@ extension ExplorerSelection on FileExplorerController {
 
     sortAscending.value = value;
     unawaited(_persistViewSetting('sort-ascending', '$value'));
+    unawaited(refreshColumns(reload: false));
   }
 
   /// Shows or hides dot-files (also bound to `Ctrl+H`).
   void toggleHiddenFiles() {
     showHidden.value = !showHidden.value;
     unawaited(_persistViewSetting('show-hidden', '${showHidden.value}'));
+    unawaited(refreshColumns(reload: false));
   }
 
   Future<void> _persistViewSetting(String key, String value) async {

@@ -16,12 +16,13 @@ import 'package:path/path.dart' as p;
 
 import 'explorer_tabs_controller.dart';
 
+part 'explorer_columns.dart';
 part 'explorer_navigation.dart';
 part 'explorer_operations.dart';
 part 'explorer_search.dart';
 part 'explorer_selection.dart';
 
-enum ExplorerViewMode { grid, list, compact }
+enum ExplorerViewMode { grid, list, compact, columns }
 
 enum ExplorerLocation { directory, recent, trash }
 
@@ -72,6 +73,38 @@ class FileExplorerController extends GetxController {
   final Rx<ExplorerLocation> location = ExplorerLocation.directory.obs;
 
   final Rx<ExplorerViewMode> viewMode = ExplorerViewMode.grid.obs;
+
+  /// Miller-columns layout state: the left column lists the parent folder and
+  /// the right column previews the selected folder. Both are loaded lazily and
+  /// stay empty while another layout is active.
+  final RxList<rust.FileEntry> columnParentEntries = <rust.FileEntry>[].obs;
+  final RxList<rust.FileEntry> columnPreviewEntries = <rust.FileEntry>[].obs;
+  final RxString columnPreviewPath = ''.obs;
+  int _columnParentGeneration = 0;
+  int _columnPreviewGeneration = 0;
+
+  /// Raw (unfiltered) side-pane listings and the paths they were read from,
+  /// so sort / dot-file toggles re-filter without re-reading the filesystem.
+  /// The map is a small LRU shared by both side panes: switching back and
+  /// forth between siblings resolves from here instead of hitting the disk.
+  final Map<String, _ColumnListing> _columnListings =
+      <String, _ColumnListing>{};
+  String _columnParentShownPath = '';
+  String _columnPreviewShownPath = '';
+
+  /// File the Miller-columns preview pane is showing, or null when it is
+  /// showing a folder's contents (or nothing). A selected/clicked file previews
+  /// here instead of opening straight away.
+  final Rxn<rust.FileEntry> columnPreviewFile = Rxn<rust.FileEntry>();
+
+  /// Coalesces cursor moves into at most one preview listing per tick; a held
+  /// arrow key or a band-select must not storm the filesystem.
+  Timer? _columnPreviewDebounce;
+  static const Duration _columnPreviewDebounceDelay = Duration(
+    milliseconds: 60,
+  );
+  static const int _columnListingCacheMax = 32;
+
   final RxBool showSidebar = true.obs;
   final RxBool isSearching = false.obs;
   final RxString searchQuery = ''.obs;
@@ -144,6 +177,7 @@ class FileExplorerController extends GetxController {
     ever(selection, (List<rust.FileEntry> selected) {
       _selectionSnapshot = List<rust.FileEntry>.unmodifiable(selected);
       selectedPaths.assignAll(selected.map((entry) => entry.path));
+      scheduleColumnPreview();
     });
     ever(places, (_) => _splitPlaces());
     _bootstrap();
@@ -152,6 +186,7 @@ class FileExplorerController extends GetxController {
   @override
   void onClose() {
     _pathSearchTimer?.cancel();
+    _columnPreviewDebounce?.cancel();
     searchFocusNode.dispose();
     keyboardFocusNode.dispose();
     super.onClose();

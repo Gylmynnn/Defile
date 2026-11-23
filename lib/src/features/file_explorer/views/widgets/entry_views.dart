@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
@@ -17,6 +19,7 @@ import 'entry_glyphs.dart';
 import 'entry_transition.dart';
 import 'hover_region.dart';
 import 'image_thumbnail.dart';
+import 'preview_panel.dart';
 import 'themed_icon.dart';
 
 typedef EntryOpenCallback = void Function(rust.FileEntry entry);
@@ -65,6 +68,18 @@ Duration get _selectionAnimationDuration {
   }
   return Get.find<ThemeService>().animationsEnabled.value
       ? const Duration(milliseconds: 120)
+      : Duration.zero;
+}
+
+/// Reveal duration for a Miller column when its contents change. Zero when
+/// animations are turned off in Settings, which also short-circuits the
+/// controller in [_ColumnReveal].
+Duration get _columnsAnimationDuration {
+  if (!Get.isRegistered<ThemeService>()) {
+    return const Duration(milliseconds: 160);
+  }
+  return Get.find<ThemeService>().animationsEnabled.value
+      ? const Duration(milliseconds: 160)
       : Duration.zero;
 }
 
@@ -459,6 +474,503 @@ class _ListRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(5),
                   border: Border.all(
                     color: selected
+                        ? context.colors.selectionBorder
+                        : Colors.transparent,
+                  ),
+                ),
+                child: content,
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Miller-columns ("nested list" / yazi) layout: parent folder, active folder
+/// and a preview of the focused entry, side by side.
+///
+/// The side columns observe their [RxList]s directly, so cursor moves only
+/// rebuild the column that changed (plus the per-row selection highlights) —
+/// never the whole three-pane view. The parent column receives the plain
+/// [currentPath] and auto-scrolls the active folder into view.
+///
+/// The right column is a true preview: a selected folder lists its contents,
+/// a selected file renders its content (image/text/PDF/...). That is why a
+/// click on a file in a side column previews it ([onPreview]) instead of
+/// opening it straight away — opening is reserved for a double-click.
+class EntryColumnsView extends StatelessWidget {
+  const EntryColumnsView({
+    super.key,
+    required this.entries,
+    required this.parentEntries,
+    required this.previewEntries,
+    required this.selectedPaths,
+    required this.currentPath,
+    required this.previewPath,
+    required this.previewFile,
+    required this.onPress,
+    required this.onTap,
+    required this.onOpen,
+    required this.onMenu,
+    required this.onNavigate,
+    required this.onPreview,
+    this.onMiddleClick,
+    this.dragEntries,
+    this.canDrop,
+    this.onDrop,
+    this.paneOwner,
+  });
+
+  final List<rust.FileEntry> entries;
+  final RxList<rust.FileEntry> parentEntries;
+  final RxList<rust.FileEntry> previewEntries;
+  final RxSet<String> selectedPaths;
+  final String currentPath;
+
+  /// Folder shown in the preview column; empty when nothing (or a file) is
+  /// selected. A file is rendered through [previewFile] instead.
+  final RxString previewPath;
+
+  /// File shown in the preview column, or null when the column lists a folder.
+  final Rxn<rust.FileEntry> previewFile;
+
+  final EntryOpenCallback onPress;
+  final EntryOpenCallback onTap;
+  final EntryOpenCallback onOpen;
+  final EntryMenuCallback onMenu;
+
+  /// Jumps into a folder clicked in one of the side columns.
+  final EntryOpenCallback onNavigate;
+
+  /// Previews a file clicked in a side column instead of opening it.
+  final EntryOpenCallback onPreview;
+
+  final EntryOpenCallback? onMiddleClick;
+  final EntryDragEntriesCallback? dragEntries;
+  final EntryCanDropCallback? canDrop;
+  final EntryDropCallback? onDrop;
+  final Object? paneOwner;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: RepaintBoundary(child: _buildParentColumn(context)),
+        ),
+        _divider(context),
+        Expanded(
+          child: RepaintBoundary(child: _buildCurrentColumn(context)),
+        ),
+        _divider(context),
+        Expanded(
+          child: RepaintBoundary(child: _buildPreviewColumn(context)),
+        ),
+      ],
+    );
+  }
+
+  /// Previewing a file starts on press so it feels immediate; folders wait for
+  /// the tap, otherwise a drag starting on a folder would navigate away mid
+  /// drag.
+  void _sidePress(rust.FileEntry entry) {
+    if (!entry.isDirectory) onPreview(entry);
+  }
+
+  /// Folder rows drill down on tap; file rows already previewed on press.
+  void _sideTap(rust.FileEntry entry) {
+    if (entry.isDirectory) onNavigate(entry);
+  }
+
+  Widget _divider(BuildContext context) => Container(
+    width: 1,
+    color: context.colors.divider,
+  );
+
+  Widget _buildParentColumn(BuildContext context) {
+    return Obx(() {
+      final List<rust.FileEntry> items = parentEntries.toList();
+      final String shownPath = currentPath.isEmpty
+          ? ''
+          : p.dirname(currentPath);
+
+      return _ColumnReveal(
+        revealKey: 'parent:$shownPath',
+        child: items.isEmpty
+            ? const SizedBox.shrink()
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final entry = items[index];
+                  final bool isCurrent = entry.path == currentPath;
+
+                  final Widget row = _ColumnRow(
+                    entry: entry,
+                    selectedPaths: selectedPaths,
+                    selected: isCurrent,
+                    onPress: () => _sidePress(entry),
+                    onTap: () => _sideTap(entry),
+                    onOpen: () => onNavigate(entry),
+                    paneOwner: paneOwner,
+                  );
+
+                  if (!isCurrent) return row;
+
+                  // The active folder's row carries its tile key; once it
+                  // mounts, bring it into view so keyboard navigation stays
+                  // visible.
+                  _scheduleReveal();
+                  return row;
+                },
+              ),
+      );
+    });
+  }
+
+  void _scheduleReveal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final BuildContext? tile = entryTileKey(
+        currentPath,
+        owner: paneOwner,
+      ).currentContext;
+      if (tile == null) return;
+
+      final RenderObject? object = tile.findRenderObject();
+      if (object is! RenderBox || !object.attached || !object.hasSize) return;
+
+      // Only scroll when the active row is actually off-screen. Re-centring on
+      // every rebuild would fight a manual scroll of the parent column — and
+      // the row is rebuilt a lot while walking a deep tree.
+      final RenderObject? viewportObject = RenderAbstractViewport.maybeOf(
+        object,
+      );
+      if (viewportObject is RenderBox &&
+          viewportObject.attached &&
+          viewportObject.hasSize) {
+        final Rect tileRect = MatrixUtils.transformRect(
+          object.getTransformTo(viewportObject),
+          Offset.zero & object.size,
+        );
+        final Rect visible = Offset.zero & viewportObject.size;
+        if (visible.contains(tileRect.topLeft) &&
+            visible.contains(tileRect.bottomRight)) {
+          return;
+        }
+      }
+
+      Scrollable.ensureVisible(
+        tile,
+        alignment: 0.5,
+        duration: _columnsAnimationDuration,
+      );
+    });
+  }
+
+  Widget _buildCurrentColumn(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        final entry = entries[index];
+
+        return EntryReveal(
+          index: index,
+          child: _EntryDragWrapper(
+            entry: entry,
+            dragEntries: dragEntries,
+            canDrop: canDrop,
+            onDrop: onDrop,
+            child: _ColumnRow(
+              entry: entry,
+              selectedPaths: selectedPaths,
+              onPress: () => onPress(entry),
+              onTap: () => onTap(entry),
+              onOpen: () => onOpen(entry),
+              onMenu: (position) => onMenu(entry, position),
+              onMiddleClick: onMiddleClick == null
+                  ? null
+                  : () => onMiddleClick!(entry),
+              paneOwner: paneOwner,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPreviewColumn(BuildContext context) {
+    return Obx(() {
+      final rust.FileEntry? file = previewFile.value;
+      final String target = previewPath.value;
+
+      final Widget child;
+      final String revealKey;
+
+      if (file != null) {
+        // A selected file previews its content in place, so a click on an
+        // image or document shows it before anything opens.
+        revealKey = 'file:${file.path}';
+        child = _ColumnFilePreview(file: file);
+      } else if (target.isEmpty) {
+        revealKey = 'empty';
+        child = const _ColumnPlaceholder(
+          icon: CupertinoIcons.sidebar_right,
+          label: 'Select a folder',
+        );
+      } else {
+        final List<rust.FileEntry> items = previewEntries.toList();
+        revealKey = 'dir:$target';
+
+        child = items.isEmpty
+            ? const _ColumnPlaceholder(
+                icon: CupertinoIcons.folder,
+                label: 'Empty folder',
+              )
+            : ListView.builder(
+                // A fresh folder starts at the top instead of inheriting the
+                // previous preview's scroll offset.
+                key: ValueKey<String>(target),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final entry = items[index];
+
+                  return _ColumnRow(
+                    entry: entry,
+                    selectedPaths: selectedPaths,
+                    onPress: () => _sidePress(entry),
+                    onTap: () => _sideTap(entry),
+                    onOpen: () => onNavigate(entry),
+                    paneOwner: paneOwner,
+                  );
+                },
+              );
+      }
+
+      return _ColumnReveal(revealKey: revealKey, child: child);
+    });
+  }
+}
+
+/// Fades a column's contents in whenever [revealKey] changes (another folder
+/// opened, another file selected). A single child stays mounted at a time, so
+/// the per-row [GlobalKey]s in the listings are never duplicated the way an
+/// [AnimatedSwitcher] would.
+class _ColumnReveal extends StatefulWidget {
+  const _ColumnReveal({required this.revealKey, required this.child});
+
+  final String revealKey;
+  final Widget child;
+
+  @override
+  State<_ColumnReveal> createState() => _ColumnRevealState();
+}
+
+class _ColumnRevealState extends State<_ColumnReveal>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: _columnsAnimationDuration,
+    value: 1,
+  );
+
+  @override
+  void didUpdateWidget(covariant _ColumnReveal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.revealKey == widget.revealKey) return;
+
+    if (_columnsAnimationDuration == Duration.zero) {
+      _controller.value = 1;
+    } else {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutCubic,
+      ),
+      child: widget.child,
+    );
+  }
+}
+
+/// Compact file preview used by the Miller-columns preview pane: a one-line
+/// header plus the shared [PreviewContent] rendering.
+class _ColumnFilePreview extends StatelessWidget {
+  const _ColumnFilePreview({required this.file});
+
+  final rust.FileEntry file;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: context.colors.divider),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                file.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.textStrong,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                fileTypeShortLabel(file.name),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: context.colors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(child: PreviewContent(file: file)),
+      ],
+    );
+  }
+}
+
+class _ColumnPlaceholder extends StatelessWidget {
+  const _ColumnPlaceholder({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 22, color: context.colors.textFaint),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11.5,
+                color: context.colors.textFaint,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ColumnRow extends StatelessWidget {
+  const _ColumnRow({
+    required this.entry,
+    required this.selectedPaths,
+    required this.onPress,
+    required this.onTap,
+    required this.onOpen,
+    this.selected = false,
+    this.onMenu,
+    this.onMiddleClick,
+    this.paneOwner,
+  });
+
+  final rust.FileEntry entry;
+  final RxSet<String> selectedPaths;
+  final bool selected;
+  final VoidCallback onPress;
+  final VoidCallback onTap;
+  final VoidCallback onOpen;
+  final ValueChanged<Offset>? onMenu;
+  final VoidCallback? onMiddleClick;
+  final Object? paneOwner;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget content = Row(
+      children: [
+        SizedBox(width: 20, child: _EntryMiniIcon(entry: entry)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            entry.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: context.colors.textPrimary),
+          ),
+        ),
+        if (entry.isDirectory)
+          Icon(
+            CupertinoIcons.chevron_right,
+            size: 10,
+            color: context.colors.textFaint,
+          ),
+      ],
+    );
+
+    return HoverRegion(
+      key: entryTileKey(entry.path, owner: paneOwner),
+      builder: (context, hovered) {
+        return Listener(
+          onPointerDown: (event) {
+            if (event.buttons == kPrimaryButton) onPress();
+          },
+          child: GestureDetector(
+            onTap: onTap,
+            onDoubleTap: onOpen,
+            onTertiaryTapUp: (_) => onMiddleClick?.call(),
+            onSecondaryTapDown: onMenu == null
+                ? null
+                : (details) => onMenu!(details.globalPosition),
+            child: Obx(() {
+              // The observable is read first so GetX always registers this
+              // builder, even for rows selected by a fixed flag.
+              final bool isSelected =
+                  selectedPaths.contains(entry.path) || selected;
+
+              return AnimatedContainer(
+                duration: _selectionAnimationDuration,
+                curve: Curves.easeOut,
+                height: 27,
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? context.colors.selection
+                      : hovered
+                      ? context.colors.hover
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: isSelected
                         ? context.colors.selectionBorder
                         : Colors.transparent,
                   ),

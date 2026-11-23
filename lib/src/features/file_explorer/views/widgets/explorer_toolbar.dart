@@ -490,6 +490,12 @@ class _ViewModeSwitch extends StatelessWidget {
             CupertinoIcons.rectangle_grid_1x2_fill,
             'Compact',
           ),
+          _segment(
+            context,
+            ExplorerViewMode.columns,
+            CupertinoIcons.rectangle_split_3x1,
+            'Columns',
+          ),
         ],
       ),
     );
