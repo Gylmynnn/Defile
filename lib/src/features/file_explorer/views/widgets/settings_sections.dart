@@ -82,6 +82,9 @@ extension _SettingsSections on _SettingsDialogState {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
+                      // Long font / theme names must not push the row past
+                      // its width; the chip truncates instead.
+                      constraints: const BoxConstraints(maxWidth: 150),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 4,
@@ -93,6 +96,8 @@ extension _SettingsSections on _SettingsDialogState {
                       ),
                       child: Text(
                         display,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w500,
@@ -141,6 +146,9 @@ extension _SettingsSections on _SettingsDialogState {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
+                      // Long font / theme names must not push the row past
+                      // its width; the chip truncates instead.
+                      constraints: const BoxConstraints(maxWidth: 150),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 4,
@@ -152,6 +160,8 @@ extension _SettingsSections on _SettingsDialogState {
                       ),
                       child: Text(
                         display,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w500,
@@ -770,6 +780,9 @@ extension _SettingsSections on _SettingsDialogState {
     }
 
     return ListView.builder(
+      // Pre-build theme rows so their (async) icon previews resolve before
+      // they become visible while scrolling.
+      scrollCacheExtent: const ScrollCacheExtent.pixels(400),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       itemCount: choices.length,
       itemBuilder: (context, index) {
@@ -871,6 +884,9 @@ extension _SettingsSections on _SettingsDialogState {
     }
 
     return ListView.builder(
+      // Build rows ahead of the viewport so hover/font/icon work finishes
+      // before they slide into view; otherwise scrolling pops content in.
+      scrollCacheExtent: const ScrollCacheExtent.pixels(400),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       itemCount: filtered.length,
       itemBuilder: (context, index) {

@@ -1,6 +1,25 @@
 part of 'file_explorer_page.dart';
 
 extension _ExplorerPageActions on _EntryContentState {
+  FavoritesService? get _favoritesService =>
+      Get.isRegistered<FavoritesService>() ? Get.find<FavoritesService>() : null;
+
+  Future<void> _toggleFavoritePath(String path, {String? label}) async {
+    final FavoritesService? favorites = _favoritesService;
+    if (favorites == null) return;
+
+    final bool added = await favorites.toggle(path);
+    final String name = label ?? path;
+
+    showAppToast(
+      title: 'Favorites',
+      message: added
+          ? '$name added to Favorites.'
+          : '$name removed from Favorites.',
+      variant: added ? AppToastVariant.success : AppToastVariant.info,
+    );
+  }
+
   void _showEntryMenu(
     BuildContext context,
     rust.FileEntry entry,
@@ -11,6 +30,8 @@ extension _ExplorerPageActions on _EntryContentState {
         : controller.selection.toList();
     final bool single = targets.length == 1;
     final bool inTrash = controller.isCurrentInTrash;
+    final FavoritesService? favorites = _favoritesService;
+    final bool isFavorite = favorites?.contains(entry.path) ?? false;
 
     showAppContextMenu(
       context: context,
@@ -62,6 +83,19 @@ extension _ExplorerPageActions on _EntryContentState {
                   );
                 }
               },
+            ),
+          ),
+        if (single && entry.isDirectory && !inTrash && favorites != null)
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: isFavorite
+                  ? CupertinoIcons.heart_fill
+                  : CupertinoIcons.heart,
+              label: isFavorite
+                  ? 'Remove from Favorites'
+                  : 'Add to Favorites',
+              onSelected: () =>
+                  _toggleFavoritePath(entry.path, label: entry.name),
             ),
           ),
         if (single && entry.isFile && !inTrash)
@@ -192,6 +226,9 @@ extension _ExplorerPageActions on _EntryContentState {
     final bool inTrash = controller.isCurrentInTrash;
     final bool inDirectory =
         controller.location.value == ExplorerLocation.directory;
+    final FavoritesService? favorites = _favoritesService;
+    final bool isFavorite =
+        favorites?.contains(controller.currentPath.value) ?? false;
 
     showAppContextMenu(
       context: context,
@@ -263,6 +300,21 @@ extension _ExplorerPageActions on _EntryContentState {
             onSelected: controller.openTerminal,
           ),
         ),
+        if (favorites != null && inDirectory && !inTrash)
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: isFavorite
+                  ? CupertinoIcons.heart_fill
+                  : CupertinoIcons.heart,
+              label: isFavorite
+                  ? 'Remove Current Folder from Favorites'
+                  : 'Add Current Folder to Favorites',
+              onSelected: () => _toggleFavoritePath(
+                controller.currentPath.value,
+                label: controller.tabTitle,
+              ),
+            ),
+          ),
         if (inTrash) ...[
           ContextMenuSeparator(),
           ContextMenuActionEntry(

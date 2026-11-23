@@ -541,7 +541,7 @@ class _CustomThemeRow extends StatelessWidget {
   }
 }
 
-class _CustomFontRow extends StatefulWidget {
+class _CustomFontRow extends StatelessWidget {
   const _CustomFontRow({
     required this.fontName,
     required this.isDefault,
@@ -555,42 +555,24 @@ class _CustomFontRow extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_CustomFontRow> createState() => _CustomFontRowState();
-}
-
-class _CustomFontRowState extends State<_CustomFontRow> {
-  bool _previewReady = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Paint the row immediately with the default font, then swap in the
-    // preview typeface next frame. Avoids a visible stall on first open while
-    // the engine loads each font.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _previewReady = true);
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final String label = widget.isDefault
-        ? 'Application default'
-        : widget.fontName;
-    final String? previewFamily = widget.isDefault || !_previewReady
-        ? null
-        : widget.fontName;
+    final String label = isDefault ? 'Application default' : fontName;
+    // Render the preview typeface on the very first frame. Deferring the swap
+    // by a frame (the previous approach) made rows flicker as they scrolled
+    // into view: they painted with the default font, then repainted with the
+    // preview family one frame later.
+    final String? previewFamily = isDefault ? null : fontName;
 
     return HoverRegion(
       builder: (context, hovered) {
         return GestureDetector(
-          onTap: widget.onTap,
+          onTap: onTap,
           child: Container(
             height: 30,
             margin: const EdgeInsets.symmetric(vertical: 1),
             padding: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
-              color: widget.selected
+              color: selected
                   ? context.colors.rowSelected
                   : hovered
                   ? context.colors.rowHover
@@ -613,7 +595,7 @@ class _CustomFontRowState extends State<_CustomFontRow> {
                       fontFamily: previewFamily,
                       fontSize: 10.5,
                       fontWeight: FontWeight.w600,
-                      color: widget.selected
+                      color: selected
                           ? context.colors.accent
                           : context.colors.textSecondary,
                     ),
@@ -628,16 +610,16 @@ class _CustomFontRowState extends State<_CustomFontRow> {
                     style: TextStyle(
                       fontFamily: previewFamily,
                       fontSize: 12,
-                      color: widget.selected
+                      color: selected
                           ? context.colors.textStrong
                           : context.colors.textLabel,
-                      fontWeight: widget.selected
+                      fontWeight: selected
                           ? FontWeight.w500
                           : FontWeight.w400,
                     ),
                   ),
                 ),
-                if (widget.selected)
+                if (selected)
                   Icon(Icons.check, size: 14, color: context.colors.accent),
               ],
             ),

@@ -18,12 +18,31 @@ class ThemeService extends GetxService {
   /// Height of the bottom preview strip used in vertical split view.
   final RxDouble previewHeight = 170.0.obs;
 
+  /// Expanded sidebar width, adjustable by dragging its right edge. In-memory
+  /// like the other window-level sizes, so it resets to the default on
+  /// restart instead of touching the settings store.
+  final RxDouble sidebarWidth = defaultSidebarWidth.obs;
+
   Duration get animationDuration => animationsEnabled.value
       ? const Duration(milliseconds: 200)
       : Duration.zero;
 
   static const double minScale = 0.75;
   static const double maxScale = 1.5;
+
+  static const double defaultSidebarWidth = 178;
+  static const double minSidebarWidth = 140;
+  static const double maxSidebarWidth = 340;
+
+  /// Nudges the sidebar width by [delta] pixels, clamped to the sane range.
+  void adjustSidebarWidth(double delta) {
+    sidebarWidth.value = (sidebarWidth.value + delta).clamp(
+      minSidebarWidth,
+      maxSidebarWidth,
+    );
+  }
+
+  void resetSidebarWidth() => sidebarWidth.value = defaultSidebarWidth;
 
   ThemePalette get palette => AppPalettes.byId(baseThemeId.value);
   AccentPreset get accent => AppAccents.byId(accentId.value);

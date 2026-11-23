@@ -5,6 +5,10 @@
 #include <gdk/gdkx.h>
 #endif
 
+#include <limits.h>
+#include <libgen.h>
+#include <unistd.h>
+
 #include "flutter/generated_plugin_registrant.h"
 
 struct _MyApplication {
@@ -13,6 +17,24 @@ struct _MyApplication {
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
+
+// Sets the window/taskbar icon from the bundled square logo. The icon ships
+// in the bundle's data directory, so resolve it relative to the running
+// executable instead of the current working directory.
+static void set_default_window_icon() {
+  char exe_path[PATH_MAX];
+  const ssize_t length =
+      readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+  if (length <= 0) {
+    return;
+  }
+  exe_path[length] = '\0';
+
+  char icon_path[PATH_MAX];
+  snprintf(icon_path, sizeof(icon_path), "%s/data/defile-icon.png",
+           dirname(exe_path));
+  gtk_window_set_default_icon_from_file(icon_path, nullptr);
+}
 
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
@@ -24,6 +46,8 @@ static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+
+  set_default_window_icon();
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu

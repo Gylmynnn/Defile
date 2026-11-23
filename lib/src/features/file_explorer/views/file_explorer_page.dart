@@ -13,6 +13,7 @@ import '../../../theme/app_theme.dart';
 import '../controllers/explorer_tabs_controller.dart';
 import '../controllers/file_explorer_controller.dart';
 import '../controllers/portal_pick_controller.dart';
+import '../services/favorites_service.dart';
 import '../services/theme_service.dart';
 import '../utils/app_dialog_route.dart';
 import '../utils/app_toast.dart';
@@ -240,29 +241,87 @@ class _LayoutHostState extends State<_LayoutHost> {
 }
 
 /// Sidebar rail shared by the single and split layouts. Slides away when the
-/// current controller hides it.
-class _SidebarRail extends StatelessWidget {
+/// current controller hides it, and can be resized by dragging its right
+/// edge (double-tap the edge restores the default width).
+class _SidebarRail extends StatefulWidget {
   const _SidebarRail({required this.controller});
 
   final FileExplorerController controller;
 
   @override
+  State<_SidebarRail> createState() => _SidebarRailState();
+}
+
+class _SidebarRailState extends State<_SidebarRail> {
+  bool _resizing = false;
+
+  FileExplorerController get controller => widget.controller;
+
+  ThemeService? get _theme =>
+      Get.isRegistered<ThemeService>() ? Get.find<ThemeService>() : null;
+
+  @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final Duration duration = Get.isRegistered<ThemeService>()
-          ? Get.find<ThemeService>().animationDuration
-          : Duration.zero;
+      final ThemeService? theme = _theme;
+      final Duration duration = _resizing
+          ? Duration.zero
+          : (theme?.animationDuration ?? Duration.zero);
       final bool expanded = controller.showSidebar.value;
+      final double width = expanded
+          ? (theme?.sidebarWidth.value ?? ThemeService.defaultSidebarWidth)
+          : 52;
 
       return AnimatedContainer(
         duration: duration,
         curve: Curves.easeOutCubic,
         // Collapsing keeps an icon rail instead of hiding the sidebar
         // entirely, so quick access stays one click away.
-        width: expanded ? 178 : 52,
-        child: ClipRect(child: AppSidebar(collapsed: !expanded)),
+        width: width,
+        child: ClipRect(
+          child: Stack(
+            children: [
+              AppSidebar(collapsed: !expanded),
+              if (expanded) _buildResizeHandle(theme),
+            ],
+          ),
+        ),
       );
     });
+  }
+
+  /// Invisible strip over the sidebar's right edge. Drag resizes; double-tap
+  /// resets. While active, a 1px accent line marks the edge being dragged.
+  Widget _buildResizeHandle(ThemeService? theme) {
+    const double handleWidth = 6;
+
+    return Positioned(
+      top: 0,
+      bottom: 0,
+      right: 0,
+      width: handleWidth,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeColumn,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragStart: (_) => setState(() => _resizing = true),
+          onHorizontalDragUpdate: (details) =>
+              theme?.adjustSidebarWidth(details.delta.dx),
+          onHorizontalDragEnd: (_) => setState(() => _resizing = false),
+          onHorizontalDragCancel: () => setState(() => _resizing = false),
+          onDoubleTap: () => theme?.resetSidebarWidth(),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              width: 1,
+              color: _resizing
+                  ? context.colors.accent
+                  : Colors.transparent,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

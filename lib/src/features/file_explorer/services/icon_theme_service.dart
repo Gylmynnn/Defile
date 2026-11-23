@@ -24,11 +24,13 @@ class IconThemeService extends GetxService {
   }
 
   /// Preload the folder previews shown in Settings > Appearance so the theme
-  /// list paints instantly on first open instead of popping in.
+  /// list paints instantly on first open instead of popping in. Sizes cover
+  /// the 18px row thumbnail at common device pixel ratios (1x, 1.25x, 1.5x,
+  /// 2x); the list looks up `(18 * dpr).round()`.
   void _warmPreviews() {
     const List<String> names = ['folder', 'inode-directory'];
     for (final theme in themes.take(16)) {
-      for (final size in const [18, 36]) {
+      for (final size in const [18, 23, 27, 36]) {
         unawaited(iconPng(names, size, theme: theme.name));
       }
     }

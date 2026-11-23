@@ -250,8 +250,8 @@ class _ExplorerTabBarState extends State<ExplorerTabBar> {
       height: ExplorerTabBar.height,
       padding: const EdgeInsets.only(left: 3),
       decoration: BoxDecoration(
-        // The strip shares the file list's background; the tab pills carry
-        // the deeper title-bar tone so the active tab reads as a button.
+        // The strip shares the file list's background; the active tab is a
+        // filled pill using the top bar's tone so it reads as a button.
         color: context.colors.window,
         border: Border(bottom: BorderSide(color: context.colors.divider)),
       ),
@@ -346,8 +346,8 @@ class _TabItem extends StatelessWidget {
     required this.onContextMenu,
   });
 
-  /// Rounded on all corners: the active tab reads as a single raised pill,
-  /// inset within the strip like classic terminal tabs.
+  /// Rounded on all corners: the active tab reads as a filled pill inset
+  /// within the strip like classic terminal tabs.
   static const BorderRadius shape = BorderRadius.all(Radius.circular(6));
 
   final ExplorerTab tab;
@@ -390,8 +390,10 @@ class _TabItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return HoverRegion(
       builder: (context, hovered) {
+        // Active tab = filled pill matching the top bar's background tone;
+        // resting tabs only get the hover wash.
         final Color background = active
-            ? context.colors.windowDeep
+            ? context.colors.surface
             : hovered
             ? context.colors.hover
             : Colors.transparent;
@@ -424,11 +426,6 @@ class _TabItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: background,
                   borderRadius: _TabItem.shape,
-                  // Hairline separator between resting tabs only; a tab
-                  // holding paint (active or hovered) doesn't need one.
-                  // border: !active && !hovered
-                  //     ? Border(right: BorderSide(color: context.colors.divider))
-                  //     : null,
                 ),
                 child: Row(
                   children: [
@@ -455,11 +452,10 @@ class _TabItem extends StatelessWidget {
                                 icon,
                                 key: ValueKey(icon),
                                 size: 14,
+                                // Focused tab's icon always follows the
+                                // accent, whatever the location is.
                                 color: active
-                                    ? (tab.controller.location.value ==
-                                              ExplorerLocation.directory
-                                          ? context.colors.folder
-                                          : context.colors.accent)
+                                    ? context.colors.accent
                                     : context.colors.textFaint,
                               ),
                             ),
