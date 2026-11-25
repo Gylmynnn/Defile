@@ -47,15 +47,7 @@ sudo zypper install ./defile-0.6.12-x86_64.rpm
 Requires: `gtk3`, `libepoxy`.
 
 ### Arch Linux (AUR)
-
-```bash
-yay -S defile-bin
-# or: paru -S defile-bin
-```
-
-The `defile-bin` recipe lives in [`packaging/aur/defile-bin/PKGBUILD`](packaging/aur/defile-bin/PKGBUILD)
-and repackages the official release AppImage (see
-[`packaging/aur/README.md`](packaging/aur/README.md) for publishing notes).
+not available at this time
 
 ### AppImage (any distro)
 
@@ -89,15 +81,6 @@ later version** (GPL-3.0-or-later), as published by the Free Software
 Foundation.
 
 Copyright (C) 2026 Gylmynnn
-
-This program is distributed in the hope that it will be useful, but **WITHOUT
-ANY WARRANTY**; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-details.
-
-You should have received a copy of the GNU General Public License along with
-this program. If not, see <https://www.gnu.org/licenses/>. The full text is
-also included in the [`LICENSE`](LICENSE) file.
 
 Third-party components keep their own licenses (all permissive:
 MIT/Apache-2.0/BSD), so they remain compatible with GPL-3.0.
