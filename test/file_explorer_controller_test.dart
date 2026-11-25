@@ -1,8 +1,11 @@
+import 'package:defile/src/features/file_explorer/controllers/explorer_tabs_controller.dart';
 import 'package:defile/src/features/file_explorer/controllers/file_explorer_controller.dart';
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:path/path.dart' as p;
 
 rust.FileEntry _entry(
   String name, {
@@ -62,6 +65,44 @@ class _CountingFs extends FileSystemService {
   Future<List<rust.FileEntry>> listDirectory(String path) async {
     calls.add(path);
     return tree[path] ?? const <rust.FileEntry>[];
+  }
+}
+
+class _MutableTreeFs extends FileSystemService {
+  _MutableTreeFs(this.tree);
+
+  final Map<String, List<rust.FileEntry>> tree;
+
+  @override
+  Future<List<rust.FileEntry>> listDirectory(String path) async =>
+      List<rust.FileEntry>.of(tree[path] ?? const <rust.FileEntry>[]);
+
+  @override
+  Future<String> renameEntry(String sourcePath, String newName) async {
+    final String dir = p.dirname(sourcePath);
+    final String newPath = p.join(dir, newName);
+    final List<rust.FileEntry>? items = tree[dir];
+    if (items != null) {
+      final int idx = items.indexWhere((e) => e.path == sourcePath);
+      if (idx != -1) {
+        final rust.FileEntry old = items[idx];
+        items[idx] = rust.FileEntry(
+          name: newName,
+          path: newPath,
+          isDirectory: old.isDirectory,
+          isFile: old.isFile,
+          sizeBytes: old.sizeBytes,
+          modifiedSeconds: old.modifiedSeconds,
+        );
+      }
+    }
+    return newPath;
+  }
+
+  @override
+  Future<void> deleteEntryRecursive(String path) async {
+    final String dir = p.dirname(path);
+    tree[dir]?.removeWhere((e) => e.path == path);
   }
 }
 
@@ -397,5 +438,106 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump();
     expect(controller.columnPreviewFile.value, isNull);
+  });
+
+  testWidgets(
+    'Obx watching visibleEntries updates immediately on rename and delete even when cache was already warm',
+    (tester) async {
+      final fs = _MutableTreeFs({
+        '/dir': [
+          _entryAt('alpha.txt', '/dir/alpha.txt'),
+          _entryAt('beta.txt', '/dir/beta.txt'),
+        ],
+      });
+      final controller = Get.put(
+        FileExplorerController(fs, initialPath: '/dir'),
+      );
+
+      await tester.runAsync(() => controller.loadDirectory('/dir'));
+      // Pre-warm _visibleCache before the Obx mounts (mirrors switching back
+      // to a tab, toggling split view, or ExplorerStatusBar mounting second).
+      expect(
+        controller.visibleEntries.map((e) => e.name).toList(),
+        ['alpha.txt', 'beta.txt'],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Obx(() {
+              controller.currentPath.value;
+              final entries = controller.visibleEntries;
+              return Column(
+                children: [
+                  for (final entry in entries) Text(entry.name),
+                ],
+              );
+            }),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('alpha.txt'), findsOneWidget);
+      expect(find.text('beta.txt'), findsOneWidget);
+
+      final rust.FileEntry alpha = controller.entries.firstWhere(
+        (e) => e.name == 'alpha.txt',
+      );
+      await tester.runAsync(() => controller.renameEntry(alpha, 'renamed.txt'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('alpha.txt'), findsNothing);
+      expect(find.text('renamed.txt'), findsOneWidget);
+      expect(find.text('beta.txt'), findsOneWidget);
+
+      final rust.FileEntry beta = controller.entries.firstWhere(
+        (e) => e.name == 'beta.txt',
+      );
+      await tester.runAsync(() => controller.deletePermanently([beta]));
+      await tester.pumpAndSettle();
+
+      expect(find.text('beta.txt'), findsNothing);
+      expect(find.text('renamed.txt'), findsOneWidget);
+    },
+  );
+
+  testWidgets('rename and delete in one tab refresh sibling tabs in same folder', (
+    tester,
+  ) async {
+    final fs = _MutableTreeFs({
+      '/dir': [
+        _entryAt('one.txt', '/dir/one.txt'),
+        _entryAt('two.txt', '/dir/two.txt'),
+      ],
+    });
+    final tabs = Get.put(ExplorerTabsController(fs));
+    final tab1 = tabs.tabs.single;
+    await tester.runAsync(() => tab1.controller.loadDirectory('/dir'));
+
+    final tab2 = tabs.addTab(path: '/dir');
+    await tester.runAsync(() => tab2.controller.loadDirectory('/dir'));
+
+    final rust.FileEntry one = tab2.controller.entries.firstWhere(
+      (e) => e.name == 'one.txt',
+    );
+    await tester.runAsync(() => tab2.controller.renameEntry(one, 'uno.txt'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tab1.controller.visibleEntries.map((e) => e.name).toList(),
+      ['two.txt', 'uno.txt'],
+    );
+
+    final rust.FileEntry two = tab2.controller.entries.firstWhere(
+      (e) => e.name == 'two.txt',
+    );
+    await tester.runAsync(() => tab2.controller.deletePermanently([two]));
+    await tester.pumpAndSettle();
+
+    expect(
+      tab1.controller.visibleEntries.map((e) => e.name).toList(),
+      ['uno.txt'],
+    );
   });
 }

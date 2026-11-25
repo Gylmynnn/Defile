@@ -232,13 +232,13 @@ extension ExplorerOperations on FileExplorerController {
       );
     }
 
+    final Set<String> touchedDirectories = <String>{
+      for (final entry in items) p.normalize(p.dirname(entry.path)),
+      p.normalize(destinationDirectory),
+    };
+    invalidateColumnListings(touchedDirectories);
     await refreshDirectory();
-    _refreshSiblingTabs(
-      sourceDirectories: items
-          .map((e) => p.normalize(p.dirname(e.path)))
-          .toSet(),
-      otherDirectory: p.normalize(destinationDirectory),
-    );
+    _syncSiblingTabs(touchedDirectories);
 
     final String label = move ? 'moved' : 'copied';
 
@@ -281,22 +281,41 @@ extension ExplorerOperations on FileExplorerController {
     return transferred;
   }
 
-  /// Refreshes other open tabs that live in a touched directory so their
-  /// listings stay in sync after a transfer or undo.
-  void _refreshSiblingTabs({
-    required Set<String> sourceDirectories,
-    required String otherDirectory,
-  }) {
+  /// Refreshes other open tabs that live in a touched directory and clears any
+  /// stale Miller-column caches they hold for those directories.
+  void _syncSiblingTabs(Set<String> touchedDirectories) {
     if (!Get.isRegistered<ExplorerTabsController>()) return;
 
     final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
     for (final tab in tabs.tabs) {
       if (tab.controller == this) continue;
+      tab.controller.invalidateColumnListings(touchedDirectories);
       final String tabPath = p.normalize(tab.controller.currentPath.value);
-      if (sourceDirectories.contains(tabPath) || tabPath == otherDirectory) {
+      if (touchedDirectories.contains(tabPath) ||
+          tab.controller.location.value == ExplorerLocation.recent) {
         tab.controller.refreshDirectory();
       }
     }
+  }
+
+  /// Refreshes the active directory and synchronizes any sibling tabs / column
+  /// caches affected by mutations in [entries] or [extraDirectories].
+  Future<void> _refreshAfterMutation({
+    Iterable<rust.FileEntry> entries = const <rust.FileEntry>[],
+    Iterable<String> extraDirectories = const <String>[],
+  }) async {
+    final Set<String> touched = <String>{
+      if (currentPath.value.isNotEmpty) p.normalize(currentPath.value),
+      for (final entry in entries) ...<String>[
+        p.normalize(p.dirname(entry.path)),
+        if (entry.isDirectory) p.normalize(entry.path),
+      ],
+      for (final dir in extraDirectories)
+        if (dir.isNotEmpty) p.normalize(dir),
+    };
+    invalidateColumnListings(touched);
+    await refreshDirectory();
+    _syncSiblingTabs(touched);
   }
 
   void _pushUndo(String label, Future<void> Function() reverse) {
@@ -319,7 +338,11 @@ extension ExplorerOperations on FileExplorerController {
 
     try {
       await entry.reverse();
-      await refreshDirectory();
+      await _refreshAfterMutation(
+        extraDirectories: <String>[
+          if (trashPath.isNotEmpty) trashPath,
+        ],
+      );
       showAppToast(
         title: 'Undone',
         message: entry.label,
@@ -368,7 +391,12 @@ extension ExplorerOperations on FileExplorerController {
       );
     }
 
-    await refreshDirectory();
+    await _refreshAfterMutation(
+      entries: entries,
+      extraDirectories: <String>[
+        if (trashPath.isNotEmpty) trashPath,
+      ],
+    );
 
     if (succeeded == entries.length) {
       showAppToast(
@@ -414,7 +442,12 @@ extension ExplorerOperations on FileExplorerController {
       }
     }
 
-    await refreshDirectory();
+    await _refreshAfterMutation(
+      entries: entries,
+      extraDirectories: <String>[
+        if (trashPath.isNotEmpty) trashPath,
+      ],
+    );
 
     if (succeeded == entries.length) {
       showAppToast(
@@ -440,7 +473,11 @@ extension ExplorerOperations on FileExplorerController {
   Future<void> emptyTrash() async {
     try {
       final int removed = await fileSystemService.emptyTrash();
-      await refreshDirectory();
+      await _refreshAfterMutation(
+        extraDirectories: <String>[
+          if (trashPath.isNotEmpty) trashPath,
+        ],
+      );
 
       showAppToast(
         title: 'Trash emptied',
@@ -477,15 +514,12 @@ extension ExplorerOperations on FileExplorerController {
       }
     }
 
-    await refreshDirectory();
-
-    if (Get.isRegistered<ExplorerTabsController>()) {
-      final ExplorerTabsController tabs = Get.find<ExplorerTabsController>();
-      for (final tab in tabs.tabs) {
-        if (tab.controller == this) continue;
-        tab.controller.refreshDirectory();
-      }
-    }
+    await _refreshAfterMutation(
+      extraDirectories: <String>[
+        for (final dest in destinations) p.dirname(dest),
+        if (trashPath.isNotEmpty) trashPath,
+      ],
+    );
 
     if (succeeded == entries.length) {
       showAppToast(
@@ -582,7 +616,7 @@ extension ExplorerOperations on FileExplorerController {
         paths: entries.map((entry) => entry.path).toList(),
         destination: destination,
       );
-      await refreshDirectory();
+      await _refreshAfterMutation(entries: entries);
 
       showAppToast(
         title: 'Compressed',
@@ -628,7 +662,7 @@ extension ExplorerOperations on FileExplorerController {
         path: entry.path,
         destinationDir: destination,
       );
-      await refreshDirectory();
+      await _refreshAfterMutation(entries: [entry]);
 
       showAppToast(
         title: 'Extracted',
@@ -791,7 +825,7 @@ extension ExplorerOperations on FileExplorerController {
         entry.path,
         trimmedName,
       );
-      await refreshDirectory();
+      await _refreshAfterMutation(entries: [entry]);
 
       _pushUndo(
         'Renamed back to "${entry.name}"',
@@ -825,7 +859,7 @@ extension ExplorerOperations on FileExplorerController {
 
     try {
       await fileSystemService.createDirectory(currentPath.value, trimmedName);
-      await refreshDirectory();
+      await _refreshAfterMutation();
 
       showAppToast(
         title: 'Success',
@@ -854,7 +888,7 @@ extension ExplorerOperations on FileExplorerController {
 
     try {
       await fileSystemService.createFile(currentPath.value, trimmedName);
-      await refreshDirectory();
+      await _refreshAfterMutation();
 
       showAppToast(
         title: 'Success',

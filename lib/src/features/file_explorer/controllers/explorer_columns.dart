@@ -70,6 +70,27 @@ extension ExplorerColumns on FileExplorerController {
     _trimColumnListings();
   }
 
+  /// Drops cached Miller-columns listings for [paths] (and any cached
+  /// descendants) after a filesystem mutation so re-entering or previewing
+  /// those folders reads fresh entries from disk.
+  void invalidateColumnListings(Iterable<String> paths) {
+    final Set<String> targets = {
+      for (final String path in paths)
+        if (path.isNotEmpty) p.normalize(path),
+    };
+    if (targets.isEmpty) return;
+
+    _columnListings.removeWhere((String key, _) {
+      final String normalized = p.normalize(key);
+      for (final String target in targets) {
+        if (normalized == target || p.isWithin(target, normalized)) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }
+
   void _trimColumnListings() {
     while (_columnListings.length >
         FileExplorerController._columnListingCacheMax) {

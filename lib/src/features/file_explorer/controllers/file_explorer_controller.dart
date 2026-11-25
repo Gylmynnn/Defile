@@ -60,6 +60,7 @@ class FileExplorerController extends GetxController {
   bool _systemStateSeeded = false;
   List<rust.FileEntry>? _visibleCache;
   int _visibleCacheRevision = -1;
+  ExplorerLocation? _visibleCacheLocation;
   String? _visibleCacheQuery;
   bool? _visibleCacheHidden;
   ExplorerSortField? _visibleCacheSort;
@@ -172,6 +173,7 @@ class FileExplorerController extends GetxController {
     searchFocusNode.onKeyEvent = _handleSearchKey;
     ever(entries, (_) {
       _entriesRevision++;
+      _visibleCache = null;
       schedulePathSearch();
     });
     ever(selection, (List<rust.FileEntry> selected) {
@@ -288,6 +290,10 @@ class FileExplorerController extends GetxController {
   }
 
   List<rust.FileEntry> get visibleEntries {
+    // Always touch `entries` so any enclosing Obx subscribes to directory
+    // updates even when the memoized listing (or path-search result) hits.
+    entries.length;
+
     final String query = searchQuery.value.trim().toLowerCase();
 
     // Path-like queries resolve asynchronously. Touching the version counter
@@ -298,12 +304,14 @@ class FileExplorerController extends GetxController {
       return _pathSearchResults ?? const <rust.FileEntry>[];
     }
 
+    final ExplorerLocation loc = location.value;
     final bool hidden = showHidden.value;
     final ExplorerSortField field = sortField.value;
     final bool ascending = sortAscending.value;
 
     if (_visibleCache != null &&
         _visibleCacheRevision == _entriesRevision &&
+        _visibleCacheLocation == loc &&
         _visibleCacheQuery == query &&
         _visibleCacheHidden == hidden &&
         _visibleCacheSort == field &&
@@ -312,14 +320,14 @@ class FileExplorerController extends GetxController {
     }
 
     List<rust.FileEntry> result = query.isEmpty
-        ? entries
+        ? List<rust.FileEntry>.of(entries)
         : entries
               .where((entry) => entry.name.toLowerCase().contains(query))
               .toList();
 
     // Recents keep the order the system history provides; sorting and the
     // dot-file filter apply to real directory listings (including Trash).
-    if (location.value != ExplorerLocation.recent) {
+    if (loc != ExplorerLocation.recent) {
       if (!hidden) {
         result = result.where((entry) => !entry.name.startsWith('.')).toList();
       }
@@ -328,6 +336,7 @@ class FileExplorerController extends GetxController {
 
     _visibleCache = result;
     _visibleCacheRevision = _entriesRevision;
+    _visibleCacheLocation = loc;
     _visibleCacheQuery = query;
     _visibleCacheHidden = hidden;
     _visibleCacheSort = field;
