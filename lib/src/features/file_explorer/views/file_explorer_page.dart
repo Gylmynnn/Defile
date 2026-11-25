@@ -1478,17 +1478,20 @@ class _EntryContentState extends State<_EntryContentArea> {
     final bool columns = controller.isColumnsLayout;
     final List<rust.FileEntry> entries = controller.visibleEntries;
     if (entries.isEmpty && !columns) {
-      if (controller.isLoading.value) {
-        return const Center(
-          child: SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        );
-      }
-
-      return _buildEmpty();
+      // Keep the loading read out of the surrounding content Obx: toggling it
+      // must not rebuild the whole listing (or the Miller columns).
+      final Widget empty = _buildEmpty();
+      return Obx(
+        () => controller.isLoading.value
+            ? const Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : empty,
+      );
     }
 
     void openMenu(rust.FileEntry entry, Offset position) {
@@ -1582,7 +1585,9 @@ class _EntryContentState extends State<_EntryContentArea> {
               ),
     };
 
-    return _LoadingShroud(loading: controller.isLoading.value, child: view);
+    return Obx(
+      () => _LoadingShroud(loading: controller.isLoading.value, child: view),
+    );
   }
 
   void _handleEntryMiddleClick(rust.FileEntry entry) {

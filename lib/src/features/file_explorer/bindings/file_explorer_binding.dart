@@ -23,7 +23,7 @@ class FileExplorerBinding extends Bindings {
     }
 
     if (!Get.isRegistered<WindowControlsService>()) {
-      Get.put<WindowControlsService>(WindowControlsService());
+      Get.put<WindowControlsService>(WindowControlsService()).init();
     }
 
     if (!Get.isRegistered<FavoritesService>()) {

@@ -187,19 +187,19 @@ void main() {
       ),
     );
 
-    Color rowColor(String path) {
-      final Container container = tester.widget<Container>(
+    Color rowColor(String name) {
+      final AnimatedContainer row = tester.widget<AnimatedContainer>(
         find
-            .descendant(
-              of: find.byKey(entryTileKey(path)),
-              matching: find.byType(Container),
+            .ancestor(
+              of: find.text(name),
+              matching: find.byType(AnimatedContainer),
             )
             .first,
       );
-      return (container.decoration! as BoxDecoration).color!;
+      return (row.decoration! as BoxDecoration).color!;
     }
 
-    expect(rowColor('/b'), isNot(Colors.transparent));
-    expect(rowColor('/a'), Colors.transparent);
+    expect(rowColor('b'), isNot(Colors.transparent));
+    expect(rowColor('a'), Colors.transparent);
   });
 }

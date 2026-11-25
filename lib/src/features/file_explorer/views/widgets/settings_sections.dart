@@ -491,7 +491,7 @@ extension _SettingsSections on _SettingsDialogState {
                     'Place a minimize control at the top right, after Settings.',
                 control: _CustomSwitch(
                   value: _windowControls.showMinimize.value,
-                  onChanged: (val) => _windowControls.showMinimize.value = val,
+                  onChanged: _windowControls.setShowMinimize,
                 ),
               );
             }),
@@ -503,7 +503,7 @@ extension _SettingsSections on _SettingsDialogState {
                     'Place a close control at the top right, after Settings.',
                 control: _CustomSwitch(
                   value: _windowControls.showClose.value,
-                  onChanged: (val) => _windowControls.showClose.value = val,
+                  onChanged: _windowControls.setShowClose,
                 ),
               );
             }),

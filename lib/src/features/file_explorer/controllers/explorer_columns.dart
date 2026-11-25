@@ -106,11 +106,24 @@ extension ExplorerColumns on FileExplorerController {
     // Navigation that keeps the same parent (a sibling switch) leaves the
     // parent pane exactly as it is — no read, no rebuild — unless the filters
     // changed under it.
-    if (!reload && _columnParentShownPath == parent) {
-      final _ColumnListing? listing = _columnListings[parent];
-      if (listing == null || _matchesFilters(listing)) return;
-      columnParentEntries.assignAll(_derive(listing));
-      return;
+    if (!reload) {
+      if (_columnParentShownPath == parent) {
+        final _ColumnListing? listing = _columnListings[parent];
+        if (listing == null || _matchesFilters(listing)) return;
+        columnParentEntries.assignAll(_derive(listing));
+        return;
+      }
+
+      // The new parent is usually the folder we just left, which
+      // `loadDirectory` seeds into the cache. Apply it in the same turn instead
+      // of awaiting a read, so the first rebuild already shows the new parent
+      // pane rather than the old one for a frame.
+      final _ColumnListing? cachedParent = _columnListings[parent];
+      if (cachedParent != null) {
+        _columnParentShownPath = parent;
+        columnParentEntries.assignAll(_derive(cachedParent));
+        return;
+      }
     }
 
     final int generation = ++_columnParentGeneration;

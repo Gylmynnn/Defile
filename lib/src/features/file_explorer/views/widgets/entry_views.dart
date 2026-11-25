@@ -553,6 +553,10 @@ class EntryColumnsView extends StatelessWidget {
   final EntryDropCallback? onDrop;
   final Object? paneOwner;
 
+  /// One pending auto-reveal at a time: rebuilding the active parent row
+  /// several times while a listing settles must not queue duplicate scrolls.
+  static String? _scheduledReveal;
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -597,44 +601,53 @@ class EntryColumnsView extends StatelessWidget {
           ? ''
           : p.dirname(currentPath);
 
-      return _ColumnReveal(
-        revealKey: 'parent:$shownPath',
-        child: items.isEmpty
-            ? const SizedBox.shrink()
-            : ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final entry = items[index];
-                  final bool isCurrent = entry.path == currentPath;
+      if (items.isEmpty) return const SizedBox.shrink();
 
-                  final Widget row = _ColumnRow(
-                    entry: entry,
-                    selectedPaths: selectedPaths,
-                    selected: isCurrent,
-                    onPress: () => _sidePress(entry),
-                    onTap: () => _sideTap(entry),
-                    onOpen: () => onNavigate(entry),
-                    paneOwner: paneOwner,
-                  );
+      return ListView.builder(
+        // The parent pane is context, not focus: it deliberately skips the
+        // full-column fade (an opacity layer over a long listing repaints the
+        // whole pane every frame) and the selection subscription. Switching
+        // folders then stays cheap even in huge directories.
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final entry = items[index];
+          final bool isCurrent = entry.path == currentPath;
 
-                  if (!isCurrent) return row;
+          final Widget row = _ColumnRow(
+            entry: entry,
+            selectedPaths: selectedPaths,
+            selected: isCurrent,
+            watchSelection: false,
+            tileKey: isCurrent
+                ? entryTileKey('@parent:$shownPath', owner: paneOwner)
+                : null,
+            onPress: () => _sidePress(entry),
+            onTap: () => _sideTap(entry),
+            onOpen: () => onNavigate(entry),
+            paneOwner: paneOwner,
+          );
 
-                  // The active folder's row carries its tile key; once it
-                  // mounts, bring it into view so keyboard navigation stays
-                  // visible.
-                  _scheduleReveal();
-                  return row;
-                },
-              ),
+          // The active folder's row carries its tile key; once it mounts,
+          // bring it into view so keyboard navigation stays visible.
+          if (isCurrent) _scheduleReveal();
+
+          return row;
+        },
       );
     });
   }
 
   void _scheduleReveal() {
+    final String signature = '${identityHashCode(paneOwner)}|$currentPath';
+    if (_scheduledReveal == signature) return;
+    _scheduledReveal = signature;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scheduledReveal == signature) _scheduledReveal = null;
+
       final BuildContext? tile = entryTileKey(
-        currentPath,
+        '@parent:${currentPath.isEmpty ? '' : p.dirname(currentPath)}',
         owner: paneOwner,
       ).currentContext;
       if (tile == null) return;
@@ -645,6 +658,7 @@ class EntryColumnsView extends StatelessWidget {
       // Only scroll when the active row is actually off-screen. Re-centring on
       // every rebuild would fight a manual scroll of the parent column — and
       // the row is rebuilt a lot while walking a deep tree.
+      Duration duration = _columnsAnimationDuration;
       final RenderObject? viewportObject = RenderAbstractViewport.maybeOf(
         object,
       );
@@ -660,13 +674,17 @@ class EntryColumnsView extends StatelessWidget {
             visible.contains(tileRect.bottomRight)) {
           return;
         }
+
+        // Jump when the row is more than a screenful away. Animating across a
+        // long listing builds every row on the way, which is exactly the
+        // stall that made the parent column feel heavy in huge folders.
+        final double gap = tileRect.top > visible.bottom
+            ? tileRect.top - visible.bottom
+            : visible.top - tileRect.bottom;
+        if (gap > visible.height) duration = Duration.zero;
       }
 
-      Scrollable.ensureVisible(
-        tile,
-        alignment: 0.5,
-        duration: _columnsAnimationDuration,
-      );
+      Scrollable.ensureVisible(tile, alignment: 0.5, duration: duration);
     });
   }
 
@@ -687,6 +705,7 @@ class EntryColumnsView extends StatelessWidget {
             child: _ColumnRow(
               entry: entry,
               selectedPaths: selectedPaths,
+              tileKey: entryTileKey(entry.path, owner: paneOwner),
               onPress: () => onPress(entry),
               onTap: () => onTap(entry),
               onOpen: () => onOpen(entry),
@@ -742,6 +761,7 @@ class EntryColumnsView extends StatelessWidget {
                   return _ColumnRow(
                     entry: entry,
                     selectedPaths: selectedPaths,
+                    watchSelection: false,
                     onPress: () => _sidePress(entry),
                     onTap: () => _sideTap(entry),
                     onOpen: () => onNavigate(entry),
@@ -901,11 +921,23 @@ class _ColumnRow extends StatelessWidget {
     this.onMenu,
     this.onMiddleClick,
     this.paneOwner,
+    this.watchSelection = true,
+    this.tileKey,
   });
 
   final rust.FileEntry entry;
   final RxSet<String> selectedPaths;
   final bool selected;
+
+  /// Whether this row follows the shared selection set. The side panes only
+  /// need the fixed [selected] flag, so they opt out: a toggle in the active
+  /// column then rebuilds no side-pane rows.
+  final bool watchSelection;
+
+  /// Tile key used to look the row up (parent-column auto reveal). The active
+  /// column keys every row for the selection band; side rows leave this null.
+  final Key? tileKey;
+
   final VoidCallback onPress;
   final VoidCallback onTap;
   final VoidCallback onOpen;
@@ -937,8 +969,32 @@ class _ColumnRow extends StatelessWidget {
     );
 
     return HoverRegion(
-      key: entryTileKey(entry.path, owner: paneOwner),
+      key: tileKey,
       builder: (context, hovered) {
+        Widget buildRow(bool isSelected) {
+          return AnimatedContainer(
+            duration: _selectionAnimationDuration,
+            curve: Curves.easeOut,
+            height: 27,
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? context.colors.selection
+                  : hovered
+                  ? context.colors.hover
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: isSelected
+                    ? context.colors.selectionBorder
+                    : Colors.transparent,
+              ),
+            ),
+            child: content,
+          );
+        }
+
         return Listener(
           onPointerDown: (event) {
             if (event.buttons == kPrimaryButton) onPress();
@@ -950,34 +1006,15 @@ class _ColumnRow extends StatelessWidget {
             onSecondaryTapDown: onMenu == null
                 ? null
                 : (details) => onMenu!(details.globalPosition),
-            child: Obx(() {
-              // The observable is read first so GetX always registers this
-              // builder, even for rows selected by a fixed flag.
-              final bool isSelected =
-                  selectedPaths.contains(entry.path) || selected;
-
-              return AnimatedContainer(
-                duration: _selectionAnimationDuration,
-                curve: Curves.easeOut,
-                height: 27,
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? context.colors.selection
-                      : hovered
-                      ? context.colors.hover
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: isSelected
-                        ? context.colors.selectionBorder
-                        : Colors.transparent,
-                  ),
-                ),
-                child: content,
-              );
-            }),
+            child: watchSelection
+                ? Obx(() {
+                    // The observable is read first so GetX always registers
+                    // this builder, even for rows selected by a fixed flag.
+                    final bool isSelected =
+                        selectedPaths.contains(entry.path) || selected;
+                    return buildRow(isSelected);
+                  })
+                : buildRow(selected),
           ),
         );
       },

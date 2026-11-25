@@ -9,6 +9,7 @@ import 'package:defile/src/features/file_explorer/services/font_service.dart';
 import 'package:defile/src/features/file_explorer/services/icon_theme_service.dart';
 import 'package:defile/src/features/file_explorer/services/portal_file_chooser_service.dart';
 import 'package:defile/src/features/file_explorer/services/theme_service.dart';
+import 'package:defile/src/features/file_explorer/services/window_controls_service.dart';
 import 'package:defile/src/features/file_explorer/views/file_explorer_page.dart';
 import 'package:defile/src/features/file_explorer/views/widgets/portal_pick_bar.dart';
 import 'package:defile/src/rust/frb_generated.dart';
@@ -121,6 +122,9 @@ Future<void> main(List<String> args) async {
   // GetMaterialApp used to run this through its `initialBinding`. The root is
   // now a plain `material_ui` MaterialApp, so the binding runs here instead.
   FileExplorerBinding().dependencies();
+  // Finish the (cheap) window-control preference load before the first frame so
+  // a minimized/closed button hidden in Settings does not flash back on launch.
+  await Get.find<WindowControlsService>().init();
   runApp(const RootApp());
   if (portalBackend) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
