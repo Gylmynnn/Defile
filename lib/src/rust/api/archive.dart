@@ -7,7 +7,9 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `add_path`, `append_paths`, `archive_file_name`, `write_tar`, `write_zip`
+// These functions are ignored because they are not marked as `pub`: `add_bytes`, `add_path`, `append_paths`, `append_tar_tree`, `archive_file_name`, `complete_item`, `compress_entries_impl`, `compute_percent`, `count_extracted_entries`, `derive_single_output_name`, `detect_compressed_tar_or_single`, `detect_format_by_extension`, `detect_format_by_magic`, `emit_percent`, `emit`, `extract_7z`, `extract_ar`, `extract_archive_impl`, `extract_compress_z`, `extract_single_compressed`, `extract_tar`, `extract_with_format`, `extract_with_tool_chain`, `extract_zip`, `format_process_error`, `has_ustar_header`, `measure_input_totals`, `new`, `new`, `parse_latest_percent`, `run_command_with_percent_stdout`, `run_rpm2cpio_pipeline`, `run_simple_command`, `run_system_tool`, `safe_join`, `step_err`, `tool_display_name`, `wrap_compressed_reader`, `write_tar`, `write_zip`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `ArchiveFormat`, `ProgressRead`, `ProgressTracker`, `StreamKind`, `SystemTool`, `ToolOutcome`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `read`
 
 /// Bundles the given files and directories into an archive at [destination].
 /// The format is derived from the destination extension: zip, tar and
@@ -21,8 +23,21 @@ Future<void> compressEntries({
   destination: destination,
 );
 
-/// Extracts an archive (zip, tar, tar.gz, tgz) into [destination_dir],
-/// creating the folder when needed. Returns the entry count.
+/// Streams progress percentage updates while compressing [paths] into
+/// [destination]. Emits a final event with `finished = true` on completion.
+Stream<ArchiveProgress> compressEntriesStream({
+  required List<String> paths,
+  required String destination,
+}) => RustLib.instance.api.crateApiArchiveCompressEntriesStream(
+  paths: paths,
+  destination: destination,
+);
+
+/// Extracts an archive into [destination_dir], creating the folder when needed.
+/// Supports zip/cbz/jar/apk, 7z/cb7, tar (plain and gz/bz2/xz/zst/lzma/lz/lz4/br),
+/// single-file compressed streams, ar/deb, and common system archive formats
+/// (rar/cbr, rpm, cpio, iso, cab, lzh/lha, arj, wim, xar, dmg, msi, etc.) when
+/// the corresponding system tools are available. Returns the extracted entry count.
 Future<BigInt> extractArchive({
   required String path,
   required String destinationDir,
@@ -30,3 +45,49 @@ Future<BigInt> extractArchive({
   path: path,
   destinationDir: destinationDir,
 );
+
+/// Streams progress percentage updates while extracting [path] into
+/// [destination_dir]. Emits a final event with `finished = true` carrying
+/// `items_completed` on completion.
+Stream<ArchiveProgress> extractArchiveStream({
+  required String path,
+  required String destinationDir,
+}) => RustLib.instance.api.crateApiArchiveExtractArchiveStream(
+  path: path,
+  destinationDir: destinationDir,
+);
+
+class ArchiveProgress {
+  final int percent;
+  final BigInt processedBytes;
+  final BigInt totalBytes;
+  final BigInt itemsCompleted;
+  final bool finished;
+
+  const ArchiveProgress({
+    required this.percent,
+    required this.processedBytes,
+    required this.totalBytes,
+    required this.itemsCompleted,
+    required this.finished,
+  });
+
+  @override
+  int get hashCode =>
+      percent.hashCode ^
+      processedBytes.hashCode ^
+      totalBytes.hashCode ^
+      itemsCompleted.hashCode ^
+      finished.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ArchiveProgress &&
+          runtimeType == other.runtimeType &&
+          percent == other.percent &&
+          processedBytes == other.processedBytes &&
+          totalBytes == other.totalBytes &&
+          itemsCompleted == other.itemsCompleted &&
+          finished == other.finished;
+}

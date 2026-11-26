@@ -73,7 +73,110 @@ const Set<String> kArchiveExtensions = {
   'rpm',
   'apk',
   'jar',
+  'tgz',
+  'tbz',
+  'tbz2',
+  'tz2',
+  'txz',
+  'tzst',
+  'tlz',
+  'taz',
+  'lzma',
+  'lz',
+  'lz4',
+  'br',
+  'z',
+  'ar',
+  'cpio',
+  'udf',
+  'cab',
+  'lzh',
+  'lha',
+  'arj',
+  'wim',
+  'swm',
+  'esd',
+  'xar',
+  'pkg',
+  'dmg',
+  'msi',
+  'squashfs',
+  'ace',
+  'alz',
+  'cbz',
+  'cbr',
+  'cb7',
+  'cbt',
+  'war',
+  'ear',
+  'whl',
+  'xpi',
 };
+
+/// Ordered longest-first so compound suffixes (`.tar.gz`, `.tar.xz`, ...)
+/// strip the entire archive suffix rather than only the outer compression tag.
+const List<String> kExtractableArchiveSuffixes = [
+  '.tar.gz',
+  '.tar.bz2',
+  '.tar.xz',
+  '.tar.zst',
+  '.tar.lzma',
+  '.tar.lz',
+  '.tar.lz4',
+  '.tar.br',
+  '.tar.z',
+  '.tgz',
+  '.tbz2',
+  '.tbz',
+  '.tz2',
+  '.txz',
+  '.tzst',
+  '.tlz',
+  '.taz',
+  '.cbt',
+  '.tar',
+  '.zip',
+  '.cbz',
+  '.jar',
+  '.apk',
+  '.war',
+  '.ear',
+  '.whl',
+  '.xpi',
+  '.7z',
+  '.cb7',
+  '.rar',
+  '.cbr',
+  '.gz',
+  '.bz2',
+  '.xz',
+  '.zst',
+  '.lzma',
+  '.lz',
+  '.lz4',
+  '.br',
+  '.z',
+  '.deb',
+  '.ar',
+  '.rpm',
+  '.cpio',
+  '.iso',
+  '.udf',
+  '.cab',
+  '.lzh',
+  '.lha',
+  '.arj',
+  '.wim',
+  '.swm',
+  '.esd',
+  '.xar',
+  '.pkg',
+  '.dmg',
+  '.msi',
+  '.squashfs',
+  '.ace',
+  '.alz',
+];
 
 const Set<String> kCodeExtensions = {
   'astro',
@@ -232,6 +335,24 @@ bool isPdfFile(String name) => fileExtension(name) == 'pdf';
 
 bool isConvertibleDocumentFile(String name) =>
     kConvertibleDocumentExtensions.contains(fileExtension(name));
+
+/// Returns the folder/base name obtained by stripping a known archive suffix
+/// from [name], or `null` when [name] is not a recognized extractable archive
+/// (or has an empty stem like `.zip`).
+String? archiveRootName(String name) {
+  final String lower = name.toLowerCase();
+
+  for (final suffix in kExtractableArchiveSuffixes) {
+    if (lower.endsWith(suffix)) {
+      final String stem = name.substring(0, name.length - suffix.length);
+      return stem.trim().isEmpty ? null : stem;
+    }
+  }
+
+  return null;
+}
+
+bool isExtractableArchiveName(String name) => archiveRootName(name) != null;
 
 String fileTypeShortLabel(String name) {
   final String ext = fileExtension(name);

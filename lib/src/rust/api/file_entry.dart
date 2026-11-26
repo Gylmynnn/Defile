@@ -9,8 +9,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'file_entry.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `copy_directory_recursive`, `entry_from_metadata`, `remove_existing`, `validate_name`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `fmt`, `from`
+// These functions are ignored because they are not marked as `pub`: `add_bytes`, `copy_directory_recursive`, `copy_entry_impl`, `copy_file_with_progress`, `emit`, `entry_from_metadata`, `new`, `remove_existing`, `tree_size_bytes`, `validate_name`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `CopyProgressState`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `fmt`, `from`
 
 Future<void> copyEntry({
   required String sourcePath,
@@ -18,6 +19,18 @@ Future<void> copyEntry({
   required String newName,
   required bool overwrite,
 }) => RustLib.instance.api.crateApiFileEntryCopyEntry(
+  sourcePath: sourcePath,
+  destinationDirectory: destinationDirectory,
+  newName: newName,
+  overwrite: overwrite,
+);
+
+Stream<TransferByteProgress> copyEntryStream({
+  required String sourcePath,
+  required String destinationDirectory,
+  required String newName,
+  required bool overwrite,
+}) => RustLib.instance.api.crateApiFileEntryCopyEntryStream(
   sourcePath: sourcePath,
   destinationDirectory: destinationDirectory,
   newName: newName,
@@ -118,4 +131,29 @@ sealed class FileOperationError
       FileOperationError_UnsupportedSymlink;
   const factory FileOperationError.invalidPath(String field0) =
       FileOperationError_InvalidPath;
+}
+
+class TransferByteProgress {
+  final int percent;
+  final BigInt copiedBytes;
+  final BigInt totalBytes;
+
+  const TransferByteProgress({
+    required this.percent,
+    required this.copiedBytes,
+    required this.totalBytes,
+  });
+
+  @override
+  int get hashCode =>
+      percent.hashCode ^ copiedBytes.hashCode ^ totalBytes.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TransferByteProgress &&
+          runtimeType == other.runtimeType &&
+          percent == other.percent &&
+          copiedBytes == other.copiedBytes &&
+          totalBytes == other.totalBytes;
 }

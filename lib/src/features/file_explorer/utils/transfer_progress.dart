@@ -14,11 +14,19 @@ class TransferProgress {
   final String title;
   final int total;
   final ValueNotifier<int> completed = ValueNotifier<int>(0);
+  final ValueNotifier<double?> fraction = ValueNotifier<double?>(null);
+  final ValueNotifier<String?> detail = ValueNotifier<String?>(null);
   final ValueNotifier<bool> cancelled = ValueNotifier<bool>(false);
 
   OverlayEntry? _entry;
 
   void advance() => completed.value += 1;
+
+  void update({int? completed, double? fraction, String? detail}) {
+    if (completed != null) this.completed.value = completed;
+    if (fraction != null) this.fraction.value = fraction.clamp(0.0, 1.0);
+    if (detail != null) this.detail.value = detail;
+  }
 
   bool get isCancelled => cancelled.value;
 
@@ -84,29 +92,61 @@ class _TransferProgressOverlay extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                ValueListenableBuilder<int>(
-                  valueListenable: progress.completed,
-                  builder: (context, completed, _) {
-                    final double ratio = progress.total == 0
-                        ? 0
-                        : completed / progress.total;
+                ListenableBuilder(
+                  listenable: Listenable.merge([
+                    progress.completed,
+                    progress.fraction,
+                    progress.detail,
+                  ]),
+                  builder: (context, _) {
+                    final int completed = progress.completed.value;
+                    final double ratio =
+                        (progress.fraction.value ??
+                                (progress.total == 0
+                                    ? 0.0
+                                    : completed / progress.total))
+                            .clamp(0.0, 1.0);
+                    final int percent = (ratio * 100).round();
+                    final String label =
+                        progress.detail.value ??
+                        '$completed of ${progress.total} items';
 
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '$completed of ${progress.total} items',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: context.colors.textPrimary,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: context.colors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '$percent%',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                                color: context.colors.textPrimary,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(3),
                           child: LinearProgressIndicator(
-                            value: ratio.clamp(0.0, 1.0),
+                            value: ratio,
                             minHeight: 6,
                             backgroundColor: context.colors.input,
                           ),

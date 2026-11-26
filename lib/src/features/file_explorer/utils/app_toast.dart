@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 import 'package:get/get.dart';
 
@@ -7,6 +8,15 @@ import '../../../theme/app_theme.dart';
 import '../services/theme_service.dart';
 
 enum AppToastVariant { success, error, info, loading }
+
+/// Live percentage and status message delivered to a loading toast.
+class AppToastProgress {
+  const AppToastProgress({this.fraction, this.message});
+
+  /// Completion in `[0.0, 1.0]`, or `null` while indeterminate.
+  final double? fraction;
+  final String? message;
+}
 
 OverlayEntry? _currentToast;
 
@@ -17,6 +27,7 @@ void showAppToast({
   required String message,
   AppToastVariant variant = AppToastVariant.info,
   Duration duration = const Duration(seconds: 3),
+  ValueListenable<AppToastProgress?>? progress,
 }) {
   final NavigatorState? navigator = Get.key.currentState;
   final OverlayState? overlay = navigator?.overlay;
@@ -37,6 +48,7 @@ void showAppToast({
       variant: variant,
       duration: duration,
       animate: animate,
+      progress: progress,
       onDismissed: () {
         if (entry.mounted) entry.remove();
         if (identical(_currentToast, entry)) _currentToast = null;
@@ -56,6 +68,7 @@ class _ToastHost extends StatefulWidget {
     required this.duration,
     required this.animate,
     required this.onDismissed,
+    this.progress,
   });
 
   final String title;
@@ -63,6 +76,7 @@ class _ToastHost extends StatefulWidget {
   final AppToastVariant variant;
   final Duration duration;
   final bool animate;
+  final ValueListenable<AppToastProgress?>? progress;
   final VoidCallback onDismissed;
 
   @override
@@ -117,12 +131,6 @@ class _ToastHostState extends State<_ToastHost>
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final (IconData icon, Color color) = switch (widget.variant) {
-      AppToastVariant.success => (Icons.check_circle_outline, colors.success),
-      AppToastVariant.error => (Icons.error_outline, colors.danger),
-      AppToastVariant.info => (Icons.info_outline, colors.accent),
-      AppToastVariant.loading => (Icons.rotate_right, colors.accent),
-    };
 
     return Positioned(
       top: 16,
@@ -150,65 +158,115 @@ class _ToastHostState extends State<_ToastHost>
                     ),
                   ],
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (widget.variant == AppToastVariant.loading)
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 1.8,
-                          strokeCap: StrokeCap.round,
-                        ),
-                      )
-                    else
-                      Icon(icon, size: 16, color: color),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.title,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: colors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            widget.message,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              height: 1.35,
-                              color: colors.textSecondary,
-                            ),
-                          ),
-                        ],
+                child: widget.progress == null
+                    ? _buildContent(colors, null)
+                    : ValueListenableBuilder<AppToastProgress?>(
+                        valueListenable: widget.progress!,
+                        builder: (context, progress, _) =>
+                            _buildContent(colors, progress),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: _dismiss,
-                      borderRadius: BorderRadius.circular(4),
-                      child: Padding(
-                        padding: const EdgeInsets.all(2),
-                        child: Icon(
-                          Icons.close,
-                          size: 13,
-                          color: colors.textFaint,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildContent(AppThemeColors colors, AppToastProgress? progress) {
+    final (IconData icon, Color color) = switch (widget.variant) {
+      AppToastVariant.success => (Icons.check_circle_outline, colors.success),
+      AppToastVariant.error => (Icons.error_outline, colors.danger),
+      AppToastVariant.info => (Icons.info_outline, colors.accent),
+      AppToastVariant.loading => (Icons.rotate_right, colors.accent),
+    };
+    final double? fraction = progress?.fraction?.clamp(0.0, 1.0);
+    final int? percent = fraction == null ? null : (fraction * 100).round();
+    final String body = progress?.message ?? widget.message;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.variant == AppToastVariant.loading)
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              value: fraction,
+              strokeWidth: 1.8,
+              strokeCap: StrokeCap.round,
+            ),
+          )
+        else
+          Icon(icon, size: 16, color: color),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (percent != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      '$percent%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        color: colors.accent,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                body,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.35,
+                  color: colors.textSecondary,
+                ),
+              ),
+              if (fraction != null) ...[
+                const SizedBox(height: 7),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: fraction,
+                    minHeight: 3,
+                    backgroundColor: colors.input,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        InkWell(
+          onTap: _dismiss,
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.all(2),
+            child: Icon(
+              Icons.close,
+              size: 13,
+              color: colors.textFaint,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

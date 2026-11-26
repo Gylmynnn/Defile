@@ -17,6 +17,7 @@ import '../services/favorites_service.dart';
 import '../services/theme_service.dart';
 import '../utils/app_dialog_route.dart';
 import '../utils/app_toast.dart';
+import '../utils/file_types.dart';
 import 'widgets/app_dialog.dart';
 import 'widgets/app_sidebar.dart';
 import 'widgets/context_menu.dart';

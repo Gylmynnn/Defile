@@ -4,6 +4,7 @@ import 'dart:io' as io;
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 
 import '../utils/app_toast.dart';
+import '../utils/file_types.dart';
 import '../utils/overwrite_prompt.dart';
 import '../utils/transfer_progress.dart';
 

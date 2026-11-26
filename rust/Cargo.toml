@@ -13,9 +13,16 @@ resvg = "0.48.1"
 lopdf = "0.34"
 zavora-docx = "0.1.4"
 office_oxide = "0.1.15"
-zip = { version = "2", default-features = false, features = ["deflate"] }
+zip = { version = "8", default-features = false, features = ["deflate", "deflate64", "bzip2", "lzma", "xz", "ppmd", "zstd"] }
 tar = "0.4"
 flate2 = "1"
+bzip2 = "0.6"
+lzma-rust2 = { version = "0.26", default-features = false, features = ["std", "xz", "lzip"] }
+zstd = "0.14"
+lz4_flex = "0.14"
+brotli = "9"
+sevenz-rust2 = { version = "0.27", default-features = false, features = ["aes256", "bzip2", "ppmd", "deflate", "lz4", "zstd", "brotli", "util", "compress"] }
+ar = "0.9"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

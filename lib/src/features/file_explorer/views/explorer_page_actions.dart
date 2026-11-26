@@ -549,18 +549,8 @@ extension _ExplorerPageActions on _EntryContentState {
     'TAR.GZ': 'tar.gz',
   };
 
-  String _defaultArchiveName(String fileName) {
-    const List<String> suffixes = ['.zip', '.tar.gz', '.tgz', '.tar'];
-    final String lower = fileName.toLowerCase();
-
-    for (final suffix in suffixes) {
-      if (lower.endsWith(suffix)) {
-        return fileName.substring(0, fileName.length - suffix.length);
-      }
-    }
-
-    return fileName;
-  }
+  String _defaultArchiveName(String fileName) =>
+      archiveRootName(fileName) ?? fileName;
 
   void _showCreateEntryDialog(BuildContext context, {required bool directory}) {
     final TextEditingController textController = TextEditingController();

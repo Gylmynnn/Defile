@@ -1,9 +1,17 @@
 use std::{
-    fs, io,
+    fs,
+    io::{self, Read, Write},
     path::{Path, PathBuf},
     process::Command,
-    time::UNIX_EPOCH,
+    time::{Duration, Instant, UNIX_EPOCH},
 };
+
+#[derive(Debug, Clone)]
+pub struct TransferByteProgress {
+    pub percent: u8,
+    pub copied_bytes: u64,
+    pub total_bytes: u64,
+}
 
 #[derive(Debug, Clone)]
 pub struct FileEntry {
@@ -80,7 +88,110 @@ fn validate_name(name: &str) -> Result<(), FileOperationError> {
     Ok(())
 }
 
-fn copy_directory_recursive(source: &Path, destination: &Path) -> Result<(), FileOperationError> {
+const COPY_BUFFER_BYTES: usize = 64 * 1024;
+const COPY_PROGRESS_INTERVAL: Duration = Duration::from_millis(50);
+
+struct CopyProgressState<'a> {
+    copied_bytes: u64,
+    total_bytes: u64,
+    last_percent: Option<u8>,
+    last_emit: Instant,
+    on_progress: &'a mut dyn FnMut(TransferByteProgress),
+}
+
+impl<'a> CopyProgressState<'a> {
+    fn new(total_bytes: u64, on_progress: &'a mut dyn FnMut(TransferByteProgress)) -> Self {
+        Self {
+            copied_bytes: 0,
+            total_bytes,
+            last_percent: None,
+            last_emit: Instant::now() - COPY_PROGRESS_INTERVAL,
+            on_progress,
+        }
+    }
+
+    fn emit(&mut self, force: bool) {
+        let percent = if self.total_bytes == 0 {
+            if force { 100 } else { 0 }
+        } else {
+            ((self.copied_bytes as u128 * 100) / (self.total_bytes as u128)).min(100) as u8
+        };
+        if !force
+            && self.last_percent == Some(percent)
+            && self.last_emit.elapsed() < COPY_PROGRESS_INTERVAL
+        {
+            return;
+        }
+        self.last_percent = Some(percent);
+        self.last_emit = Instant::now();
+        (self.on_progress)(TransferByteProgress {
+            percent,
+            copied_bytes: self.copied_bytes,
+            total_bytes: self.total_bytes,
+        });
+    }
+
+    fn add_bytes(&mut self, delta: u64) {
+        if delta == 0 {
+            return;
+        }
+        self.copied_bytes = self.copied_bytes.saturating_add(delta);
+        self.emit(false);
+    }
+}
+
+fn tree_size_bytes(path: &Path) -> Result<u64, FileOperationError> {
+    let metadata = fs::symlink_metadata(path)?;
+    if metadata.file_type().is_symlink() {
+        return Err(FileOperationError::UnsupportedSymlink(
+            path.display().to_string(),
+        ));
+    }
+    if metadata.is_file() {
+        return Ok(metadata.len());
+    }
+    if !metadata.is_dir() {
+        return Err(FileOperationError::InvalidPath(
+            "Unsupported file type".to_string(),
+        ));
+    }
+    let mut total = 0u64;
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        total = total.saturating_add(tree_size_bytes(&entry.path())?);
+    }
+    Ok(total)
+}
+
+fn copy_file_with_progress(
+    source: &Path,
+    destination: &Path,
+    state: &mut CopyProgressState<'_>,
+) -> Result<(), FileOperationError> {
+    let mut input = fs::File::open(source)?;
+    let mut output = fs::File::create(destination)?;
+    let mut buf = vec![0u8; COPY_BUFFER_BYTES];
+
+    loop {
+        let n = input.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        output.write_all(&buf[..n])?;
+        state.add_bytes(n as u64);
+    }
+
+    if let Ok(meta) = fs::metadata(source) {
+        let _ = fs::set_permissions(destination, meta.permissions());
+    }
+    Ok(())
+}
+
+fn copy_directory_recursive(
+    source: &Path,
+    destination: &Path,
+    state: &mut CopyProgressState<'_>,
+) -> Result<(), FileOperationError> {
     fs::create_dir(destination)?;
 
     for entry in fs::read_dir(source)? {
@@ -97,9 +208,9 @@ fn copy_directory_recursive(source: &Path, destination: &Path) -> Result<(), Fil
         }
 
         if metadata.is_dir() {
-            copy_directory_recursive(&source_path, &destination_path)?;
+            copy_directory_recursive(&source_path, &destination_path, state)?;
         } else if metadata.is_file() {
-            fs::copy(&source_path, &destination_path)?;
+            copy_file_with_progress(&source_path, &destination_path, state)?;
         }
     }
 
@@ -112,6 +223,31 @@ pub fn copy_entry(
     destination_directory: std::string::String,
     new_name: std::string::String,
     overwrite: bool,
+) -> Result<(), FileOperationError> {
+    let mut noop = |_| {};
+    copy_entry_impl(source_path, destination_directory, new_name, overwrite, &mut noop)
+}
+
+#[flutter_rust_bridge::frb]
+pub fn copy_entry_stream(
+    source_path: std::string::String,
+    destination_directory: std::string::String,
+    new_name: std::string::String,
+    overwrite: bool,
+    sink: crate::frb_generated::StreamSink<TransferByteProgress>,
+) -> Result<(), FileOperationError> {
+    let mut emit = |progress: TransferByteProgress| {
+        let _ = sink.add(progress);
+    };
+    copy_entry_impl(source_path, destination_directory, new_name, overwrite, &mut emit)
+}
+
+fn copy_entry_impl(
+    source_path: std::string::String,
+    destination_directory: std::string::String,
+    new_name: std::string::String,
+    overwrite: bool,
+    on_progress: &mut dyn FnMut(TransferByteProgress),
 ) -> Result<(), FileOperationError> {
     validate_name(&new_name)?;
 
@@ -157,9 +293,8 @@ pub fn copy_entry(
         let destination_metadata = fs::symlink_metadata(&destination)
             .map_err(|error| FileOperationError::Io(error.to_string()))?;
 
-        // A regular file can simply be rewritten by fs::copy; directories and
-        // symlinks must be removed first so their old contents cannot leak
-        // into the replacement.
+        // A regular file can simply be rewritten; directories and symlinks must
+        // be removed first so their old contents cannot leak into the replacement.
         if metadata.is_dir()
             || destination_metadata.is_dir()
             || destination_metadata.file_type().is_symlink()
@@ -168,16 +303,21 @@ pub fn copy_entry(
         }
     }
 
+    let total_bytes = tree_size_bytes(&source)?;
+    let mut state = CopyProgressState::new(total_bytes, on_progress);
+    state.emit(false);
+
     if metadata.is_dir() {
-        copy_directory_recursive(&source, &destination)?;
+        copy_directory_recursive(&source, &destination, &mut state)?;
     } else if metadata.is_file() {
-        fs::copy(&source, &destination)?;
+        copy_file_with_progress(&source, &destination, &mut state)?;
     } else {
         return Err(FileOperationError::InvalidPath(
             "Unsupported file type".to_string(),
         ));
     }
 
+    state.emit(true);
     Ok(())
 }
 

@@ -81,6 +81,20 @@ class FileSystemService {
     );
   }
 
+  Stream<rust.TransferByteProgress> copyEntryStream({
+    required String sourcePath,
+    required String destinationDirectory,
+    required String newName,
+    bool overwrite = false,
+  }) {
+    return rust.copyEntryStream(
+      sourcePath: sourcePath,
+      destinationDirectory: destinationDirectory,
+      newName: newName,
+      overwrite: overwrite,
+    );
+  }
+
   Future<void> moveEntry({
     required String sourcePath,
     required String destinationDirectory,
@@ -102,11 +116,31 @@ class FileSystemService {
     return rust_archive.compressEntries(paths: paths, destination: destination);
   }
 
+  Stream<rust_archive.ArchiveProgress> compressEntriesStream({
+    required List<String> paths,
+    required String destination,
+  }) {
+    return rust_archive.compressEntriesStream(
+      paths: paths,
+      destination: destination,
+    );
+  }
+
   Future<BigInt> extractArchive({
     required String path,
     required String destinationDir,
   }) {
     return rust_archive.extractArchive(
+      path: path,
+      destinationDir: destinationDir,
+    );
+  }
+
+  Stream<rust_archive.ArchiveProgress> extractArchiveStream({
+    required String path,
+    required String destinationDir,
+  }) {
+    return rust_archive.extractArchiveStream(
       path: path,
       destinationDir: destinationDir,
     );

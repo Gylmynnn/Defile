@@ -164,7 +164,29 @@ extension ExplorerOperations on FileExplorerController {
     final List<String> transferred = <String>[];
     final List<(String, String)> movedPairs = <(String, String)>[];
 
-    for (final entry in items) {
+    ValueNotifier<AppToastProgress?>? singleCopyProgress;
+    Timer? singleCopyToastTimer;
+    if (items.length == 1 && !move) {
+      final ValueNotifier<AppToastProgress?> notifier =
+          ValueNotifier<AppToastProgress?>(
+            AppToastProgress(
+              fraction: 0,
+              message: 'Copying "${items.first.name}"',
+            ),
+          );
+      singleCopyProgress = notifier;
+      singleCopyToastTimer = Timer(const Duration(milliseconds: 80), () {
+        showAppToast(
+          title: 'Copying',
+          message: 'Copying "${items.first.name}"',
+          variant: AppToastVariant.loading,
+          progress: notifier,
+        );
+      });
+    }
+
+    for (int index = 0; index < items.length; index++) {
+      final rust.FileEntry entry = items[index];
       if (progress?.isCancelled ?? false) {
         cancelled = true;
         break;
@@ -174,6 +196,8 @@ extension ExplorerOperations on FileExplorerController {
 
       if (skipConflicts && conflicts.containsKey(name)) {
         skipped++;
+        progress?.advance();
+        progress?.update(fraction: (index + 1) / items.length);
         continue;
       }
 
@@ -193,22 +217,39 @@ extension ExplorerOperations on FileExplorerController {
             movedPairs.add((entry.path, destination));
           }
         } else {
-          await fileSystemService.copyEntry(
+          await for (final event in fileSystemService.copyEntryStream(
             sourcePath: entry.path,
             destinationDirectory: destinationDirectory,
             newName: name,
             overwrite: overwrite,
-          );
+          )) {
+            final double itemFraction = (event.percent / 100.0).clamp(0.0, 1.0);
+            if (progress != null) {
+              progress.update(
+                fraction: (index + itemFraction) / items.length,
+                detail: '${index + 1} of ${items.length} items · $name',
+              );
+            } else if (singleCopyProgress != null) {
+              singleCopyProgress.value = AppToastProgress(
+                fraction: itemFraction,
+                message: 'Copying "$name"',
+              );
+            }
+          }
         }
 
         succeeded++;
         transferred.add(entry.path);
         progress?.advance();
+        progress?.update(fraction: (index + 1) / items.length);
       } catch (error) {
         lastError = error.toString();
+        progress?.advance();
+        progress?.update(fraction: (index + 1) / items.length);
       }
     }
 
+    singleCopyToastTimer?.cancel();
     if (progress != null) progress.close();
 
     if (move && movedPairs.isNotEmpty) {
@@ -277,6 +318,8 @@ extension ExplorerOperations on FileExplorerController {
         variant: AppToastVariant.error,
       );
     }
+
+    singleCopyProgress?.dispose();
 
     return transferred;
   }
@@ -357,14 +400,52 @@ extension ExplorerOperations on FileExplorerController {
     }
   }
 
+  ValueNotifier<AppToastProgress?>? _startBatchPercentToast({
+    required int total,
+    required String title,
+    required String verb,
+  }) {
+    if (total <= 1) return null;
+    final ValueNotifier<AppToastProgress?> notifier =
+        ValueNotifier<AppToastProgress?>(
+          AppToastProgress(fraction: 0, message: '$verb 0 of $total items'),
+        );
+    showAppToast(
+      title: title,
+      message: '$verb 0 of $total items',
+      variant: AppToastVariant.loading,
+      progress: notifier,
+    );
+    return notifier;
+  }
+
+  void _updateBatchPercentToast(
+    ValueNotifier<AppToastProgress?>? notifier, {
+    required int completed,
+    required int total,
+    required String verb,
+  }) {
+    if (notifier == null) return;
+    notifier.value = AppToastProgress(
+      fraction: total == 0 ? 1.0 : completed / total,
+      message: '$verb $completed of $total items',
+    );
+  }
+
   Future<void> trashEntries(List<rust.FileEntry> entries) async {
     if (entries.isEmpty) return;
 
     int succeeded = 0;
     String? lastError;
     final List<String> trashed = <String>[];
+    final ValueNotifier<AppToastProgress?>? progress = _startBatchPercentToast(
+      total: entries.length,
+      title: 'Moving to Trash',
+      verb: 'Moving',
+    );
 
-    for (final entry in entries) {
+    for (int i = 0; i < entries.length; i++) {
+      final rust.FileEntry entry = entries[i];
       try {
         final String destination = await fileSystemService.moveToTrash(
           entry.path,
@@ -375,6 +456,12 @@ extension ExplorerOperations on FileExplorerController {
       } catch (error) {
         lastError = error.toString();
       }
+      _updateBatchPercentToast(
+        progress,
+        completed: i + 1,
+        total: entries.length,
+        verb: 'Moving',
+      );
     }
 
     if (trashed.isNotEmpty) {
@@ -417,6 +504,7 @@ extension ExplorerOperations on FileExplorerController {
         variant: AppToastVariant.error,
       );
     }
+    progress?.dispose();
   }
 
   Future<void> trashEntry(rust.FileEntry entry) => trashEntries([entry]);
@@ -426,8 +514,14 @@ extension ExplorerOperations on FileExplorerController {
 
     int succeeded = 0;
     String? lastError;
+    final ValueNotifier<AppToastProgress?>? progress = _startBatchPercentToast(
+      total: entries.length,
+      title: 'Deleting',
+      verb: 'Deleting',
+    );
 
-    for (final entry in entries) {
+    for (int i = 0; i < entries.length; i++) {
+      final rust.FileEntry entry = entries[i];
       try {
         if (isInTrash(entry.path)) {
           await fileSystemService.deleteFromTrash(entry.path);
@@ -440,6 +534,12 @@ extension ExplorerOperations on FileExplorerController {
       } catch (error) {
         lastError = error.toString();
       }
+      _updateBatchPercentToast(
+        progress,
+        completed: i + 1,
+        total: entries.length,
+        verb: 'Deleting',
+      );
     }
 
     await _refreshAfterMutation(
@@ -468,6 +568,7 @@ extension ExplorerOperations on FileExplorerController {
         variant: AppToastVariant.error,
       );
     }
+    progress?.dispose();
   }
 
   Future<void> emptyTrash() async {
@@ -501,8 +602,14 @@ extension ExplorerOperations on FileExplorerController {
     int succeeded = 0;
     String? lastError;
     final List<String> destinations = <String>[];
+    final ValueNotifier<AppToastProgress?>? progress = _startBatchPercentToast(
+      total: entries.length,
+      title: 'Restoring',
+      verb: 'Restoring',
+    );
 
-    for (final entry in entries) {
+    for (int i = 0; i < entries.length; i++) {
+      final rust.FileEntry entry = entries[i];
       try {
         final String restored = await fileSystemService.restoreFromTrash(
           entry.path,
@@ -512,6 +619,12 @@ extension ExplorerOperations on FileExplorerController {
       } catch (error) {
         lastError = error.toString();
       }
+      _updateBatchPercentToast(
+        progress,
+        completed: i + 1,
+        total: entries.length,
+        verb: 'Restoring',
+      );
     }
 
     await _refreshAfterMutation(
@@ -542,36 +655,15 @@ extension ExplorerOperations on FileExplorerController {
         variant: AppToastVariant.error,
       );
     }
+    progress?.dispose();
   }
 
   Future<void> restoreEntry(rust.FileEntry entry) => restoreEntries([entry]);
 
-  static const List<String> _archiveSuffixes = [
-    '.zip',
-    '.tar',
-    '.tar.gz',
-    '.tgz',
-  ];
-
   /// Whether the entry is an archive the built-in extractor understands.
   bool isExtractableArchive(rust.FileEntry entry) {
     if (entry.isDirectory) return false;
-
-    final String lower = entry.name.toLowerCase();
-    return _archiveSuffixes.any(lower.endsWith);
-  }
-
-  /// Name given to the folder an archive's contents land in.
-  static String? _archiveRootName(String fileName) {
-    final String lower = fileName.toLowerCase();
-
-    for (final suffix in _archiveSuffixes) {
-      if (lower.endsWith(suffix)) {
-        return fileName.substring(0, fileName.length - suffix.length);
-      }
-    }
-
-    return null;
+    return isExtractableArchiveName(entry.name);
   }
 
   /// Bundles [entries] into an archive named `<archiveFile>` in the current
@@ -604,18 +696,32 @@ extension ExplorerOperations on FileExplorerController {
         : '$trimmed$extension';
     final String destination = _uniqueChildPath(currentPath.value, fileName);
 
+    final ValueNotifier<AppToastProgress?> progress =
+        ValueNotifier<AppToastProgress?>(
+          AppToastProgress(
+            fraction: 0,
+            message:
+                'Packing ${entries.length} item(s) into "${p.basename(destination)}"',
+          ),
+        );
+
     showAppToast(
       title: 'Compressing',
       message:
           'Packing ${entries.length} item(s) into "${p.basename(destination)}"',
       variant: AppToastVariant.loading,
+      progress: progress,
     );
 
     try {
-      await fileSystemService.compressEntries(
+      await for (final event in fileSystemService.compressEntriesStream(
         paths: entries.map((entry) => entry.path).toList(),
         destination: destination,
-      );
+      )) {
+        progress.value = AppToastProgress(
+          fraction: (event.percent / 100.0).clamp(0.0, 1.0),
+        );
+      }
       await _refreshAfterMutation(entries: entries);
 
       showAppToast(
@@ -630,17 +736,18 @@ extension ExplorerOperations on FileExplorerController {
         message: error.toString(),
         variant: AppToastVariant.error,
       );
+    } finally {
+      progress.dispose();
     }
   }
 
   /// Extracts an archive next to itself, into a folder named after it.
   Future<void> extractEntry(rust.FileEntry entry) async {
-    final String? rootName = _archiveRootName(entry.name);
+    final String? rootName = archiveRootName(entry.name);
     if (rootName == null || rootName.trim().isEmpty) {
       showAppToast(
         title: 'Extract',
-        message:
-            'Unsupported archive format. Zip, tar and tar.gz are supported.',
+        message: 'Unsupported archive format.',
         variant: AppToastVariant.error,
       );
       return;
@@ -650,18 +757,35 @@ extension ExplorerOperations on FileExplorerController {
       p.dirname(entry.path),
       rootName,
     );
+    final ValueNotifier<AppToastProgress?> progress =
+        ValueNotifier<AppToastProgress?>(
+          AppToastProgress(
+            fraction: 0,
+            message:
+                'Unpacking "${entry.name}" into "${p.basename(destination)}"',
+          ),
+        );
 
     showAppToast(
       title: 'Extracting',
       message: 'Unpacking "${entry.name}" into "${p.basename(destination)}"',
       variant: AppToastVariant.loading,
+      progress: progress,
     );
 
     try {
-      final BigInt items = await fileSystemService.extractArchive(
+      BigInt items = BigInt.zero;
+      await for (final event in fileSystemService.extractArchiveStream(
         path: entry.path,
         destinationDir: destination,
-      );
+      )) {
+        progress.value = AppToastProgress(
+          fraction: (event.percent / 100.0).clamp(0.0, 1.0),
+        );
+        if (event.finished) {
+          items = event.itemsCompleted;
+        }
+      }
       await _refreshAfterMutation(entries: [entry]);
 
       showAppToast(
@@ -676,6 +800,8 @@ extension ExplorerOperations on FileExplorerController {
         variant: AppToastVariant.error,
       );
       return;
+    } finally {
+      progress.dispose();
     }
   }
 
