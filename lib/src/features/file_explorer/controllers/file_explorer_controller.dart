@@ -1,6 +1,7 @@
 import 'dart:async' show Timer, unawaited;
 import 'dart:io' as io;
 
+import 'package:defile/src/features/file_explorer/services/drive_service.dart';
 import 'package:defile/src/features/file_explorer/services/file_system_service.dart';
 
 import '../utils/app_toast.dart';
@@ -56,6 +57,14 @@ class FileExplorerController extends GetxController {
   final RxMap<String, rust_system.DiskUsage> driveUsages =
       <String, rust_system.DiskUsage>{}.obs;
   final Rxn<rust_system.DiskUsage> diskUsage = Rxn();
+
+  /// Guards asynchronous place loads against out-of-order completion.
+  int _placesGeneration = 0;
+
+  /// Drive watcher shared with the app; when registered its [revision] tells
+  /// this tab to re-merge places so a plucked/unplugged stick updates Drives.
+  DriveService? _driveService;
+  Worker? _driveRevisionWorker;
 
   int _entriesRevision = 0;
   bool _systemStateSeeded = false;
@@ -183,11 +192,24 @@ class FileExplorerController extends GetxController {
       scheduleColumnPreview();
     });
     ever(places, (_) => _splitPlaces());
+    _watchDrives();
     _bootstrap();
+  }
+
+  /// Subscribes to the shared [DriveService] so plugged/unplugged media
+  /// refreshes the sidebar without waiting for a manual refresh.
+  void _watchDrives() {
+    if (!Get.isRegistered<DriveService>()) return;
+
+    _driveService = Get.find<DriveService>();
+    _driveRevisionWorker = ever<int>(_driveService!.revision, (_) {
+      unawaited(_loadPlaces());
+    });
   }
 
   @override
   void onClose() {
+    _driveRevisionWorker?.dispose();
     _pathSearchTimer?.cancel();
     _columnPreviewDebounce?.cancel();
     searchFocusNode.dispose();
@@ -286,6 +308,12 @@ class FileExplorerController extends GetxController {
         if (currentPath.value == homePath.value) return 'Home';
 
         final String base = p.basename(currentPath.value);
+        if (base.startsWith('mtp:')) {
+          for (final place in drivePlaces) {
+            if (place.path == currentPath.value) return place.label;
+          }
+          return 'Phone';
+        }
         return base.isEmpty ? currentPath.value : base;
     }
   }

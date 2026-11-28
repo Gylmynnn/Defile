@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 
+import '../services/drive_service.dart';
 import '../services/file_system_service.dart';
 
 import 'package:defile/src/rust/api/file_entry.dart' as rust;
@@ -19,6 +20,8 @@ class DirectoryPickerController extends GetxController {
   /// Sidebar shortcuts (quick access, bookmarked folders, drives), loaded by
   /// the picker itself so the dialog stays self-contained.
   final RxList<rust_system.Place> places = <rust_system.Place>[].obs;
+
+  int _placesGeneration = 0;
 
   Future<void> initialize(String initialPath) async {
     currentPath.value = initialPath;
@@ -73,11 +76,30 @@ class DirectoryPickerController extends GetxController {
   }
 
   Future<void> _loadPlaces() async {
+    final int generation = ++_placesGeneration;
+
+    List<rust_system.Place> base = const <rust_system.Place>[];
     try {
-      places.assignAll(await rust_system.listPlaces());
+      base = await rust_system.listPlaces();
     } catch (_) {
-      places.clear();
+      base = const <rust_system.Place>[];
     }
+
+    if (generation != _placesGeneration) return;
+
+    // Rust's single hard-coded drive is replaced by the discovered mounts.
+    if (!Get.isRegistered<DriveService>()) {
+      places.assignAll(base);
+      return;
+    }
+
+    final List<rust_system.Place> merged = <rust_system.Place>[
+      for (final place in base)
+        if (place.kind != rust_system.PlaceKind.drive) place,
+    ];
+    merged.addAll(Get.find<DriveService>().drives);
+
+    places.assignAll(merged);
   }
 
   Future<void> openDirectory(rust.FileEntry entry) async {

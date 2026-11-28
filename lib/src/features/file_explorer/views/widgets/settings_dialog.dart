@@ -9,6 +9,7 @@ import '../../../../theme/theme_palette.dart';
 import '../../controllers/explorer_tabs_controller.dart';
 import '../../controllers/file_explorer_controller.dart';
 import '../../services/default_file_manager_service.dart';
+import '../../services/drive_service.dart';
 import '../../services/font_service.dart';
 import '../../services/icon_theme_service.dart';
 import '../../services/portal_file_chooser_service.dart';
@@ -174,6 +175,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
     }
     // Tests render the dialog without the exploration binding.
     return Get.put<WindowControlsService>(WindowControlsService());
+  }
+  DriveService get _driveService {
+    if (Get.isRegistered<DriveService>()) {
+      return Get.find<DriveService>();
+    }
+    // Tests render the dialog without the exploration binding.
+    return Get.put<DriveService>(DriveService(autoMountAllowed: false));
   }
   FileExplorerController? get _explorerController {
     if (Get.isRegistered<FileExplorerController>()) {

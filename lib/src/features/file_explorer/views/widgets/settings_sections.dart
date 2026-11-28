@@ -509,6 +509,28 @@ extension _SettingsSections on _SettingsDialogState {
             }),
           ],
         ),
+
+        if (DriveService.supported) ...[
+          const SizedBox(height: 22),
+          _buildSectionTitle('Removable Drives'),
+          const SizedBox(height: 8),
+          _CustomSectionCard(
+            children: [
+              Obx(() {
+                return _CustomSettingRow(
+                  title: 'Auto-mount drives',
+                  subtitle:
+                      'Mount USB sticks and other removable media as soon as '
+                      'they are plugged in, and show them under Drives.',
+                  control: _CustomSwitch(
+                    value: _driveService.autoMount.value,
+                    onChanged: _driveService.setAutoMount,
+                  ),
+                );
+              }),
+            ],
+          ),
+        ],
       ],
     );
   }

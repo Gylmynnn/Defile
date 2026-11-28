@@ -4,6 +4,28 @@ String formatBytes(BigInt bytes) =>
 String formatBytesIec(BigInt bytes) =>
     _formatBytes(bytes, const ['KiB', 'MiB', 'GiB', 'TiB', 'PiB']);
 
+/// Capacity-style size: always one decimal (trimmed when `.0`), so a disk
+/// reads like `342.8 GB of 512 GB` instead of `343 GB`.
+String formatStorageSize(BigInt bytes) {
+  final int value = bytes.toInt();
+  if (value < 1024) return '$value B';
+
+  double size = value / 1024;
+  const List<String> units = ['KB', 'MB', 'GB', 'TB', 'PB'];
+  int unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+
+  String formatted = size.toStringAsFixed(1);
+  if (formatted.endsWith('.0')) {
+    formatted = formatted.substring(0, formatted.length - 2);
+  }
+  return '$formatted ${units[unitIndex]}';
+}
+
 String _formatBytes(BigInt bytes, List<String> units) {
   final int value = bytes.toInt();
   if (value < 1024) return '$value B';

@@ -9,9 +9,11 @@ import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import '../../../../theme/app_theme.dart';
 import '../../controllers/explorer_tabs_controller.dart';
 import '../../controllers/file_explorer_controller.dart';
+import '../../services/drive_service.dart';
 import '../../services/favorites_service.dart';
 import '../../services/theme_service.dart';
 import '../../utils/app_toast.dart';
+import '../../utils/formatters.dart';
 import '../../utils/place_icons.dart';
 import 'context_menu.dart';
 import 'entry_views.dart' show entriesFromLocalData;
@@ -50,18 +52,68 @@ class AppSidebar extends StatelessWidget {
   ) {
     if (place.kind == rust_system.PlaceKind.network) return;
 
+    final List<ContextMenuEntry> entries = <ContextMenuEntry>[
+      ContextMenuActionEntry(
+        ContextMenuAction(
+          icon: Icons.tab,
+          label: 'Open in New Tab',
+          onSelected: () => _openPlaceInNewTab(place),
+        ),
+      ),
+    ];
+
+    final DriveService? drives = _driveService;
+    if (place.kind == rust_system.PlaceKind.drive && drives != null) {
+      final bool canUnmount = drives.canUnmount(place.path);
+      final bool removable = drives.isRemovable(place.path);
+
+      if (canUnmount || removable) {
+        entries.add(ContextMenuSeparator());
+      }
+      if (canUnmount) {
+        entries.add(
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: CupertinoIcons.xmark_circle,
+              label: 'Unmount',
+              onSelected: () => _runDriveCommand(
+                drives.unmount(place.path),
+              ),
+            ),
+          ),
+        );
+      }
+      if (removable) {
+        entries.add(
+          ContextMenuActionEntry(
+            ContextMenuAction(
+              icon: CupertinoIcons.eject,
+              label: 'Eject',
+              onSelected: () => _runDriveCommand(
+                drives.eject(place.path),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
     showAppContextMenu(
       context: context,
       position: position,
-      entries: [
-        ContextMenuActionEntry(
-          ContextMenuAction(
-            icon: Icons.tab,
-            label: 'Open in New Tab',
-            onSelected: () => _openPlaceInNewTab(place),
-          ),
-        ),
-      ],
+      entries: entries,
+    );
+  }
+
+  DriveService? get _driveService =>
+      Get.isRegistered<DriveService>() ? Get.find<DriveService>() : null;
+
+  Future<void> _runDriveCommand(Future<DriveCommandResult> command) async {
+    final DriveCommandResult result = await command;
+    showAppToast(
+      title: 'Drives',
+      message: result.message,
+      variant: result.ok ? AppToastVariant.success : AppToastVariant.error,
     );
   }
 
@@ -293,12 +345,17 @@ class AppSidebar extends StatelessWidget {
     required IconData icon,
     Color? iconColor,
   }) {
+    // Read the reactive state here, during the enclosing Obx build. The
+    // DragTarget builder below runs later with no Obx proxy, so an Rx read
+    // inside it would not subscribe the sidebar to changes.
+    final bool active = c.isPlaceActive(place);
+
     Widget tile(bool dropping) => _PlaceTile(
       place: place,
       icon: icon,
       iconColor: iconColor,
       collapsed: collapsed,
-      active: c.isPlaceActive(place),
+      active: active,
       dropping: dropping,
       onTap: () => c.openPlace(place),
       onMiddleClick: () => _openPlaceInNewTab(place),
@@ -315,15 +372,23 @@ class AppSidebar extends StatelessWidget {
     FileExplorerController c,
     rust_system.Place place,
   ) {
+    // Read the reactive state during the enclosing Obx build. The DragTarget
+    // builder below is invoked later, outside the Obx proxy, so reading
+    // `driveUsages[...]` (or `isPlaceActive`) inside it would never subscribe
+    // the sidebar — the tile would keep showing just the name until some
+    // unrelated rebuild.
+    final rust_system.DiskUsage? usage = c.driveUsages[place.path];
+    final bool active = c.isPlaceActive(place);
+
     return _dropTarget(
       context,
       c,
       place.path,
       (dropping) => _DriveTile(
         place: place,
-        usage: c.driveUsages[place.path],
+        usage: usage,
         collapsed: collapsed,
-        active: c.isPlaceActive(place),
+        active: active,
         dropping: dropping,
         onTap: () => c.openPlace(place),
         onMiddleClick: () => _openPlaceInNewTab(place),
@@ -617,15 +682,15 @@ class _DriveTile extends StatelessWidget {
           onSecondaryTapDown: (details) =>
               onSecondaryTap?.call(details.globalPosition),
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 7),
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
             decoration: BoxDecoration(
               color: background,
-              borderRadius: BorderRadius.circular(5),
+              borderRadius: BorderRadius.circular(6),
               border: Border.all(
                 color: dropping || active
                     ? context.colors.selectionBorder
-                    : Colors.transparent,
+                    : context.colors.divider,
               ),
             ),
             child: collapsed
@@ -643,43 +708,54 @@ class _DriveTile extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            sidebarDriveIcon,
-                            size: 14,
-                            color: dropping || active
-                                ? context.colors.textPrimary
-                                : context.colors.textSecondary,
-                          ),
-                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               place.label,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 12,
-                                color: dropping || active
-                                    ? context.colors.textPrimary
-                                    : context.colors.textSecondary,
-                                fontWeight: dropping || active
-                                    ? FontWeight.w500
-                                    : FontWeight.w400,
+                                fontSize: 12.5,
+                                color: context.colors.textPrimary,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
+                          if (ratio != null)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Text(
+                                '${(ratio * 100).round()}%',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.colors.textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-                      if (ratio != null) ...[
-                        const SizedBox(height: 6),
+                      if (usage != null) ...[
+                        const SizedBox(height: 8),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
+                          borderRadius: BorderRadius.circular(3),
                           child: LinearProgressIndicator(
                             value: ratio,
-                            minHeight: 3,
+                            minHeight: 6,
                             backgroundColor: context.colors.divider,
                             valueColor: AlwaysStoppedAnimation<Color>(
                               context.colors.accent,
                             ),
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          '${formatStorageSize(usage.usedBytes)} of '
+                          '${formatStorageSize(usage.totalBytes)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: context.colors.textSecondary,
                           ),
                         ),
                       ],
@@ -690,9 +766,10 @@ class _DriveTile extends StatelessWidget {
 
         // The rail drops the label and usage bar; the tooltip carries them.
         if (collapsed) {
-          final String usageText = ratio == null
+          final String usageText = usage == null
               ? ''
-              : ' · ${(ratio * 100).round()}% used';
+              : ' · ${formatStorageSize(usage.usedBytes)} of '
+                    '${formatStorageSize(usage.totalBytes)}';
           tile = Tooltip(message: '${place.label}$usageText', child: tile);
         }
         return tile;

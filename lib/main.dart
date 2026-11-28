@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:defile/src/features/file_explorer/bindings/file_explorer_binding.dart';
 import 'package:defile/src/features/file_explorer/controllers/explorer_tabs_controller.dart';
 import 'package:defile/src/features/file_explorer/controllers/portal_pick_controller.dart';
+import 'package:defile/src/features/file_explorer/services/drive_service.dart';
 import 'package:defile/src/features/file_explorer/services/file_manager1_service.dart';
 import 'package:defile/src/features/file_explorer/services/font_service.dart';
 import 'package:defile/src/features/file_explorer/services/icon_theme_service.dart';
@@ -121,10 +122,13 @@ Future<void> main(List<String> args) async {
 
   // GetMaterialApp used to run this through its `initialBinding`. The root is
   // now a plain `material_ui` MaterialApp, so the binding runs here instead.
-  FileExplorerBinding().dependencies();
+  FileExplorerBinding(autoMountDrives: !portalBackend).dependencies();
   // Finish the (cheap) window-control preference load before the first frame so
   // a minimized/closed button hidden in Settings does not flash back on launch.
   await Get.find<WindowControlsService>().init();
+  // Discover removable media (and mount it, when allowed) before the first
+  // frame so a stick plugged in before launch already shows up in Drives.
+  await Get.find<DriveService>().init();
   runApp(const RootApp());
   if (portalBackend) {
     WidgetsBinding.instance.addPostFrameCallback((_) {

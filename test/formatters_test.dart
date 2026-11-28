@@ -13,4 +13,14 @@ void main() {
   test('formats thousands separators', () {
     expect(formatThousands(BigInt.from(1234567)), '1,234,567');
   });
+
+  test('formats storage capacity with a trimmed decimal', () {
+    expect(formatStorageSize(BigInt.from(512)), '512 B');
+    expect(formatStorageSize(BigInt.from(1536)), '1.5 KB');
+    expect(formatStorageSize(BigInt.from(2048)), '2 KB');
+    expect(
+      formatStorageSize(BigInt.from(512) * BigInt.from(1024 * 1024 * 1024)),
+      '512 GB',
+    );
+  });
 }

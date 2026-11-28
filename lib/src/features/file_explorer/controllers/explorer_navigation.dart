@@ -2,22 +2,55 @@ part of 'file_explorer_controller.dart';
 
 extension ExplorerNavigation on FileExplorerController {
   Future<void> _loadPlaces() async {
+    final int generation = ++_placesGeneration;
+
+    List<rust_system.Place> base = const <rust_system.Place>[];
     try {
-      places.assignAll(await rust_system.listPlaces());
+      base = await rust_system.listPlaces();
     } catch (_) {
-      places.clear();
+      base = const <rust_system.Place>[];
     }
 
+    // A slower list that finished after a newer one must not clobber it.
+    if (generation != _placesGeneration) return;
+
+    final List<rust_system.Place> merged = _mergePlaces(base);
+    places.assignAll(merged);
+    // `ever(places, ...)` already splits the sections, but doing it here keeps
+    // the drive list available below even if the worker ran late.
+    _splitPlaces();
+
     await Future.wait([
-      for (final drive in drivePlaces)
-        () async {
-          try {
-            driveUsages[drive.path] = await rust_system.getDiskUsage(
-              path: drive.path,
-            );
-          } catch (_) {}
-        }(),
+      for (final drive in merged)
+        if (drive.kind == rust_system.PlaceKind.drive &&
+            !drive.path.contains('/gvfs/'))
+          () async {
+            try {
+              driveUsages[drive.path] = await rust_system.getDiskUsage(
+                path: drive.path,
+              );
+            } catch (_) {}
+          }(),
     ]);
+  }
+
+  /// Combines the Rust-provided places with the [DriveService] listing.
+  ///
+  /// Rust only knows a single hard-coded drive ("/"), so its drive entries are
+  /// dropped and replaced by the discovered mounts (root plus removable media).
+  /// Without a [DriveService] (non-Linux, or before binding) the list is left
+  /// untouched.
+  List<rust_system.Place> _mergePlaces(List<rust_system.Place> base) {
+    final DriveService? service = _driveService;
+    if (service == null) return base;
+
+    final List<rust_system.Place> merged = <rust_system.Place>[
+      for (final place in base)
+        if (place.kind != rust_system.PlaceKind.drive) place,
+    ];
+    merged.addAll(service.drives);
+
+    return merged;
   }
 
   bool isPlaceActive(rust_system.Place place) {
@@ -38,15 +71,45 @@ extension ExplorerNavigation on FileExplorerController {
     }
   }
 
-  bool get canGoToParent =>
-      location.value == ExplorerLocation.directory &&
-      p.dirname(currentPath.value) != currentPath.value;
+  bool get canGoToParent {
+    if (location.value != ExplorerLocation.directory) return false;
+
+    final String path = currentPath.value;
+    final String? mountRoot = _gvfsMountRootPath(path);
+    // The phone's gvfs mount is a root of its own; going above it would expose
+    // the runtime-directory plumbing.
+    if (mountRoot != null && mountRoot == path) return false;
+
+    return p.dirname(path) != path;
+  }
 
   String crumbLabel(String path) {
     if (path == homePath.value) return 'Home';
 
+    if (p.basename(path).startsWith('mtp:')) {
+      // gvfs mount roots carry an encoded spec; show the friendly drive label.
+      for (final place in drivePlaces) {
+        if (place.path == path) return place.label;
+      }
+      return 'Phone';
+    }
+
     final String base = p.basename(path);
     return base.isEmpty ? path : base;
+  }
+
+  /// Root of the gvfs MTP mount that [path] lives under, e.g.
+  /// `/run/user/1000/gvfs/mtp:host=Pixel_5`, or null for normal paths.
+  /// Breadcrumbs start here so the phone reads as one root instead of exposing
+  /// the runtime-directory chain.
+  String? _gvfsMountRootPath(String path) {
+    final List<String> parts = p.split(path);
+    for (int index = 0; index < parts.length - 1; index++) {
+      if (parts[index] == 'gvfs' && parts[index + 1].startsWith('mtp:')) {
+        return p.joinAll(parts.sublist(0, index + 2));
+      }
+    }
+    return null;
   }
 
   List<String> get breadcrumbs {
@@ -56,13 +119,18 @@ extension ExplorerNavigation on FileExplorerController {
       return _breadcrumbsCache!;
     }
 
-    final List<String> parts = p.split(normalized);
+    final String? mountRoot = _gvfsMountRootPath(normalized);
+    final String anchor = mountRoot ?? p.rootPrefix(normalized);
+    final String relative = mountRoot == null
+        ? normalized
+        : normalized.substring(mountRoot.length);
 
     final List<String> result = <String>[];
-    String accumulatedPath = p.rootPrefix(normalized);
+    String accumulatedPath = anchor;
+    if (mountRoot != null) result.add(mountRoot);
 
-    for (final String part in parts) {
-      if (part == p.rootPrefix(normalized)) continue;
+    for (final String part in p.split(relative)) {
+      if (part == p.rootPrefix(relative) || part.isEmpty) continue;
 
       accumulatedPath = p.join(accumulatedPath, part);
       result.add(accumulatedPath);
@@ -241,9 +309,13 @@ extension ExplorerNavigation on FileExplorerController {
   }
 
   Future<void> goToParent() async {
-    final String parentPath = p.dirname(currentPath.value);
+    final String path = currentPath.value;
+    final String? mountRoot = _gvfsMountRootPath(path);
+    if (mountRoot != null && mountRoot == path) return;
 
-    if (parentPath == currentPath.value) return;
+    final String parentPath = p.dirname(path);
+
+    if (parentPath == path) return;
 
     await navigateTo(parentPath);
   }
